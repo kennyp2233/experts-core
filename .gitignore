@@ -3,6 +3,25 @@
 /node_modules
 /build
 
+# Apps node_modules (monorepo)
+apps/*/node_modules
+apps/*/dist
+apps/*/build
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+dev.db
+test.db
+production.db
+
+# Prisma
+prisma/migrations/*
+!prisma/migrations/.gitkeep
+apps/*/prisma/migrations/*
+!apps/*/prisma/migrations/.gitkeep
+
 # Logs
 logs
 *.log
@@ -41,6 +60,11 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+apps/*/.env
+apps/*/.env.local
+apps/*/.env.development.local
+apps/*/.env.test.local
+apps/*/.env.production.local
 
 # temp directory
 .temp

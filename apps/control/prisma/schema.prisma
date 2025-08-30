@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+// ===== ENUMS como STRINGS (SQLite compatible) =====
+
+// AttendanceType: "ENTRY" | "EXIT"
+// RecordStatus: "PENDING" | "ACCEPTED" | "REJECTED" | "SUSPICIOUS" 
+// DeviceStatus: "ACTIVE" | "INACTIVE" | "BLOCKED"
+// WorkerStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+
+// ===== ENTIDADES PRINCIPALES =====
+
+model Depot {
+    id              String   @id @default(cuid())
+    name            String
+    address         String?
+    latitude        Float
+    longitude       Float
+    radius          Int      @default(100) // Radio en metros para geofencing
+    secret          String   @unique // Clave criptográfica para códigos QR
+    secretUpdatedAt DateTime @default(now())
+    isActive        Boolean  @default(true)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    // Relaciones
+    workers     Worker[]
+    attendances Attendance[]
+    qrCodes     QRCode[]
+
+    @@map("depots")
+}
+
+model Worker {
+    id           String       @id @default(cuid())
+    employeeId   String       @unique // ID empleado externo
+    firstName    String
+    lastName     String
+    email        String?      @unique
+    phone        String?
+    profilePhoto String? // URL/path de foto de referencia
+    status       String  @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
+    createdAt    DateTime     @default(now())
+    updatedAt    DateTime     @updatedAt
+
+    // Relación con depot
+    depotId String
+    depot   Depot  @relation(fields: [depotId], references: [id])
+
+    // Relaciones
+    devices           Device[]
+    attendances       Attendance[]
+    attendanceRecords AttendanceRecord[]
+
+    @@map("workers")
+}
+
+model Device {
+    id         String       @id @default(cuid())
+    deviceId   String       @unique // Fingerprint único del dispositivo
+    model      String?
+    platform   String? // iOS/Android
+    appVersion String?
+    status     String       @default("ACTIVE") // ACTIVE | INACTIVE | BLOCKED
+    lastUsedAt DateTime?
+    createdAt  DateTime     @default(now())
+    updatedAt  DateTime     @updatedAt
+
+    // Relación con worker
+    workerId String
+    worker   Worker @relation(fields: [workerId], references: [id])
+
+    // Relaciones
+    attendanceRecords AttendanceRecord[]
+
+    @@map("devices")
+}
+
+model Attendance {
+    id         String    @id @default(cuid())
+    date       DateTime // Fecha de la jornada laboral
+    entryTime  DateTime? // Hora de entrada
+    exitTime   DateTime? // Hora de salida
+    totalHours Float? // Horas trabajadas calculadas
+    isComplete Boolean   @default(false) // Si tiene entrada Y salida
+    notes      String? // Observaciones
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
+
+    // Relaciones
+    workerId String
+    worker   Worker @relation(fields: [workerId], references: [id])
+    depotId  String
+    depot    Depot  @relation(fields: [depotId], references: [id])
+
+    // Registros individuales de entrada y salida
+    records AttendanceRecord[]
+
+    @@unique([workerId, date])
+    @@map("attendances")
+}
+
+model AttendanceRecord {
+    id        String         @id @default(cuid())
+    type      String // ENTRY | EXIT
+    timestamp DateTime // Momento exacto del registro
+    status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | SUSPICIOUS
+
+    // Validaciones anti-fraude
+    qrCodeUsed    String // Hash del código QR utilizado
+    photoPath     String // Path de la selfie tomada
+    photoMetadata String? // Metadatos de la foto (JSON)
+    latitude      Float? // GPS - Latitud
+    longitude     Float? // GPS - Longitud
+    accuracy      Float? // Precisión del GPS en metros
+
+    // Validaciones del servidor
+    validationErrors String? // Errores de validación (JSON)
+    processedAt      DateTime? // Cuándo fue procesado por el servidor
+
+    // Datos offline
+    createdOffline Boolean   @default(false)
+    syncedAt       DateTime? // Cuándo se sincronizó
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relaciones
+    workerId     String
+    worker       Worker     @relation(fields: [workerId], references: [id])
+    deviceId     String
+    device       Device     @relation(fields: [deviceId], references: [id])
+    attendanceId String
+    attendance   Attendance @relation(fields: [attendanceId], references: [id])
+
+    @@map("attendance_records")
+}
+
+model QRCode {
+    id        String    @id @default(cuid())
+    hash      String    @unique // Hash SHA256 generado
+    timestamp DateTime // Momento de generación
+    expiresAt DateTime // Cuándo expira (timestamp + 2 minutos)
+    isUsed    Boolean   @default(false)
+    usedAt    DateTime?
+    createdAt DateTime  @default(now())
+
+    // Relación con depot
+    depotId String
+    depot   Depot  @relation(fields: [depotId], references: [id])
+
+    @@map("qr_codes")
+}
