@@ -1,0 +1,26 @@
+// This is your Prisma schema file for Core App
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    url      = "file:./core.db"
+}
+
+// ===== CORE APP MODELS =====
+
+// Example model - replace with your specific needs
+model CoreEntity {
+    id        String   @id @default(cuid())
+    name      String
+    type      String
+    data      String?  // JSON data
+    status    String   @default("ACTIVE") // ACTIVE | INACTIVE
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("core_entities")
+}

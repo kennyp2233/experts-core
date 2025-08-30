@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { CryptoUtils } from '../libs/core/src/utils/crypto.utils';
+import { CryptoUtils } from '../src/utils/crypto.utils';
 
 const prisma = new PrismaClient();
 
