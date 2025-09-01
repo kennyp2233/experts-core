@@ -5,9 +5,10 @@ import { AttendanceType } from '../../domain/enums/attendance-type.enum';
 import { RecordStatus } from '../../domain/enums/record-status.enum';
 import { RecordAttendanceDto } from '../dto/record-attendance.dto';
 import { AttendanceResponseDto } from '../dto/attendance-response.dto';
-import { GPSCoordinate } from '../../domain/value-objects/gps-coordinate.vo';
-import { PhotoMetadata } from '../../domain/value-objects/photo-metadata.vo';
-
+// TODO: NO VALIDAR SI TIENE TURNO YA QUE EL FRONT FUNCIONA INDEPENDIENTE DEL BACK
+// Y SOLO SABE MANEJAR ENTRADAS Y SALIDAS. ES DECIR DEBO MANEJAR LOS CAMBIOS
+// EN EL BACK DE LA MISMA FORMA, SI YA TENGO TURNO SE CIERRA EL ANTERIOR
+// Y SE ABRE UNO NUEVO
 @Injectable()
 export class RecordEntryUseCase {
   constructor(
