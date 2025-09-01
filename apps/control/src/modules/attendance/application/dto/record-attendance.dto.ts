@@ -10,6 +10,7 @@ import {
   IsISO8601, 
   ValidateNested,
   IsObject,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ATTENDANCE_TYPE_VALUES } from '../../domain/enums/attendance-type.enum';
@@ -80,7 +81,10 @@ export class RecordAttendanceDto {
 
   @IsNotEmpty()
   @IsString()
-  photoPath: string;
+  @Matches(/^data:image\/(jpeg|jpg|png|gif|webp);base64,/, {
+    message: 'Photo must be a valid base64 image (jpeg, png, gif, webp)'
+  })
+  photo: string;
 
   @IsOptional()
   @ValidateNested()

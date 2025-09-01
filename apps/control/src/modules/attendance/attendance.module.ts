@@ -5,7 +5,12 @@ import { AttendanceController } from './attendance.controller';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
 import { RecordExitUseCase } from './application/use-cases/record-exit.use-case';
 import { ValidateAttendanceUseCase } from './application/use-cases/validate-attendance.use-case';
-import { SyncOfflineBatchUseCase } from './application/use-cases/sync-offline-batch.use-case';
+
+// Application Services
+import { AttendanceProcessingService } from './application/services/attendance-processing.service';
+
+// Infrastructure Services  
+import { PhotoStorageService } from './infrastructure/services/photo-storage.service';
 
 // Domain Services
 import { AntiFraudValidatorDomainService } from './domain/services/anti-fraud-validator.domain-service';
@@ -20,8 +25,10 @@ import { AttendanceRepository } from './infrastructure/repositories/attendance.r
 
 // External Dependencies (assuming PrismaService is available)
 import { PrismaService } from '../../prisma.service'; // Adjust path as needed
+import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
 
 @Module({
+  imports: [WorkerAuthModule],
   controllers: [AttendanceController],
   providers: [
     // External dependencies
@@ -40,20 +47,25 @@ import { PrismaService } from '../../prisma.service'; // Adjust path as needed
     WorkHoursCalculatorDomainService,
     AntiFraudValidatorDomainService,
     
+    // Application Services
+    AttendanceProcessingService,
+    
+    // Infrastructure Services
+    PhotoStorageService,
+    
     // Use Cases
     RecordEntryUseCase,
     RecordExitUseCase,
     ValidateAttendanceUseCase,
-    SyncOfflineBatchUseCase,
   ],
   exports: [
     // Export services that other modules might need
     AttendanceRepositoryInterface,
     AntiFraudValidatorDomainService,
+    AttendanceProcessingService,
     RecordEntryUseCase,
     RecordExitUseCase,
     ValidateAttendanceUseCase,
-    SyncOfflineBatchUseCase,
   ],
 })
 export class AttendanceModule {
