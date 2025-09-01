@@ -16,6 +16,48 @@ datasource db {
 // RecordStatus: "PENDING" | "ACCEPTED" | "REJECTED" | "SUSPICIOUS" 
 // DeviceStatus: "ACTIVE" | "INACTIVE" | "BLOCKED"
 // WorkerStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+// AdminRole: "SUPER_ADMIN" | "SUPERVISOR" | "OPERATOR"
+// LoginQRStatus: "PENDING" | "USED" | "EXPIRED"
+
+// ===== AUTENTICACIÓN =====
+
+model Admin {
+    id        String   @id @default(cuid())
+    username  String   @unique
+    email     String   @unique
+    password  String // Hash de contraseña
+    firstName String
+    lastName  String
+    role      String   @default("SUPERVISOR") // SUPER_ADMIN | SUPERVISOR | OPERATOR
+    isActive  Boolean  @default(true)
+    lastLogin DateTime?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // QRs de login generados por este admin
+    generatedLoginQRs WorkerLoginQR[]
+
+    @@map("admins")
+}
+
+model WorkerLoginQR {
+    id          String    @id @default(cuid())
+    qrToken     String    @unique // Token único para el QR
+    status      String    @default("PENDING") // PENDING | USED | EXPIRED
+    expiresAt   DateTime? // Opcional, si quieres que expiren
+    usedAt      DateTime?
+    deviceInfo  String? // JSON con info del dispositivo que lo usó
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    // Relaciones
+    workerId String
+    worker   Worker @relation(fields: [workerId], references: [id])
+    adminId  String
+    admin    Admin  @relation(fields: [adminId], references: [id])
+
+    @@map("worker_login_qrs")
+}
 
 // ===== ENTIDADES PRINCIPALES =====
 
@@ -26,7 +68,7 @@ model Depot {
     latitude        Float
     longitude       Float
     radius          Int      @default(100) // Radio en metros para geofencing
-    secret          String   @unique // Clave criptográfica para códigos QR
+    secret          String   @unique // Clave criptográfica para códigos QR de asistencia
     secretUpdatedAt DateTime @default(now())
     isActive        Boolean  @default(true)
     createdAt       DateTime @default(now())
@@ -35,22 +77,27 @@ model Depot {
     // Relaciones
     workers     Worker[]
     attendances Attendance[]
-    qrCodes     QRCode[]
+    qrCodes     AttendanceQRCode[] // Renombrado para distinguir de login QRs
 
     @@map("depots")
 }
 
 model Worker {
-    id           String       @id @default(cuid())
-    employeeId   String       @unique // ID empleado externo
+    id           String  @id @default(cuid())
+    employeeId   String  @unique // ID empleado externo
     firstName    String
     lastName     String
-    email        String?      @unique
+    email        String? @unique
     phone        String?
     profilePhoto String? // URL/path de foto de referencia
     status       String  @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
-    createdAt    DateTime     @default(now())
-    updatedAt    DateTime     @updatedAt
+    
+    // Autenticación
+    isAuthenticated Boolean   @default(false) // Si está logueado actualmente
+    lastLoginAt     DateTime? // Última vez que se autenticó
+    
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     // Relación con depot
     depotId String
@@ -60,20 +107,28 @@ model Worker {
     devices           Device[]
     attendances       Attendance[]
     attendanceRecords AttendanceRecord[]
+    loginQRs          WorkerLoginQR[] // QRs generados para este worker
 
     @@map("workers")
 }
 
 model Device {
-    id         String       @id @default(cuid())
-    deviceId   String       @unique // Fingerprint único del dispositivo
-    model      String?
-    platform   String? // iOS/Android
-    appVersion String?
-    status     String       @default("ACTIVE") // ACTIVE | INACTIVE | BLOCKED
+    id           String    @id @default(cuid())
+    deviceId     String    @unique // Fingerprint único del dispositivo
+    model        String?
+    platform     String?   // iOS/Android
+    appVersion   String?
+    status       String    @default("ACTIVE") // ACTIVE | INACTIVE | BLOCKED
+    
+    // Sesión activa
+    isLoggedIn      Boolean   @default(false) // Si tiene sesión activa
+    sessionToken    String?   @unique // Token de sesión actual
+    sessionExpiry   DateTime? // Cuándo expira la sesión (opcional)
+    lastActivityAt  DateTime? // Última actividad registrada
+    
     lastUsedAt DateTime?
-    createdAt  DateTime     @default(now())
-    updatedAt  DateTime     @updatedAt
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
 
     // Relación con worker
     workerId String
@@ -87,12 +142,12 @@ model Device {
 
 model Attendance {
     id         String    @id @default(cuid())
-    date       DateTime // Fecha de la jornada laboral
+    date       DateTime  // Fecha de la jornada laboral
     entryTime  DateTime? // Hora de entrada
     exitTime   DateTime? // Hora de salida
-    totalHours Float? // Horas trabajadas calculadas
+    totalHours Float?    // Horas trabajadas calculadas
     isComplete Boolean   @default(false) // Si tiene entrada Y salida
-    notes      String? // Observaciones
+    notes      String?   // Observaciones
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
 
@@ -110,21 +165,21 @@ model Attendance {
 }
 
 model AttendanceRecord {
-    id        String         @id @default(cuid())
-    type      String // ENTRY | EXIT
+    id        String   @id @default(cuid())
+    type      String   // ENTRY | EXIT
     timestamp DateTime // Momento exacto del registro
     status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | SUSPICIOUS
 
     // Validaciones anti-fraude
-    qrCodeUsed    String // Hash del código QR utilizado
-    photoPath     String // Path de la selfie tomada
+    qrCodeUsed    String  // Hash del código QR de asistencia utilizado
+    photoPath     String  // Path de la selfie tomada
     photoMetadata String? // Metadatos de la foto (JSON)
-    latitude      Float? // GPS - Latitud
-    longitude     Float? // GPS - Longitud
-    accuracy      Float? // Precisión del GPS en metros
+    latitude      Float?  // GPS - Latitud
+    longitude     Float?  // GPS - Longitud
+    accuracy      Float?  // Precisión del GPS en metros
 
     // Validaciones del servidor
-    validationErrors String? // Errores de validación (JSON)
+    validationErrors String?   // Errores de validación (JSON)
     processedAt      DateTime? // Cuándo fue procesado por el servidor
 
     // Datos offline
@@ -145,11 +200,12 @@ model AttendanceRecord {
     @@map("attendance_records")
 }
 
-model QRCode {
+// Renombrado para distinguir de los QRs de login
+model AttendanceQRCode {
     id        String    @id @default(cuid())
-    hash      String    @unique // Hash SHA256 generado
-    timestamp DateTime // Momento de generación
-    expiresAt DateTime // Cuándo expira (timestamp + 2 minutos)
+    hash      String    @unique // Hash SHA256 generado para asistencia
+    timestamp DateTime  // Momento de generación
+    expiresAt DateTime  // Cuándo expira (timestamp + 2 minutos)
     isUsed    Boolean   @default(false)
     usedAt    DateTime?
     createdAt DateTime  @default(now())
@@ -158,5 +214,5 @@ model QRCode {
     depotId String
     depot   Depot  @relation(fields: [depotId], references: [id])
 
-    @@map("qr_codes")
+    @@map("attendance_qr_codes")
 }
