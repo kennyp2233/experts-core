@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { WorkerAuthRepositoryInterface } from '../../domain/repositories/worker-auth.repository.interface';
 import { WorkerSessionEntity } from '../../domain/entities/worker-session.entity';
 import { SessionInfoDto } from '../dto/session-info.dto';
@@ -7,6 +7,7 @@ import { plainToClass } from 'class-transformer';
 @Injectable()
 export class SessionManagerService {
   constructor(
+    @Inject('WorkerAuthRepositoryInterface')
     private readonly workerAuthRepository: WorkerAuthRepositoryInterface,
   ) {}
 

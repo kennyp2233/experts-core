@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import type { WorkerAuthRepositoryInterface } from '../../domain/repositories/worker-auth.repository.interface';
 import { SessionInfoDto } from '../dto/session-info.dto';
 import { plainToClass } from 'class-transformer';
@@ -6,6 +6,7 @@ import { plainToClass } from 'class-transformer';
 @Injectable()
 export class RefreshSessionUseCase {
   constructor(
+    @Inject('WorkerAuthRepositoryInterface')
     private readonly workerAuthRepository: WorkerAuthRepositoryInterface,
   ) {}
 

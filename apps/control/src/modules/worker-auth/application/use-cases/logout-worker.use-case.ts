@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, Inject } from '@nestjs/common';
 import type { WorkerAuthRepositoryInterface } from '../../domain/repositories/worker-auth.repository.interface';
 import { LogoutDto, LogoutResponseDto } from '../dto/logout.dto';
 
@@ -7,6 +7,7 @@ export class LogoutWorkerUseCase {
   private readonly logger = new Logger(LogoutWorkerUseCase.name);
 
   constructor(
+    @Inject('WorkerAuthRepositoryInterface')
     private readonly workerAuthRepository: WorkerAuthRepositoryInterface,
   ) {}
 

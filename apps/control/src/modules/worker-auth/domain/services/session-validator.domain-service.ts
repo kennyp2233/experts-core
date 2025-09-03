@@ -10,6 +10,7 @@ export interface SessionInfo {
 @Injectable()
 export class SessionValidatorDomainService {
   constructor(
+    @Inject('WorkerAuthRepositoryInterface')
     private readonly workerAuthRepository: WorkerAuthRepositoryInterface
   ) {}
 

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import type { WorkerAuthRepositoryInterface } from '../../domain/repositories/worker-auth.repository.interface';
 import { GenerateLoginQRDto } from '../dto/generate-login-qr.dto';
 import { LoginQRResponseDto } from '../dto/session-info.dto';
@@ -8,6 +8,7 @@ import { LoginQRStatus } from '../../domain/enums/login-qr-status.enum';
 @Injectable()
 export class GenerateWorkerLoginQRUseCase {
   constructor(
+    @Inject('WorkerAuthRepositoryInterface')
     private readonly workerAuthRepository: WorkerAuthRepositoryInterface,
   ) {}
 
