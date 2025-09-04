@@ -8,6 +8,16 @@ export class QRLoginToken {
     this.validate();
   }
 
+  /**
+   * Crear un QRLoginToken desde un valor existente (para cuando se lee de la BD)
+   */
+  static fromValue(value: string): QRLoginToken {
+    const token = Object.create(QRLoginToken.prototype);
+    token.value = value;
+    token.validate();
+    return token;
+  }
+
   private generateToken(workerId: string, adminId: string, timestamp: Date): string {
     const payload = `${workerId}:${adminId}:${timestamp.getTime()}`;
     const hash = crypto.createHash('sha256').update(payload).digest('hex');

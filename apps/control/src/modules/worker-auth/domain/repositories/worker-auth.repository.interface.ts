@@ -37,11 +37,13 @@ export interface WorkerAuthRepositoryInterface {
   findQRByToken(qrToken: string): Promise<LoginQREntity | null>;
   updateQRStatus(qrId: string, status: LoginQRStatus, usedAt?: Date): Promise<void>;
   expireWorkerQRs(workerId: string): Promise<void>;
+  getAllActiveQRs(): Promise<any[]>; // Para debugging
 
   // Device operations
   findDeviceByDeviceId(deviceId: string): Promise<any>;
   findDeviceBySessionToken(sessionToken: string): Promise<any>;
   createDevice(params: CreateDeviceParams): Promise<any>;
+  updateDevice(deviceId: string, params: Partial<CreateDeviceParams>): Promise<any>;
   updateDeviceSession(deviceId: string, params: UpdateDeviceSessionParams): Promise<void>;
   updateDeviceActivity(deviceId: string): Promise<void>;
 

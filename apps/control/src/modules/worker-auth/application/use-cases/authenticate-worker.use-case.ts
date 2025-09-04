@@ -42,11 +42,43 @@ export class AuthenticateWorkerUseCase {
   }
 
   private async validateQRToken(qrToken: string) {
+    console.log('[DEBUG] Backend - Buscando QR token:', qrToken);
+    console.log('[DEBUG] Backend - Longitud del token:', qrToken.length);
+    
     const qr = await this.workerAuthRepository.findQRByToken(qrToken);
     
     if (!qr) {
+      console.log('[DEBUG] Backend - QR no encontrado en la base de datos');
+      
+      // Buscar QRs similares para debugging
+      try {
+        const allQRs = await this.workerAuthRepository.getAllActiveQRs();
+        console.log('[DEBUG] Backend - QRs activos en la base de datos:', allQRs.length);
+        allQRs.forEach((activeQR, index) => {
+          console.log(`[DEBUG] Backend - QR ${index + 1}:`, {
+            id: activeQR.id,
+            qrToken: activeQR.qrToken,
+            qrTokenLength: activeQR.qrToken.length,
+            workerId: activeQR.workerId,
+            status: activeQR.status,
+            createdAt: activeQR.createdAt,
+            expiresAt: activeQR.expiresAt
+          });
+        });
+      } catch (error) {
+        console.log('[DEBUG] Backend - Error obteniendo QRs activos:', error);
+      }
+      
       throw new BadRequestException('Código QR no encontrado');
     }
+    
+    console.log('[DEBUG] Backend - QR encontrado:', {
+      id: qr.id,
+      workerId: qr.workerId,
+      status: qr.status,
+      createdAt: qr.createdAt,
+      expiresAt: qr.expiresAt
+    });
     
     if (!qr.canBeUsed()) {
       if (qr.isExpired()) {
@@ -59,11 +91,41 @@ export class AuthenticateWorkerUseCase {
   }
 
   private async findOrCreateDevice(deviceInfo: any, workerId: string) {
+    console.log('[DEBUG] Backend - Buscando/creando device:', {
+      deviceId: deviceInfo.deviceId,
+      workerId: workerId,
+      platform: deviceInfo.platform
+    });
+
     let device = await this.workerAuthRepository.findDeviceByDeviceId(deviceInfo.deviceId);
     
     if (!device) {
-      device = await this.workerAuthRepository.createDevice({
-        deviceId: deviceInfo.deviceId,
+      console.log('[DEBUG] Backend - Device no encontrado, intentando crear');
+      try {
+        device = await this.workerAuthRepository.createDevice({
+          deviceId: deviceInfo.deviceId,
+          workerId,
+          model: deviceInfo.model,
+          platform: deviceInfo.platform,
+          appVersion: deviceInfo.appVersion,
+        });
+        console.log('[DEBUG] Backend - Device creado exitosamente');
+      } catch (error: any) {
+        // Si hay error de constraint único, significa que otro request ya lo creó
+        if (error.code === 'P2002') {
+          console.log('[DEBUG] Backend - Device ya existe (constraint unique), buscando de nuevo');
+          device = await this.workerAuthRepository.findDeviceByDeviceId(deviceInfo.deviceId);
+          if (!device) {
+            throw new Error('No se pudo encontrar o crear el device');
+          }
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      console.log('[DEBUG] Backend - Device encontrado, actualizando información');
+      // Actualizar información del device si ya existe
+      device = await this.workerAuthRepository.updateDevice(deviceInfo.deviceId, {
         workerId,
         model: deviceInfo.model,
         platform: deviceInfo.platform,

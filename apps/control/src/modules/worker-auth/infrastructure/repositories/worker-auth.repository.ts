@@ -42,6 +42,15 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
   }
 
   async createLoginQR(params: CreateLoginQRParams): Promise<LoginQREntity> {
+    console.log('[DEBUG] Backend - Creando QR en BD con params:', {
+      qrToken: params.qrToken,
+      qrTokenLength: params.qrToken.length,
+      workerId: params.workerId,
+      adminId: params.adminId,
+      status: params.status,
+      expiresAt: params.expiresAt
+    });
+
     const qr = await this.prisma.workerLoginQR.create({
       data: {
         qrToken: params.qrToken,
@@ -62,9 +71,18 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
       }
     });
 
+    console.log('[DEBUG] Backend - QR creado en BD:', {
+      id: qr.id,
+      qrToken: qr.qrToken,
+      qrTokenLength: qr.qrToken.length,
+      workerId: qr.workerId,
+      adminId: qr.adminId,
+      status: qr.status
+    });
+
     return new LoginQREntity(
       qr.id,
-      new QRLoginToken(qr.workerId, qr.adminId),
+      QRLoginToken.fromValue(qr.qrToken),
       qr.workerId,
       qr.adminId,
       qr.status as LoginQRStatus,
@@ -97,7 +115,7 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
 
     return new LoginQREntity(
       qr.id,
-      new QRLoginToken(qr.workerId, qr.adminId),
+      QRLoginToken.fromValue(qr.qrToken),
       qr.workerId,
       qr.adminId,
       qr.status as LoginQRStatus,
@@ -129,6 +147,27 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
         status: LoginQRStatus.EXPIRED,
         updatedAt: new Date()
       }
+    });
+  }
+
+  async getAllActiveQRs(): Promise<any[]> {
+    return this.prisma.workerLoginQR.findMany({
+      where: {
+        status: LoginQRStatus.PENDING,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      },
+      select: {
+        id: true,
+        qrToken: true,
+        workerId: true,
+        status: true,
+        createdAt: true,
+        expiresAt: true
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
@@ -176,6 +215,33 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
         model: params.model,
         platform: params.platform,
         appVersion: params.appVersion
+      },
+      include: {
+        worker: {
+          include: {
+            depot: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  async updateDevice(deviceId: string, params: Partial<CreateDeviceParams>): Promise<any> {
+    console.log('[DEBUG] Backend - Actualizando device:', { deviceId, params });
+    
+    return this.prisma.device.update({
+      where: { deviceId },
+      data: {
+        ...(params.workerId && { workerId: params.workerId }),
+        ...(params.model && { model: params.model }),
+        ...(params.platform && { platform: params.platform }),
+        ...(params.appVersion && { appVersion: params.appVersion }),
+        updatedAt: new Date()
       },
       include: {
         worker: {

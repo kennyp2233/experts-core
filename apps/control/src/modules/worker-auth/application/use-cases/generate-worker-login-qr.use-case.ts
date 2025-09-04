@@ -30,11 +30,17 @@ export class GenerateWorkerLoginQRUseCase {
 
     // 4. Generar nuevo token
     const qrToken = new QRLoginToken(dto.workerId, adminId);
+    console.log('[DEBUG] Backend - Generando QR token:', qrToken.getValue());
+    console.log('[DEBUG] Backend - Longitud del token generado:', qrToken.getValue().length);
+    console.log('[DEBUG] Backend - Primeros 10 caracteres:', qrToken.getValue().substring(0, 10));
+    console.log('[DEBUG] Backend - Últimos 10 caracteres:', qrToken.getValue().substring(qrToken.getValue().length - 10));
 
     // 5. Calcular expiración
     const expiresAt = dto.expiresInMinutes 
       ? new Date(Date.now() + dto.expiresInMinutes * 60 * 1000)
       : undefined;
+
+    console.log('[DEBUG] Backend - Expira en:', expiresAt);
 
     // 6. Crear registro en BD
     const loginQR = await this.workerAuthRepository.createLoginQR({
@@ -43,6 +49,15 @@ export class GenerateWorkerLoginQRUseCase {
       adminId,
       expiresAt,
       status: LoginQRStatus.PENDING,
+    });
+
+    console.log('[DEBUG] Backend - QR guardado en BD:', {
+      id: loginQR.id,
+      qrToken: loginQR.qrToken.getValue(),
+      qrTokenLength: loginQR.qrToken.getValue().length,
+      workerId: loginQR.workerId,
+      status: loginQR.status,
+      adminId: adminId
     });
 
     return {
