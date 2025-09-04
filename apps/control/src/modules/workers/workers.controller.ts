@@ -35,9 +35,7 @@ export class WorkersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
-  async findAll(
-    @Query(ValidationPipe) query: QueryWorkersDto
-  ): Promise<WorkersListResponseDto> {
+  async findAll(@Query() query: QueryWorkersDto): Promise<WorkersListResponseDto> {
     return this.workersService.findAll(query);
   }
 
@@ -46,7 +44,7 @@ export class WorkersController {
   @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
   async findByDepot(
     @Param('depotId') depotId: string,
-    @Query(ValidationPipe) query: QueryWorkersDto
+    @Query() query: QueryWorkersDto
   ): Promise<WorkersListResponseDto> {
     return this.workersService.findByDepot(depotId, query);
   }

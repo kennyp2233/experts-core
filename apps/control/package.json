@@ -13,6 +13,9 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset",
+    "seed": "ts-node src/scripts/seed.ts",
+    "create-admin": "ts-node src/scripts/create-admin.ts",
+    "db:reset-and-seed": "prisma migrate reset --force && npm run seed",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\""
   },
@@ -35,6 +38,8 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/passport-jwt": "^4.0.1",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }
