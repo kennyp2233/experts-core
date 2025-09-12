@@ -160,7 +160,8 @@ model Attendance {
     // Registros individuales de entrada y salida
     records AttendanceRecord[]
 
-    @@unique([workerId, date])
+    // NOTA: Removida restricción única para permitir múltiples turnos por día
+    // @@unique([workerId, date])
     @@map("attendances")
 }
 

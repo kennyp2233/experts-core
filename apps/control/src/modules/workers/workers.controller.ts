@@ -11,7 +11,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  ValidationPipe
+  ValidationPipe,
+  Request
 } from '@nestjs/common';
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
@@ -22,10 +23,13 @@ import {
   WorkersListResponseDto,
   WorkerCreateResponseDto,
   WorkerUpdateResponseDto,
-  WorkerDeleteResponseDto
+  WorkerDeleteResponseDto,
+  WorkerShiftStatusResponseDto,
+  WorkerShiftStatusDto
 } from './dto/worker-response.dto';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { WorkerAuthGuard } from '../worker-auth/guards/worker-auth.guard';
 
 @Controller('workers')
 @UseGuards(JwtGuard)

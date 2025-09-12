@@ -22,6 +22,9 @@ import { PrismaService } from '../../prisma.service';
 // Guards
 import { WorkerAuthGuard } from './guards/worker-auth.guard';
 
+// Import WorkersService
+import { WorkersService } from '../workers/workers.service';
+
 // Token para inyección de dependencia del repositorio
 const WORKER_AUTH_REPOSITORY = 'WorkerAuthRepository';
 
@@ -31,6 +34,7 @@ const WORKER_AUTH_REPOSITORY = 'WorkerAuthRepository';
     // Services
     WorkerAuthService,
     SessionManagerService,
+    WorkersService,
     
     // Use Cases
     GenerateWorkerLoginQRUseCase,
@@ -59,6 +63,7 @@ const WORKER_AUTH_REPOSITORY = 'WorkerAuthRepository';
     WorkerAuthService,
     SessionManagerService,
     WorkerAuthGuard,
+    SessionValidatorDomainService,
   ],
 })
 export class WorkerAuthModule {}

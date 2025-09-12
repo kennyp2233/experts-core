@@ -93,8 +93,8 @@ export class AntiFraudValidatorDomainService {
     // Nivel 3: Validación Geográfica
     validationResults.geolocation = await this.performGeolocationValidation(data, context);
 
-    // Nivel 4: Validación Fotográfica
-    validationResults.photo = await this.performPhotoValidation(data, context);
+    // Nivel 4: Validación Fotográfica - DESHABILITADA TEMPORALMENTE
+    // validationResults.photo = await this.performPhotoValidation(data, context);
 
     // Nivel 5: Validación de Patrones
     validationResults.pattern = await this.performPatternValidation(data, context);
@@ -162,10 +162,27 @@ export class AntiFraudValidatorDomainService {
     const results: ValidationResult[] = [];
 
     try {
-      // Validar autenticidad del QR usando CryptoUtils existente
+      // Extraer timestamp y signature del QR JSON
       const qrTimestamp = this.extractTimestampFromQR(data.qrCodeUsed);
+      const qrSignature = this.extractSignatureFromQR(data.qrCodeUsed);
+
+      if (!qrSignature) {
+        results.push({
+          isValid: false,
+          isSuspicious: false,
+          reason: FraudReason.MALFORMED_QR_CODE,
+          message: 'QR code format is invalid - missing signature',
+          severity: 30,
+          details: {
+            qrData: data.qrCodeUsed?.substring(0, 100) + '...',
+          },
+        });
+        return results;
+      }
+
+      // Validar autenticidad del QR usando la signature extraída
       const isValid = CryptoUtils.validateQRHash(
-        data.qrCodeUsed,
+        qrSignature, // Usar la signature extraída en lugar del JSON completo
         context.depot.secret,
         context.depot.id,
         qrTimestamp || data.timestamp,
@@ -179,7 +196,7 @@ export class AntiFraudValidatorDomainService {
           message: 'QR code cryptographic signature is invalid',
           severity: 35,
           details: {
-            qrHash: data.qrCodeUsed,
+            qrSignature: qrSignature?.substring(0, 16) + '...',
             depotId: context.depot.id,
             timestamp: qrTimestamp?.toISOString() || data.timestamp.toISOString(),
           },
@@ -266,15 +283,44 @@ export class AntiFraudValidatorDomainService {
       return results;
     }
 
-    // Crear PhotoMetadata value object
-    const photoMetadata = PhotoMetadata.create(
-      new Date(data.photoMetadata.timestamp),
-      data.photoMetadata.hasCameraInfo,
-      data.photoMetadata.fileSize,
-      data.photoMetadata.dimensions,
-      data.photoMetadata.cameraInfo,
-      data.photoPath,
-    );
+    // Crear PhotoMetadata value object con manejo de errores
+    let photoMetadata: PhotoMetadata;
+    try {
+      photoMetadata = PhotoMetadata.create(
+        new Date(data.photoMetadata.timestamp),
+        data.photoMetadata.hasCameraInfo,
+        data.photoMetadata.fileSize,
+        data.photoMetadata.dimensions,
+        data.photoMetadata.cameraInfo,
+        data.photoPath,
+      );
+    } catch (error) {
+      // Si hay error en PhotoMetadata, registrar como validación fallida pero no fallar
+      results.push({
+        isValid: false,
+        isSuspicious: false,
+        reason: FraudReason.PHOTO_MISSING_METADATA,
+        message: `Photo metadata validation failed: ${error.message}`,
+        severity: 30, // Alta severidad pero no crítica
+        details: {
+          error: error.message,
+          photoMetadata: data.photoMetadata,
+        },
+      });
+      
+      // Crear PhotoMetadata con valores seguros para continuar el procesamiento
+      photoMetadata = PhotoMetadata.create(
+        new Date(data.photoMetadata.timestamp),
+        data.photoMetadata.hasCameraInfo,
+        Math.max(data.photoMetadata.fileSize, 1),
+        data.photoMetadata.dimensions ? {
+          width: Math.max(data.photoMetadata.dimensions.width, 200),
+          height: Math.max(data.photoMetadata.dimensions.height, 200)
+        } : { width: 200, height: 200 },
+        data.photoMetadata.cameraInfo,
+        data.photoPath,
+      );
+    }
 
     // Validar foto completa
     const photoValidation = this.photoValidator.validatePhoto(photoMetadata, data.timestamp);
@@ -481,11 +527,12 @@ export class AntiFraudValidatorDomainService {
   private calculateComprehensiveFraudScore(
     validationResults: ComprehensiveValidationResult['validationResults'],
   ): FraudScore {
+    // Excluimos validaciones fotográficas temporalmente
     const allResults = [
       ...validationResults.temporal,
       ...validationResults.cryptographic,
       ...validationResults.geolocation,
-      ...validationResults.photo,
+      // ...validationResults.photo, // DESHABILITADO TEMPORALMENTE
       ...validationResults.pattern,
     ];
 
@@ -542,11 +589,31 @@ export class AntiFraudValidatorDomainService {
    */
   private extractTimestampFromQR(qrHash: string): Date | null {
     try {
-      // Esta implementación depende del formato del QR
-      // Aquí asumimos que el QR contiene información de timestamp
-      // En una implementación real, esto dependería del formato específico del QR
-      return new Date(); // Placeholder
-    } catch {
+      // El QR viene como JSON: {depotId, timestamp, signature}
+      const qrJson = JSON.parse(qrHash);
+      
+      if (qrJson.timestamp) {
+        const timestamp = new Date(qrJson.timestamp);
+        return isNaN(timestamp.getTime()) ? null : timestamp;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('[AntiFraudValidator] Error parseando QR JSON:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extrae la firma (hash) del QR code
+   */
+  private extractSignatureFromQR(qrData: string): string | null {
+    try {
+      // El QR viene como JSON: {depotId, timestamp, signature}
+      const qrJson = JSON.parse(qrData);
+      return qrJson.signature || null;
+    } catch (error) {
+      console.log('[AntiFraudValidator] Error parseando QR JSON para extraer signature:', error);
       return null;
     }
   }

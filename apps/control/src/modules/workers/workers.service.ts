@@ -377,6 +377,66 @@ export class WorkersService {
     }
   }
 
+  // Método para obtener el estado del turno de un trabajador
+  async getShiftStatus(workerId: string): Promise<{
+    isOnShift: boolean;
+    currentShiftId?: string;
+    lastAction?: 'ENTRY' | 'EXIT';
+    lastActionTimestamp?: Date;
+  }> {
+    try {
+      // Verificar que el worker existe
+      const worker = await this.prisma.worker.findUnique({
+        where: { id: workerId }
+      });
+
+      if (!worker) {
+        throw new NotFoundException(`Worker con ID ${workerId} no encontrado`);
+      }
+
+      // Buscar el último registro de asistencia del trabajador
+      const lastAttendance = await this.prisma.attendance.findFirst({
+        where: {
+          workerId: workerId
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        include: {
+          records: {
+            orderBy: {
+              timestamp: 'desc'
+            },
+            take: 1
+          }
+        }
+      });
+
+      if (!lastAttendance || !lastAttendance.records.length) {
+        // No hay registros, el trabajador está fuera de turno
+        return {
+          isOnShift: false
+        };
+      }
+
+      const lastRecord = lastAttendance.records[0];
+      
+      return {
+        isOnShift: lastRecord.type === 'ENTRY',
+        currentShiftId: lastRecord.type === 'ENTRY' ? lastAttendance.id : undefined,
+        lastAction: lastRecord.type as 'ENTRY' | 'EXIT',
+        lastActionTimestamp: lastRecord.timestamp
+      };
+
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Error obteniendo estado del turno para worker ${workerId}: ${error.message}`);
+      throw new BadRequestException('Error al obtener el estado del turno');
+    }
+  }
+
   async findByDepot(depotId: string, query: QueryWorkersDto): Promise<WorkersListResponseDto> {
     // Verificar que el depot existe
     const depot = await this.prisma.depot.findUnique({

@@ -23,6 +23,15 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
   // Attendance CRUD
   async createAttendance(data: CreateAttendanceData): Promise<AttendanceEntity> {
+    console.log('[AttendanceRepository] 📅 Creando attendance');
+    console.log('[AttendanceRepository] Datos recibidos:', {
+      date: data.date,
+      entryTime: data.entryTime,
+      exitTime: data.exitTime,
+      workerId: data.workerId,
+      depotId: data.depotId
+    });
+
     // Normalize date to start of day
     const normalizedDate = new Date(data.date);
     normalizedDate.setHours(0, 0, 0, 0);
@@ -30,20 +39,33 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     const totalHours = this.calculateTotalHours(data.entryTime || null, data.exitTime || null);
     const isComplete = data.entryTime !== undefined && data.exitTime !== undefined;
 
-    const attendance = await this.prisma.attendance.create({
-      data: {
-        date: normalizedDate,
-        entryTime: data.entryTime || null,
-        exitTime: data.exitTime || null,
-        totalHours,
-        isComplete,
-        notes: data.notes || null,
-        workerId: data.workerId,
-        depotId: data.depotId,
-      },
-    });
+    try {
+      const attendance = await this.prisma.attendance.create({
+        data: {
+          date: normalizedDate,
+          entryTime: data.entryTime || null,
+          exitTime: data.exitTime || null,
+          totalHours,
+          isComplete,
+          notes: data.notes || null,
+          workerId: data.workerId,
+          depotId: data.depotId,
+        },
+      });
 
-    return this.toDomainAttendance(attendance);
+      console.log('[AttendanceRepository] ✅ Attendance creado exitosamente:', {
+        id: attendance.id,
+        date: attendance.date,
+        entryTime: attendance.entryTime,
+        exitTime: attendance.exitTime,
+        isComplete: attendance.isComplete
+      });
+
+      return this.toDomainAttendance(attendance);
+    } catch (error) {
+      console.error('[AttendanceRepository] ❌ Error creando attendance:', error);
+      throw error;
+    }
   }
 
   async findAttendanceById(id: string): Promise<AttendanceEntity | null> {
@@ -58,13 +80,14 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     const normalizedDate = new Date(date);
     normalizedDate.setHours(0, 0, 0, 0);
 
-    const attendance = await this.prisma.attendance.findUnique({
+    const attendance = await this.prisma.attendance.findFirst({
       where: {
-        workerId_date: {
-          workerId,
-          date: normalizedDate,
-        },
+        workerId,
+        date: normalizedDate,
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
     return attendance ? this.toDomainAttendance(attendance) : null;
@@ -194,28 +217,80 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
   // Attendance Record CRUD
   async createAttendanceRecord(data: CreateAttendanceRecordData): Promise<AttendanceRecordEntity> {
-    const record = await this.prisma.attendanceRecord.create({
-      data: {
-        type: data.type,
-        timestamp: data.timestamp,
-        status: data.status,
-        qrCodeUsed: data.qrCodeUsed,
-        photoPath: data.photoPath,
-        photoMetadata: data.photoMetadata || null,
-        latitude: data.latitude || null,
-        longitude: data.longitude || null,
-        accuracy: data.accuracy || null,
-        validationErrors: data.validationErrors || null,
-        processedAt: data.processedAt || null,
-        createdOffline: data.createdOffline,
-        syncedAt: data.syncedAt || null,
-        workerId: data.workerId,
-        deviceId: data.deviceId,
-        attendanceId: data.attendanceId,
-      },
+    console.log('[AttendanceRepository] 💾 Creando registro de attendance record');
+    console.log('[AttendanceRepository] Datos recibidos:', {
+      type: data.type,
+      timestamp: data.timestamp,
+      status: data.status,
+      workerId: data.workerId,
+      attendanceId: data.attendanceId,
+      photoPath: data.photoPath,
+      location: { latitude: data.latitude, longitude: data.longitude, accuracy: data.accuracy },
+      createdOffline: data.createdOffline
     });
 
-    return this.toDomainAttendanceRecord(record);
+    try {
+      // Verificar que el worker existe antes de crear el record
+      console.log('[AttendanceRepository] Verificando que el worker existe...');
+      const workerExists = await this.prisma.worker.findUnique({
+        where: { id: data.workerId },
+        select: { id: true, firstName: true, lastName: true }
+      });
+      
+      if (!workerExists) {
+        console.error('[AttendanceRepository] ❌ Worker no encontrado:', data.workerId);
+        throw new Error(`Worker with ID ${data.workerId} not found`);
+      }
+      
+      console.log('[AttendanceRepository] ✅ Worker encontrado:', workerExists);
+
+      // Verificar que el device existe
+      console.log('[AttendanceRepository] Verificando que el device existe...');
+      const deviceExists = await this.prisma.device.findUnique({
+        where: { id: data.deviceId },
+        select: { id: true, deviceId: true }
+      });
+      
+      if (!deviceExists) {
+        console.error('[AttendanceRepository] ❌ Device no encontrado:', data.deviceId);
+        throw new Error(`Device with ID ${data.deviceId} not found`);
+      }
+      
+      console.log('[AttendanceRepository] ✅ Device encontrado:', deviceExists);
+
+      const record = await this.prisma.attendanceRecord.create({
+        data: {
+          type: data.type,
+          timestamp: data.timestamp,
+          status: data.status,
+          qrCodeUsed: data.qrCodeUsed,
+          photoPath: data.photoPath,
+          photoMetadata: data.photoMetadata || null,
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          accuracy: data.accuracy || null,
+          validationErrors: data.validationErrors || null,
+          processedAt: data.processedAt || null,
+          createdOffline: data.createdOffline,
+          syncedAt: data.syncedAt || null,
+          workerId: data.workerId,
+          deviceId: data.deviceId,
+          attendanceId: data.attendanceId,
+        },
+      });
+
+      console.log('[AttendanceRepository] ✅ Registro creado exitosamente:', {
+        id: record.id,
+        type: record.type,
+        status: record.status,
+        timestamp: record.timestamp
+      });
+
+      return this.toDomainAttendanceRecord(record);
+    } catch (error) {
+      console.error('[AttendanceRepository] ❌ Error creando registro:', error);
+      throw error;
+    }
   }
 
   async findAttendanceRecordById(id: string): Promise<AttendanceRecordEntity | null> {

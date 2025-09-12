@@ -60,7 +60,35 @@ export class AttendanceController {
     @Body() dto: RecordAttendanceDto,
     @Request() req
   ): Promise<AttendanceResponseDto> {
-    return await this.recordEntryUseCase.execute(dto, req.worker.id, req.worker.depot.id);
+    console.log('[AttendanceController] 📥 POST /attendance/entry - Iniciando registro de entrada');
+    console.log('[AttendanceController] Worker:', {
+      id: req.worker?.id,
+      name: req.worker?.name,
+      depotId: req.worker?.depot?.id
+    });
+    console.log('[AttendanceController] DTO recibido:', {
+      type: dto.type,
+      qrCodeUsed: dto.qrCodeUsed?.substring(0, 50) + '...',
+      photoSize: dto.photo?.length || 0,
+      location: dto.location,
+      deviceId: dto.deviceId,
+      timestamp: dto.timestamp,
+      createdOffline: dto.createdOffline
+    });
+
+    try {
+      const result = await this.recordEntryUseCase.execute(dto, req.worker.id, req.worker.depot.id, req.device.id);
+      console.log('[AttendanceController] ✅ Registro de entrada exitoso:', {
+        recordId: result.recordId,
+        attendanceId: result.attendanceId,
+        status: result.status,
+        fraudScore: result.fraudScore
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error en registro de entrada:', error);
+      throw error;
+    }
   }
 
   @Post('exit')
@@ -70,7 +98,35 @@ export class AttendanceController {
     @Body() dto: RecordAttendanceDto,
     @Request() req
   ): Promise<AttendanceResponseDto> {
-    return await this.recordExitUseCase.execute(dto, req.worker.id, req.worker.depot.id);
+    console.log('[AttendanceController] 📤 POST /attendance/exit - Iniciando registro de salida');
+    console.log('[AttendanceController] Worker:', {
+      id: req.worker?.id,
+      name: req.worker?.name,
+      depotId: req.worker?.depot?.id
+    });
+    console.log('[AttendanceController] DTO recibido:', {
+      type: dto.type,
+      qrCodeUsed: dto.qrCodeUsed?.substring(0, 50) + '...',
+      photoSize: dto.photo?.length || 0,
+      location: dto.location,
+      deviceId: dto.deviceId,
+      timestamp: dto.timestamp,
+      createdOffline: dto.createdOffline
+    });
+
+    try {
+      const result = await this.recordExitUseCase.execute(dto, req.worker.id, req.worker.depot.id, req.device.id);
+      console.log('[AttendanceController] ✅ Registro de salida exitoso:', {
+        recordId: result.recordId,
+        attendanceId: result.attendanceId,
+        status: result.status,
+        fraudScore: result.fraudScore
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error en registro de salida:', error);
+      throw error;
+    }
   }
 
   @Post('validate')

@@ -20,13 +20,15 @@ import { LogoutDto } from './application/dto/logout.dto';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { WorkerAuthGuard } from './guards/worker-auth.guard';
+import { WorkersService } from '../workers/workers.service';
 
 @Controller('worker-auth')
 export class WorkerAuthController {
   constructor(
     private readonly workerAuthService: WorkerAuthService,
     private readonly sessionManagerService: SessionManagerService,
-  ) {}
+    private readonly workersService: WorkersService,
+  ) { }
 
   // ===== ENDPOINTS PARA ADMINISTRADORES =====
 
@@ -102,6 +104,32 @@ export class WorkerAuthController {
   ) {
     const sessionToken = this.extractTokenFromHeader(req);
     return this.workerAuthService.logout(sessionToken, dto);
+  }
+
+  @Get('status')
+  @UseGuards(WorkerAuthGuard)
+  async getWorkerStatus(@Request() req) {
+    // Debug: logging completo del objeto user
+    console.log('[WorkerAuthController] 🔍 Debug req.user completo:', JSON.stringify(req.user, null, 2));
+    console.log('[WorkerAuthController] 🔍 req.user?.workerId:', req.user?.workerId);
+    console.log('[WorkerAuthController] 🔍 req.user?.id:', req.user?.id);
+    console.log('[WorkerAuthController] 🔍 Object.keys(req.user):', Object.keys(req.user || {}));
+    
+    // Extraer workerId del usuario autenticado
+    const workerId = req.user?.workerId;
+    if (!workerId) {
+      console.error('[WorkerAuthController] ❌ Worker ID not found. User object:', req.user);
+      throw new Error('Worker ID not found in authentication token');
+    }
+
+    const shiftStatus = await this.workersService.getShiftStatus(workerId);
+
+    console.log('[WorkerAuthController] ✅ Estado del turno obtenido:', shiftStatus);
+    return {
+      success: true,
+      data: shiftStatus,
+      message: 'Estado del turno obtenido exitosamente'
+    };
   }
 
   // ===== UTILITY METHODS =====

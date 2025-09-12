@@ -91,3 +91,24 @@ export class WorkerDeleteResponseDto {
   success: boolean;
   message: string;
 }
+
+// DTO para el estado del turno del trabajador
+export class WorkerShiftStatusDto {
+  @Expose()
+  isOnShift: boolean;
+
+  @Expose()
+  currentShiftId?: string;
+
+  @Expose()
+  lastAction?: 'ENTRY' | 'EXIT';
+
+  @Expose()
+  lastActionTimestamp?: Date;
+}
+
+export class WorkerShiftStatusResponseDto {
+  success: boolean;
+  data: WorkerShiftStatusDto;
+  message?: string;
+}

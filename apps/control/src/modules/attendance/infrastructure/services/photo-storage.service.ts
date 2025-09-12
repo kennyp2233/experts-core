@@ -19,12 +19,24 @@ export class PhotoStorageService {
    * @returns Path relativo de la imagen guardada
    */
   async processAndSavePhoto(base64Image: string, workerId: string): Promise<string> {
+    console.log('[PhotoStorageService] 📸 Procesando y guardando foto');
+    console.log('[PhotoStorageService] WorkerId:', workerId);
+    console.log('[PhotoStorageService] Tamaño imagen base64:', base64Image?.length || 0, 'caracteres');
+
     try {
       // 1. Validar y extraer datos de la imagen Base64
+      console.log('[PhotoStorageService] Paso 1: Parseando imagen base64...');
       const { mimeType, imageBuffer, extension } = this.parseBase64Image(base64Image);
+      console.log('[PhotoStorageService] ✅ Imagen parseada:', {
+        mimeType,
+        extension,
+        bufferSize: imageBuffer.length,
+        sizeInMB: Math.round(imageBuffer.length / (1024 * 1024) * 100) / 100
+      });
       
       // 2. Validar tamaño de imagen (max 10MB)
       if (imageBuffer.length > 10 * 1024 * 1024) {
+        console.error('[PhotoStorageService] ❌ Imagen muy grande:', imageBuffer.length, 'bytes');
         throw new BadRequestException('Image size exceeds 10MB limit');
       }
 
@@ -32,19 +44,25 @@ export class PhotoStorageService {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const randomSuffix = crypto.randomBytes(4).toString('hex');
       const fileName = `${workerId}_${timestamp}_${randomSuffix}.${extension}`;
+      console.log('[PhotoStorageService] Nombre archivo generado:', fileName);
       
       // 4. Crear carpeta por worker si no existe
       const workerFolder = join(this.uploadPath, workerId);
+      console.log('[PhotoStorageService] Carpeta worker:', workerFolder);
       await this.ensureDirectory(workerFolder);
       
       // 5. Guardar imagen
       const filePath = join(workerFolder, fileName);
+      console.log('[PhotoStorageService] Guardando en:', filePath);
       await writeFile(filePath, imageBuffer);
       
       // 6. Retornar path relativo (para guardar en BD)
-      return `attendance-photos/${workerId}/${fileName}`;
+      const relativePath = `attendance-photos/${workerId}/${fileName}`;
+      console.log('[PhotoStorageService] ✅ Imagen guardada exitosamente:', relativePath);
+      return relativePath;
       
     } catch (error) {
+      console.error('[PhotoStorageService] ❌ Error procesando imagen:', error);
       throw new BadRequestException(`Failed to process image: ${error.message}`);
     }
   }
