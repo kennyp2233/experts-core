@@ -5,6 +5,9 @@ import { AttendanceController } from './attendance.controller';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
 import { RecordExitUseCase } from './application/use-cases/record-exit.use-case';
 import { ValidateAttendanceUseCase } from './application/use-cases/validate-attendance.use-case';
+import { GetWorkerShiftHistoryUseCase } from './application/use-cases/get-worker-shift-history.use-case';
+import { GetShiftAuditUseCase } from './application/use-cases/get-shift-audit.use-case';
+import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worker-detailed-stats.use-case';
 
 // Application Services
 import { AttendanceProcessingService } from './application/services/attendance-processing.service';
@@ -26,9 +29,11 @@ import { AttendanceRepository } from './infrastructure/repositories/attendance.r
 // External Dependencies (assuming PrismaService is available)
 import { PrismaService } from '../../prisma.service'; // Adjust path as needed
 import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
+import { WorkersModule } from '../workers/workers.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [WorkerAuthModule],
+  imports: [WorkerAuthModule, WorkersModule, AuthModule],
   controllers: [AttendanceController],
   providers: [
     // External dependencies
@@ -57,6 +62,9 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     RecordEntryUseCase,
     RecordExitUseCase,
     ValidateAttendanceUseCase,
+    GetWorkerShiftHistoryUseCase,
+    GetShiftAuditUseCase,
+    GetWorkerDetailedStatsUseCase,
   ],
   exports: [
     // Export services that other modules might need
@@ -66,6 +74,9 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     RecordEntryUseCase,
     RecordExitUseCase,
     ValidateAttendanceUseCase,
+    GetWorkerShiftHistoryUseCase,
+    GetShiftAuditUseCase,
+    GetWorkerDetailedStatsUseCase,
   ],
 })
 export class AttendanceModule {

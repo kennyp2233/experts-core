@@ -1,12 +1,23 @@
-import { Controller, Post, Get, Body, Request, HttpStatus, HttpCode, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Request, HttpStatus, HttpCode, UseGuards, Param, Query, ValidationPipe } from '@nestjs/common';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
 import { RecordExitUseCase } from './application/use-cases/record-exit.use-case';
 import { ValidateAttendanceUseCase } from './application/use-cases/validate-attendance.use-case';
+import { GetWorkerShiftHistoryUseCase } from './application/use-cases/get-worker-shift-history.use-case';
+import { GetShiftAuditUseCase } from './application/use-cases/get-shift-audit.use-case';
+import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worker-detailed-stats.use-case';
 import { RecordAttendanceDto } from './application/dto/record-attendance.dto';
 import { AttendanceResponseDto } from './application/dto/attendance-response.dto';
 import { ValidationResultDto } from './application/dto/validation-result.dto';
+import { GetWorkerHistoryQueryDto } from './application/dto/get-worker-history-query.dto';
+import { WorkerShiftHistoryResponseDto } from './application/dto/worker-shift-history-response.dto';
+import { GetShiftAuditDto } from './application/dto/get-shift-audit.dto';
+import { ShiftAuditResponseDto } from './application/dto/shift-audit-response.dto';
+import { GetWorkerStatsQueryDto } from './application/dto/get-worker-stats-query.dto';
+import { WorkerDetailedStatsResponseDto } from './application/dto/worker-detailed-stats-response.dto';
 import { AttendanceType } from './domain/enums/attendance-type.enum';
 import { WorkerAuthGuard } from '../worker-auth/guards/worker-auth.guard';
+import { JwtGuard } from '../auth/guards/jwt.guard';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 
 // Interface para ValidateAttendanceDto
 interface ValidateAttendanceDto {
@@ -51,6 +62,9 @@ export class AttendanceController {
     private readonly recordEntryUseCase: RecordEntryUseCase,
     private readonly recordExitUseCase: RecordExitUseCase,
     private readonly validateAttendanceUseCase: ValidateAttendanceUseCase,
+    private readonly getWorkerShiftHistoryUseCase: GetWorkerShiftHistoryUseCase,
+    private readonly getShiftAuditUseCase: GetShiftAuditUseCase,
+    private readonly getWorkerDetailedStatsUseCase: GetWorkerDetailedStatsUseCase,
   ) {}
 
   @Post('entry')
@@ -145,5 +159,104 @@ export class AttendanceController {
       timestamp: new Date().toISOString(),
       version: '1.0.0'
     };
+  }
+
+  @Get('worker/:workerId/history')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getWorkerHistory(
+    @Param('workerId') workerId: string,
+    @Query(new ValidationPipe({ transform: true })) query: GetWorkerHistoryQueryDto,
+    @Request() req
+  ): Promise<WorkerShiftHistoryResponseDto> {
+    console.log('[AttendanceController] 📊 GET /attendance/worker/:workerId/history - Obteniendo historial de turnos');
+    console.log('[AttendanceController] Worker:', { id: workerId });
+    console.log('[AttendanceController] Query:', query);
+
+    try {
+      const result = await this.getWorkerShiftHistoryUseCase.execute(workerId, query);
+      console.log('[AttendanceController] ✅ Historial obtenido exitosamente:', {
+        shiftsCount: result.shifts.length,
+        dateRange: result.dateRange
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo historial:', error);
+      throw error;
+    }
+  }
+
+  @Get('shift/:shiftId/audit')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getShiftAudit(
+    @Param('shiftId') shiftId: string,
+    @Request() req
+  ): Promise<ShiftAuditResponseDto> {
+    console.log('[AttendanceController] 🔍 GET /attendance/shift/:shiftId/audit - Obteniendo auditoría de turno');
+    console.log('[AttendanceController] Shift:', { id: shiftId });
+
+    try {
+      const result = await this.getShiftAuditUseCase.execute({ shiftId });
+      console.log('[AttendanceController] ✅ Auditoría obtenida exitosamente:', {
+        recordsCount: result.records.length,
+        riskScore: result.auditSummary.overallRiskScore
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo auditoría:', error);
+      throw error;
+    }
+  }
+
+  @Get('worker/:workerId/stats')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getWorkerStats(
+    @Param('workerId') workerId: string,
+    @Query(new ValidationPipe({ transform: true })) query: GetWorkerStatsQueryDto,
+    @Request() req
+  ): Promise<WorkerDetailedStatsResponseDto> {
+    console.log('[AttendanceController] 📈 GET /attendance/worker/:workerId/stats - Obteniendo estadísticas detalladas');
+    console.log('[AttendanceController] Worker:', { id: workerId });
+    console.log('[AttendanceController] Query:', query);
+
+    try {
+      const result = await this.getWorkerDetailedStatsUseCase.execute(workerId, query);
+      console.log('[AttendanceController] ✅ Estadísticas obtenidas exitosamente:', {
+        attendanceRate: result.attendance.attendanceRate,
+        totalHours: result.hours.totalHours
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo estadísticas:', error);
+      throw error;
+    }
+  }
+
+  @Get('worker/:workerId/recent')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getWorkerRecentShifts(
+    @Param('workerId') workerId: string,
+    @Request() req
+  ): Promise<WorkerShiftHistoryResponseDto> {
+    console.log('[AttendanceController] 🕐 GET /attendance/worker/:workerId/recent - Obteniendo turnos recientes');
+    console.log('[AttendanceController] Worker:', { id: workerId });
+
+    try {
+      // Obtener últimos 5 turnos + turno activo si existe
+      const result = await this.getWorkerShiftHistoryUseCase.execute(workerId, {
+        limit: 5,
+        offset: 0
+      });
+      console.log('[AttendanceController] ✅ Turnos recientes obtenidos exitosamente:', {
+        shiftsCount: result.shifts.length
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo turnos recientes:', error);
+      throw error;
+    }
   }
 }
