@@ -10,11 +10,11 @@ async function main() {
   try {
     // 1. Crear Admin
     console.log('👨‍💼 Creando administrador...');
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const hashedPassword = await bcrypt.hash('180473', 10);
     
     const admin = await prisma.admin.create({
       data: {
-        username: 'admin',
+        username: 'mauricio',
         email: 'admin@expertcontrol.com',
         password: hashedPassword,
         firstName: 'Administrador',
@@ -31,10 +31,10 @@ async function main() {
     
     const depot = await prisma.depot.create({
       data: {
-        name: 'Depot Central',
-        address: 'Av. Principal 123, Ciudad',
-        latitude: -12.0464, // Lima, Perú como ejemplo
-        longitude: -77.0428,
+        name: 'Cuarto Frio',
+        address: 'Tababela',
+        latitude: -0.1820944, // Lima, Perú como ejemplo
+        longitude: -78.3414831,
         radius: 100,
         secret: depotSecret,
         isActive: true,
@@ -49,10 +49,10 @@ async function main() {
     const worker1 = await prisma.worker.create({
       data: {
         employeeId: 'CHF001',
-        firstName: 'Juan Carlos',
-        lastName: 'Pérez García',
-        email: 'juan.perez@expertcontrol.com',
-        phone: '+51987654321',
+        firstName: 'Franklin',
+        lastName: 'Simbaña',
+        email: 'franklin@expertcontrol.com',
+        phone: '',
         status: 'ACTIVE',
         depotId: depot.id,
       },
@@ -61,10 +61,10 @@ async function main() {
     const worker2 = await prisma.worker.create({
       data: {
         employeeId: 'CHF002',
-        firstName: 'María Elena',
-        lastName: 'Rodriguez López',
-        email: 'maria.rodriguez@expertcontrol.com',
-        phone: '+51987654322',
+        firstName: 'Milton',
+        lastName: 'Cabascango',
+        email: 'MIlton@expertcontrol.com',
+        phone: '',
         status: 'ACTIVE',
         depotId: depot.id,
       },
