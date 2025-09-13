@@ -133,7 +133,12 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     if (filter.dateFrom || filter.dateTo) {
       where.date = {};
       if (filter.dateFrom) where.date.gte = filter.dateFrom;
-      if (filter.dateTo) where.date.lte = filter.dateTo;
+      if (filter.dateTo) {
+        // Incluir todo el día final agregando 23:59:59.999
+        const endOfDay = new Date(filter.dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        where.date.lte = endOfDay;
+      }
     }
 
     if (filter.isActive) {
