@@ -26,10 +26,25 @@ export class GetWorkerShiftHistoryUseCase {
       }
 
       // Establecer rango de fechas por defecto (últimos 30 días)
-      const dateTo = query.dateTo ? new Date(query.dateTo) : new Date();
-      const dateFrom = query.dateFrom
-        ? new Date(query.dateFrom)
-        : new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 días atrás
+      // Ajustar fechas para zona horaria de Ecuador (UTC-5)
+      let dateTo: Date;
+      let dateFrom: Date;
+
+      if (query.dateTo) {
+        // Si dateTo es string tipo "2025-09-13", crear fecha local Ecuador y convertir a UTC
+        const dateToLocal = new Date(query.dateTo + 'T23:59:59.999-05:00'); // Fin del día Ecuador
+        dateTo = dateToLocal;
+      } else {
+        dateTo = new Date();
+      }
+
+      if (query.dateFrom) {
+        // Si dateFrom es string tipo "2025-08-14", crear fecha local Ecuador y convertir a UTC
+        const dateFromLocal = new Date(query.dateFrom + 'T00:00:00.000-05:00'); // Inicio del día Ecuador
+        dateFrom = dateFromLocal;
+      } else {
+        dateFrom = new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 días atrás
+      }
 
       console.log('[GetWorkerShiftHistoryUseCase] Rango de fechas:', { dateFrom, dateTo });
 
