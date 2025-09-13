@@ -35,10 +35,8 @@ export class AuditRecordDto {
   @Type(() => Object)
   fraudValidation: {
     overallScore: number;
-    timeValidation: { valid: boolean; score: number; issues: string[] };
+    qrValidation: { valid: boolean; score: number; issues: string[] };
     locationValidation: { valid: boolean; score: number; issues: string[] };
-    deviceValidation: { valid: boolean; score: number; issues: string[] };
-    photoValidation: { valid: boolean; score: number; issues: string[] };
   };
 
   @Expose()

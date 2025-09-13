@@ -1,18 +1,18 @@
-import { 
-  Injectable, 
-  NotFoundException, 
+import {
+  Injectable,
+  NotFoundException,
   ConflictException,
   BadRequestException,
-  Logger 
+  Logger
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto, UpdateWorkerStatusDto } from './dto/update-worker.dto';
 import { QueryWorkersDto } from './dto/query-workers.dto';
-import { 
-  WorkerResponseDto, 
+import {
+  WorkerResponseDto,
   PaginationDto,
-  WorkersListResponseDto 
+  WorkersListResponseDto
 } from './dto/worker-response.dto';
 import { plainToClass } from 'class-transformer';
 import { Prisma } from '@prisma/client';
@@ -21,19 +21,19 @@ import { Prisma } from '@prisma/client';
 export class WorkersService {
   private readonly logger = new Logger(WorkersService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(query: QueryWorkersDto): Promise<WorkersListResponseDto> {
-    const { 
-      page = 1, 
-      limit = 10, 
-      search, 
-      status, 
-      depotId, 
-      sortBy = 'createdAt', 
-      sortOrder = 'desc' 
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status,
+      depotId,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
     } = query;
-    
+
     const skip = (page - 1) * limit;
 
     // Construir condiciones de filtro
@@ -381,10 +381,13 @@ export class WorkersService {
   async getShiftStatus(workerId: string): Promise<{
     isOnShift: boolean;
     currentShiftId?: string;
+    currentAttendanceId?: string;
     lastAction?: 'ENTRY' | 'EXIT';
     lastActionTimestamp?: Date;
   }> {
     try {
+      console.log('[WorkersService - Backend] 🔍 Obteniendo estado del turno para worker:', workerId);
+
       // Verificar que el worker existe
       const worker = await this.prisma.worker.findUnique({
         where: { id: workerId }
@@ -394,44 +397,72 @@ export class WorkersService {
         throw new NotFoundException(`Worker con ID ${workerId} no encontrado`);
       }
 
-      // Buscar el último registro de asistencia del trabajador
-      const lastAttendance = await this.prisma.attendance.findFirst({
+      // FIX CRÍTICO: Buscar registros de asistencia activos del trabajador ordenados por timestamp (no createdAt)
+      const recentAttendances = await this.prisma.attendanceRecord.findMany({
         where: {
-          workerId: workerId
+          attendance: {
+            workerId: workerId
+          }
         },
         orderBy: {
-          createdAt: 'desc'
+          timestamp: 'desc' // FIX: Usar timestamp del record, no createdAt
         },
+        take: 10, // Tomar más registros para análisis
         include: {
-          records: {
-            orderBy: {
-              timestamp: 'desc'
-            },
-            take: 1
+          attendance: {
+            select: {
+              id: true,
+              workerId: true
+            }
           }
         }
       });
 
-      if (!lastAttendance || !lastAttendance.records.length) {
-        // No hay registros, el trabajador está fuera de turno
+      console.log('[WorkersService - Backend] 📊 Registros encontrados:', {
+        count: recentAttendances.length,
+        records: recentAttendances.map(r => ({
+          id: r.id,
+          type: r.type,
+          timestamp: r.timestamp,
+          attendanceId: r.attendance.id
+        }))
+      });
+
+      if (!recentAttendances.length) {
+        console.log('[WorkersService - Backend] ❌ No hay registros - Worker está OFF_SHIFT');
         return {
           isOnShift: false
         };
       }
 
-      const lastRecord = lastAttendance.records[0];
-      
-      return {
-        isOnShift: lastRecord.type === 'ENTRY',
-        currentShiftId: lastRecord.type === 'ENTRY' ? lastAttendance.id : undefined,
+      // FIX CRÍTICO: Analizar la secuencia de ENTRY/EXIT para determinar estado actual
+      const lastRecord = recentAttendances[0];
+      const isCurrentlyOnShift = lastRecord.type === 'ENTRY';
+
+      console.log('[WorkersService - Backend] 🎯 Último registro:', {
+        id: lastRecord.id,
+        type: lastRecord.type,
+        timestamp: lastRecord.timestamp,
+        attendanceId: lastRecord.attendance.id,
+        isCurrentlyOnShift
+      });
+
+      const result = {
+        isOnShift: isCurrentlyOnShift,
+        currentShiftId: isCurrentlyOnShift ? lastRecord.attendance.id : undefined,
+        currentAttendanceId: isCurrentlyOnShift ? lastRecord.attendance.id : undefined,
         lastAction: lastRecord.type as 'ENTRY' | 'EXIT',
         lastActionTimestamp: lastRecord.timestamp
       };
+
+      console.log('[WorkersService - Backend] ✅ Estado calculado:', result);
+      return result;
 
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
+      console.error('[WorkersService - Backend] ❌ Error obteniendo estado del turno:', error);
       this.logger.error(`Error obteniendo estado del turno para worker ${workerId}: ${error.message}`);
       throw new BadRequestException('Error al obtener el estado del turno');
     }

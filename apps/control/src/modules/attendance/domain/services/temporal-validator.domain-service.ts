@@ -29,7 +29,7 @@ export class TemporalValidatorDomainService {
         isValid: false,
         isSuspicious: false,
         reason: isFromFuture ? FraudReason.QR_FROM_FUTURE : FraudReason.QR_EXPIRED,
-        message: `QR code ${isFromFuture ? 'from future' : 'expired'} by ${diffMinutes.toFixed(1)} minutes (tolerance: ${this.QR_TOLERANCE_MINUTES} min)`,
+        message: `Código QR ${isFromFuture ? 'del futuro' : 'expirado'} por ${diffMinutes.toFixed(1)} minutos (tolerancia: ${this.QR_TOLERANCE_MINUTES} min)`,
         severity: 30, // High severity for temporal violations
         details: {
           qrTimestamp: qrTimestamp.toISOString(),
@@ -58,7 +58,7 @@ export class TemporalValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'QR timing validation passed',
+      message: 'Validación de tiempo del QR exitosa',
     };
   }
 
@@ -88,7 +88,7 @@ export class TemporalValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Device time validation passed',
+      message: 'Validación de tiempo del dispositivo exitosa',
     };
   }
 
@@ -101,7 +101,7 @@ export class TemporalValidatorDomainService {
         isValid: true,
         isSuspicious: false,
         severity: 0,
-        message: 'First record for worker',
+        message: 'Primer registro del trabajador',
       };
     }
 
@@ -144,7 +144,7 @@ export class TemporalValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Record sequence validation passed',
+      message: 'Validación de secuencia de registros exitosa',
     };
   }
 
@@ -188,7 +188,7 @@ export class TemporalValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Working hours validation passed',
+      message: 'Validación de horario laboral exitosa',
     };
   }
 }

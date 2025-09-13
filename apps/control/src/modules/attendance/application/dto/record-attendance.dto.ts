@@ -82,7 +82,7 @@ export class RecordAttendanceDto {
   @IsNotEmpty()
   @IsString()
   @Matches(/^data:image\/(jpeg|jpg|png|gif|webp);base64,/, {
-    message: 'Photo must be a valid base64 image (jpeg, png, gif, webp)'
+    message: 'La foto debe ser una imagen base64 válida (jpeg, png, gif, webp)'
   })
   photo: string;
 

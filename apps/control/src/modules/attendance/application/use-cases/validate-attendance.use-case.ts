@@ -86,7 +86,7 @@ export class ValidateAttendanceUseCase {
         fraudScore: 100, // Máximo score por error
         validationErrors: [{
           level: 'system',
-          error: error instanceof Error ? error.message : 'Unknown validation error',
+          error: error instanceof Error ? error.message : 'Error de validación desconocido',
           severity: 'critical',
         }],
         processedAt: new Date().toISOString(),

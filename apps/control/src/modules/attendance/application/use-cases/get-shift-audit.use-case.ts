@@ -36,14 +36,28 @@ export class GetShiftAuditUseCase {
       const auditRecords: AuditRecordDto[] = await Promise.all(
         records.map(async (record) => {
           // Obtener datos de validación anti-fraude del registro
-          const fraudScore = record.fraudScore;
+          const storedFraudScore = record.fraudScore;
           const validationErrors = record.validationErrors ? JSON.parse(record.validationErrors) : [];
 
-          // Calcular scores de validación individuales (simplificado)
+          // Extraer TODAS las validaciones necesarias
           const timeValidation = this.extractValidationByType(validationErrors, 'temporal');
+          const cryptographicValidation = this.extractValidationByType(validationErrors, 'cryptographic');
           const locationValidation = this.extractValidationByType(validationErrors, 'geolocation');
-          const deviceValidation = this.extractValidationByType(validationErrors, 'device');
-          const photoValidation = this.extractValidationByType(validationErrors, 'photo');
+
+          // Combinar validaciones del QR en una sola categoría
+          const qrValidation = this.combineQRValidations(timeValidation, cryptographicValidation);
+
+          // Calcular fraud score real basado en las validaciones individuales
+          const calculatedFraudScore = this.calculateOverallFraudScore(
+            qrValidation.score,
+            locationValidation.score,
+            timeValidation.score
+          );
+
+          // Usar el fraud score almacenado si existe, sino el calculado
+          const finalFraudScore = storedFraudScore?.score ?? calculatedFraudScore;
+
+          console.log(`[GetShiftAudit] Record ${record.id}: stored=${storedFraudScore?.score}, calculated=${calculatedFraudScore}, final=${finalFraudScore}`);
 
           return {
             id: record.id,
@@ -66,11 +80,16 @@ export class GetShiftAuditUseCase {
               metadata: record.photoMetadata?.toJSON(),
             },
             fraudValidation: {
-              overallScore: fraudScore?.score || 0,
-              timeValidation,
-              locationValidation,
-              deviceValidation,
-              photoValidation,
+              // Convertir fraud score del backend (más alto = peor) a score del frontend (más alto = mejor)
+              overallScore: this.convertFraudScoreToQualityScore(finalFraudScore),
+              qrValidation: {
+                ...qrValidation,
+                score: this.convertFraudScoreToQualityScore(qrValidation.score),
+              },
+              locationValidation: {
+                ...locationValidation,
+                score: this.convertFraudScoreToQualityScore(locationValidation.score),
+              },
             },
             technical: {
               deviceId: record.deviceId,
@@ -93,27 +112,27 @@ export class GetShiftAuditUseCase {
         status = 'INCOMPLETE';
       }
 
-      // Calcular resumen de auditoría
+      // Calcular resumen de auditoría usando scores convertidos
       const overallRiskScore = auditRecords.length > 0
-        ? auditRecords.reduce((sum, r) => sum + r.fraudValidation.overallScore, 0) / auditRecords.length
-        : 0;
+        ? Math.round(auditRecords.reduce((sum, r) => sum + r.fraudValidation.overallScore, 0) / auditRecords.length)
+        : 100; // Score perfecto si no hay registros
 
+      // Ajustar lógica para scores convertidos (ahora más alto = mejor)
       const hasRedFlags = auditRecords.some(r =>
-        r.fraudValidation.overallScore > 70 ||
+        r.fraudValidation.overallScore < 50 || // Score bajo indica problemas
         r.status === 'REJECTED'
       );
 
       const needsManualReview = auditRecords.some(r =>
         r.status === 'SUSPICIOUS' ||
-        r.fraudValidation.overallScore > 50
+        r.fraudValidation.overallScore < 70 // Score bajo necesita revisión
       );
 
       const issuesFound = this.collectAllIssues(auditRecords);
       const validationsPerformed = auditRecords.reduce((sum, r) =>
-        sum + (r.fraudValidation.timeValidation.valid ? 1 : 0) +
-        (r.fraudValidation.locationValidation.valid ? 1 : 0) +
-        (r.fraudValidation.deviceValidation.valid ? 1 : 0) +
-        (r.fraudValidation.photoValidation.valid ? 1 : 0), 0
+        sum + (r.fraudValidation.qrValidation.valid ? 1 : 0) +
+        (r.fraudValidation.locationValidation.valid ? 1 : 0), 0
+        // ✅ Solo contar QR y location
       );
 
       const response: ShiftAuditResponseDto = {
@@ -141,30 +160,72 @@ export class GetShiftAuditUseCase {
     }
   }
 
+  /**
+   * Calcula el fraud score general basado en scores individuales
+   */
+  private calculateOverallFraudScore(qrScore: number, locationScore: number, timeScore: number): number {
+    // Promedio ponderado de los scores
+    const weights = { qr: 0.4, location: 0.4, time: 0.2 };
+
+    const weightedScore = (qrScore * weights.qr) +
+                         (locationScore * weights.location) +
+                         (timeScore * weights.time);
+
+    return Math.min(Math.round(weightedScore), 100);
+  }
+
+  /**
+   * Convierte fraud score del backend (más alto = peor) a quality score del frontend (más alto = mejor)
+   * Función más graduada y realista
+   */
+  private convertFraudScoreToQualityScore(fraudScore: number): number {
+    // Fraud score: 0 = perfecto, 100 = máximo fraude
+    // Quality score: 100 = perfecto, 0 = máximo problema
+
+    if (fraudScore === 0) return 100;   // Perfecto: sin problemas
+    if (fraudScore <= 5) return 95;     // Excelente: problemas mínimos
+    if (fraudScore <= 15) return 85;    // Muy bueno: problemas menores
+    if (fraudScore <= 30) return 75;    // Bueno: algunos problemas
+    if (fraudScore <= 50) return 60;    // Aceptable: varios problemas
+    if (fraudScore <= 70) return 45;    // Problemático: muchos problemas
+    if (fraudScore <= 85) return 25;    // Grave: problemas serios
+    return 10; // Crítico: problemas críticos
+  }
+
   private extractValidationByType(validationErrors: any[], type: string): { valid: boolean; score: number; issues: string[] } {
     const typeErrors = validationErrors.filter(error => error.level === type);
     const valid = typeErrors.length === 0;
-    const score = valid ? 0 : Math.min(typeErrors.length * 20, 100); // Score basado en cantidad de errores
-    const issues = typeErrors.map(error => error.error || error.message || 'Unknown issue');
 
-    return { valid, score, issues };
+    // Calcular fraud score basado en cantidad y severidad de errores
+    let fraudScore = 0;
+    if (!valid) {
+      // Score base por cantidad de errores (más conservador)
+      fraudScore = Math.min(typeErrors.length * 15, 60); // Base más baja
+
+      // Agregar severidad acumulada de todos los errores
+      const totalSeverity = typeErrors.reduce((sum, error) => {
+        return sum + (error.severity || 10); // Default 10 si no hay severidad
+      }, 0);
+
+      fraudScore = Math.min(fraudScore + totalSeverity, 100);
+    }
+
+    const issues = typeErrors.map(error => error.error || error.message || 'Problema desconocido');
+
+    console.log(`[GetShiftAudit] Validation for ${type}: ${typeErrors.length} errors, fraud score: ${fraudScore}`);
+
+    return { valid, score: fraudScore, issues }; // Retorna fraud score, se convertirá después
   }
 
   private collectAllIssues(records: AuditRecordDto[]): string[] {
     const issues: string[] = [];
 
     records.forEach(record => {
-      if (!record.fraudValidation.timeValidation.valid) {
-        issues.push(...record.fraudValidation.timeValidation.issues.map(issue => `Time: ${issue}`));
+      if (!record.fraudValidation.qrValidation.valid) {
+        issues.push(...record.fraudValidation.qrValidation.issues.map(issue => `QR: ${issue}`));
       }
       if (!record.fraudValidation.locationValidation.valid) {
         issues.push(...record.fraudValidation.locationValidation.issues.map(issue => `Location: ${issue}`));
-      }
-      if (!record.fraudValidation.deviceValidation.valid) {
-        issues.push(...record.fraudValidation.deviceValidation.issues.map(issue => `Device: ${issue}`));
-      }
-      if (!record.fraudValidation.photoValidation.valid) {
-        issues.push(...record.fraudValidation.photoValidation.issues.map(issue => `Photo: ${issue}`));
       }
       if (record.status === 'REJECTED') {
         issues.push(`Record ${record.id} was rejected`);
@@ -172,5 +233,19 @@ export class GetShiftAuditUseCase {
     });
 
     return [...new Set(issues)]; // Remover duplicados
+  }
+
+  /**
+   * Combinar validaciones temporales y criptográficas del QR en una sola validación
+   */
+  private combineQRValidations(
+    timeValidation: { valid: boolean; score: number; issues: string[] },
+    cryptographicValidation: { valid: boolean; score: number; issues: string[] }
+  ): { valid: boolean; score: number; issues: string[] } {
+    return {
+      valid: timeValidation.valid && cryptographicValidation.valid,
+      score: Math.max(timeValidation.score, cryptographicValidation.score),
+      issues: [...timeValidation.issues, ...cryptographicValidation.issues],
+    };
   }
 }

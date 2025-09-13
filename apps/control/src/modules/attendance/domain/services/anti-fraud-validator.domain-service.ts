@@ -70,7 +70,15 @@ export class AntiFraudValidatorDomainService {
   ) {}
 
   /**
-   * Ejecutar validación anti-fraude completa (5 niveles)
+   * Ejecutar validación anti-fraude completa
+   * 
+   * NIVELES ACTIVOS:
+   * ✅ Nivel 1: Validación Temporal (QR timing, device time, secuencias)
+   * ✅ Nivel 2: Validación Criptográfica (firma QR, autenticidad)
+   * ✅ Nivel 3: Validación Geográfica (GPS, geofence, velocidad)
+   * ❌ Nivel 4: Validación Fotográfica (DESHABILITADA)
+   * ✅ Nivel 5: Validación de Patrones (entrada/salida, historial)
+   *     - ❌ Validación de dispositivo (DESHABILITADA)
    */
   async validateRecord(
     data: AttendanceRecordValidationData,
@@ -171,7 +179,7 @@ export class AntiFraudValidatorDomainService {
           isValid: false,
           isSuspicious: false,
           reason: FraudReason.MALFORMED_QR_CODE,
-          message: 'QR code format is invalid - missing signature',
+          message: 'Formato de código QR inválido - falta la firma',
           severity: 30,
           details: {
             qrData: data.qrCodeUsed?.substring(0, 100) + '...',
@@ -193,7 +201,7 @@ export class AntiFraudValidatorDomainService {
           isValid: false,
           isSuspicious: false,
           reason: FraudReason.INVALID_QR_SIGNATURE,
-          message: 'QR code cryptographic signature is invalid',
+          message: 'La firma criptográfica del código QR es inválida',
           severity: 35,
           details: {
             qrSignature: qrSignature?.substring(0, 16) + '...',
@@ -206,7 +214,7 @@ export class AntiFraudValidatorDomainService {
           isValid: true,
           isSuspicious: false,
           severity: 0,
-          message: 'QR cryptographic validation passed',
+          message: 'Validación criptográfica del QR exitosa',
         });
       }
     } catch (error) {
@@ -214,10 +222,10 @@ export class AntiFraudValidatorDomainService {
         isValid: false,
         isSuspicious: false,
         reason: FraudReason.MALFORMED_QR_CODE,
-        message: 'QR code format is invalid or malformed',
+        message: 'Formato de código QR inválido o mal formado',
         severity: 30,
         details: {
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : 'Error desconocido',
           qrHash: data.qrCodeUsed,
         },
       });
@@ -274,7 +282,7 @@ export class AntiFraudValidatorDomainService {
         isValid: data.createdOffline || false,
         isSuspicious: true,
         reason: FraudReason.PHOTO_MISSING_METADATA,
-        message: 'No photo metadata provided',
+        message: 'No se proporcionaron metadatos de la foto',
         severity: data.createdOffline ? 5 : 25,
         details: {
           isOfflineRecord: data.createdOffline,
@@ -341,22 +349,22 @@ export class AntiFraudValidatorDomainService {
   ): Promise<ValidationResult[]> {
     const results: ValidationResult[] = [];
 
-    // Validar dispositivo registrado
-    if (context.deviceInfo) {
-      if (!context.deviceInfo.isRegistered) {
-        results.push({
-          isValid: false,
-          isSuspicious: true,
-          reason: FraudReason.UNKNOWN_DEVICE,
-          message: 'Device is not registered for this worker',
-          severity: 20,
-          details: {
-            deviceId: data.deviceId,
-            workerId: data.workerId,
-          },
-        });
-      }
-    }
+    // Validar dispositivo registrado - DESHABILITADO TEMPORALMENTE
+    // if (context.deviceInfo) {
+    //   if (!context.deviceInfo.isRegistered) {
+    //     results.push({
+    //       isValid: false,
+    //       isSuspicious: true,
+    //       reason: FraudReason.UNKNOWN_DEVICE,
+    //       message: 'Device is not registered for this worker',
+    //       severity: 20,
+    //       details: {
+    //         deviceId: data.deviceId,
+    //         workerId: data.workerId,
+    //       },
+    //     });
+    //   }
+    // }
 
     // Validar patrones de entrada/salida
     if (data.type === AttendanceType.ENTRY) {
@@ -389,7 +397,7 @@ export class AntiFraudValidatorDomainService {
         isValid: false,
         isSuspicious: false,
         reason: FraudReason.DUPLICATE_ENTRY,
-        message: 'Worker already has an entry record for today',
+        message: 'El trabajador ya tiene un registro de entrada para hoy',
         severity: 30,
         details: {
           lastEntryTime: context.lastRecord.timestamp.toISOString(),
@@ -407,7 +415,7 @@ export class AntiFraudValidatorDomainService {
         isValid: true,
         isSuspicious: true,
         reason: FraudReason.MISSING_EXIT_PREVIOUS_DAY,
-        message: 'Worker did not register exit yesterday',
+        message: 'El trabajador no registró salida ayer',
         severity: 15,
         details: {
           lastEntryTime: context.lastRecord.timestamp.toISOString(),
@@ -420,7 +428,7 @@ export class AntiFraudValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Entry pattern validation passed',
+      message: 'Validación de patrón de entrada exitosa',
     };
   }
 
@@ -440,7 +448,7 @@ export class AntiFraudValidatorDomainService {
         isValid: false,
         isSuspicious: true,
         reason: FraudReason.INVALID_SHIFT_SEQUENCE,
-        message: 'Exit without corresponding entry for today',
+        message: 'Salida sin entrada correspondiente para hoy',
         severity: 25,
         details: {
           exitTime: data.timestamp.toISOString(),
@@ -458,7 +466,7 @@ export class AntiFraudValidatorDomainService {
         isValid: false,
         isSuspicious: true,
         reason: FraudReason.UNUSUAL_WORK_HOURS,
-        message: `Very short shift: ${shiftHours.toFixed(2)} hours`,
+        message: `Turno muy corto: ${shiftHours.toFixed(2)} horas`,
         severity: 20,
         details: {
           shiftHours: shiftHours.toFixed(2),
@@ -473,7 +481,7 @@ export class AntiFraudValidatorDomainService {
         isValid: true,
         isSuspicious: true,
         reason: FraudReason.UNUSUAL_WORK_HOURS,
-        message: `Very long shift: ${shiftHours.toFixed(2)} hours`,
+        message: `Turno muy largo: ${shiftHours.toFixed(2)} horas`,
         severity: 15,
         details: {
           shiftHours: shiftHours.toFixed(2),
@@ -485,7 +493,7 @@ export class AntiFraudValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Exit pattern validation passed',
+      message: 'Validación de patrón de salida exitosa',
     };
   }
 
@@ -504,7 +512,7 @@ export class AntiFraudValidatorDomainService {
       return {
         isValid: true,
         isSuspicious: true,
-        message: `Worker has ${suspiciousCount} suspicious records in recent history`,
+        message: `El trabajador tiene ${suspiciousCount} registros sospechosos en su historial reciente`,
         severity: 10,
         details: {
           recentSuspiciousCount: suspiciousCount,
@@ -517,7 +525,7 @@ export class AntiFraudValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Attendance history validation passed',
+      message: 'Validación de historial de asistencia exitosa',
     };
   }
 
@@ -577,7 +585,7 @@ export class AntiFraudValidatorDomainService {
       .filter(Boolean);
 
     if (issues.length === 0) {
-      return 'All validations passed successfully';
+      return 'Todas las validaciones pasaron exitosamente';
     }
 
     const action = fraudScore.getRecommendedAction();

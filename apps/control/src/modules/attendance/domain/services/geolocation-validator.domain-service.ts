@@ -12,9 +12,14 @@ export interface DepotLocation {
 
 @Injectable()
 export class GeolocationValidatorDomainService {
-  private readonly MIN_GPS_ACCURACY = 50; // meters
-  private readonly MAX_TRAVEL_SPEED_KMH = 100; // km/h
-  private readonly SUSPICIOUS_SPEED_KMH = 60; // km/h
+  // Umbrales más realistas para GPS móvil
+  private readonly EXCELLENT_GPS_ACCURACY = 20; // meters - GPS excelente
+  private readonly GOOD_GPS_ACCURACY = 50; // meters - GPS bueno
+  private readonly ACCEPTABLE_GPS_ACCURACY = 150; // meters - GPS aceptable
+  private readonly POOR_GPS_ACCURACY = 300; // meters - GPS pobre pero usable
+
+  private readonly MAX_TRAVEL_SPEED_KMH = 120; // km/h - más realista para vehículos
+  private readonly SUSPICIOUS_SPEED_KMH = 80; // km/h - velocidad sospechosa
 
   /**
    * Nivel 3: Validación Geográfica
@@ -24,17 +29,20 @@ export class GeolocationValidatorDomainService {
     recordCoordinate: GPSCoordinate,
     depotLocation: DepotLocation,
   ): ValidationResult {
-    // First check GPS accuracy
-    if (!recordCoordinate.isAccuratEnough(this.MIN_GPS_ACCURACY)) {
+    // Validar precisión GPS con umbrales graduales
+    const accuracyValidation = this.validateGPSAccuracy(recordCoordinate);
+
+    // Si la precisión es muy mala (>300m), fallar la validación
+    if (recordCoordinate.accuracy > this.POOR_GPS_ACCURACY) {
       return {
         isValid: false,
-        isSuspicious: true,
+        isSuspicious: false,
         reason: FraudReason.GPS_ACCURACY_TOO_LOW,
-        message: `GPS accuracy too low: ${recordCoordinate.accuracy}m (required: <${this.MIN_GPS_ACCURACY}m)`,
-        severity: 20,
+        message: `Precisión GPS muy baja: ${recordCoordinate.accuracy}m (máximo aceptable: ${this.POOR_GPS_ACCURACY}m)`,
+        severity: 30,
         details: {
           accuracy: recordCoordinate.accuracy,
-          requiredAccuracy: this.MIN_GPS_ACCURACY,
+          maxAcceptable: this.POOR_GPS_ACCURACY,
           coordinate: recordCoordinate.toJSON(),
         },
       };
@@ -48,24 +56,30 @@ export class GeolocationValidatorDomainService {
       new Date(), // Timestamp doesn't matter for distance calculation
     );
 
-    // Check if within depot radius
+    // Check if within depot radius, ajustando por precisión GPS
     const distance = recordCoordinate.distanceTo(depotCoordinate);
-    
-    if (distance > depotLocation.radius) {
-      const severity = this.calculateLocationSeverity(distance, depotLocation.radius);
-      
+
+    // Tolerancia adicional basada en precisión GPS
+    const gpsToleranceBuffer = Math.min(recordCoordinate.accuracy * 0.5, 100);
+    const effectiveRadius = depotLocation.radius + gpsToleranceBuffer;
+
+    if (distance > effectiveRadius) {
+      const severity = this.calculateLocationSeverity(distance, effectiveRadius, recordCoordinate.accuracy);
+
       return {
         isValid: false,
         isSuspicious: severity < 25, // High severity = rejected, lower = suspicious
         reason: FraudReason.LOCATION_OUT_OF_RANGE,
-        message: `Location ${distance.toFixed(0)}m from depot (max: ${depotLocation.radius}m)`,
+        message: `Ubicación a ${distance.toFixed(0)}m del depósito (máximo: ${depotLocation.radius}m + ${gpsToleranceBuffer.toFixed(0)}m tolerancia GPS)`,
         severity,
         details: {
           distance: distance.toFixed(2),
-          maxDistance: depotLocation.radius,
+          baseRadius: depotLocation.radius,
+          gpsToleranceBuffer: gpsToleranceBuffer.toFixed(2),
+          effectiveRadius: effectiveRadius.toFixed(2),
           recordCoordinate: recordCoordinate.toJSON(),
           depotLocation,
-          exceedsBy: (distance - depotLocation.radius).toFixed(2),
+          exceedsBy: (distance - effectiveRadius).toFixed(2),
         },
       };
     }
@@ -75,7 +89,7 @@ export class GeolocationValidatorDomainService {
       return {
         isValid: true,
         isSuspicious: true,
-        message: `Location suspiciously close to depot center (${distance.toFixed(1)}m)`,
+        message: `Ubicación sospechosamente cerca del centro del depósito (${distance.toFixed(1)}m)`,
         severity: 5,
         details: {
           distance: distance.toFixed(2),
@@ -88,7 +102,7 @@ export class GeolocationValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Location validation passed',
+      message: 'Validación de ubicación exitosa',
       details: {
         distance: distance.toFixed(2),
         maxDistance: depotLocation.radius,
@@ -108,7 +122,7 @@ export class GeolocationValidatorDomainService {
         isValid: true,
         isSuspicious: false,
         severity: 0,
-        message: 'First location record for worker',
+        message: 'Primer registro de ubicación del trabajador',
       };
     }
 
@@ -120,7 +134,7 @@ export class GeolocationValidatorDomainService {
         isValid: false,
         isSuspicious: false,
         reason: FraudReason.IMPOSSIBLE_TRAVEL_SPEED,
-        message: `Impossible travel speed: ${speedKmh.toFixed(1)} km/h (max: ${this.MAX_TRAVEL_SPEED_KMH} km/h)`,
+        message: `Velocidad de viaje imposible: ${speedKmh.toFixed(1)} km/h (máximo: ${this.MAX_TRAVEL_SPEED_KMH} km/h)`,
         severity: 35,
         details: {
           speedKmh: speedKmh.toFixed(2),
@@ -138,7 +152,7 @@ export class GeolocationValidatorDomainService {
       return {
         isValid: true,
         isSuspicious: true,
-        message: `High travel speed: ${speedKmh.toFixed(1)} km/h`,
+        message: `Velocidad de viaje alta: ${speedKmh.toFixed(1)} km/h`,
         severity: 10,
         details: {
           speedKmh: speedKmh.toFixed(2),
@@ -152,7 +166,7 @@ export class GeolocationValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Travel speed validation passed',
+      message: 'Validación de velocidad de viaje exitosa',
       details: {
         speedKmh: speedKmh.toFixed(2),
       },
@@ -168,7 +182,7 @@ export class GeolocationValidatorDomainService {
       return {
         isValid: false,
         isSuspicious: false,
-        message: 'Coordinates at null island (0,0) - likely GPS error or spoofing',
+        message: 'Coordenadas en la isla nula (0,0) - probablemente error de GPS o falsificación',
         severity: 40,
         details: {
           coordinate: coordinate.toJSON(),
@@ -184,7 +198,7 @@ export class GeolocationValidatorDomainService {
       return {
         isValid: true,
         isSuspicious: true,
-        message: 'Coordinates have very low precision - might be manually entered',
+        message: 'Las coordenadas tienen muy baja precisión - podrían haber sido ingresadas manualmente',
         severity: 12,
         details: {
           coordinate: coordinate.toJSON(),
@@ -200,7 +214,7 @@ export class GeolocationValidatorDomainService {
       return {
         isValid: false,
         isSuspicious: false,
-        message: 'Coordinates outside valid geographic bounds',
+        message: 'Coordenadas fuera de los límites geográficos válidos',
         severity: 30,
         details: {
           coordinate: coordinate.toJSON(),
@@ -212,29 +226,82 @@ export class GeolocationValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Coordinate realism validation passed',
+      message: 'Validación de realismo de coordenadas exitosa',
     };
   }
 
-  private calculateLocationSeverity(distance: number, maxRadius: number): number {
-    const exceedsBy = distance - maxRadius;
-    const exceedsRatio = exceedsBy / maxRadius;
-    
-    // Base severity starts at 15
-    let severity = 15;
-    
+  /**
+   * Validar precisión GPS con umbrales graduales
+   */
+  private validateGPSAccuracy(coordinate: GPSCoordinate): ValidationResult {
+    const accuracy = coordinate.accuracy;
+
+    if (accuracy <= this.EXCELLENT_GPS_ACCURACY) {
+      return {
+        isValid: true,
+        isSuspicious: false,
+        severity: 0,
+        message: 'Precisión GPS excelente',
+        details: { accuracy, level: 'excellent' }
+      };
+    }
+
+    if (accuracy <= this.GOOD_GPS_ACCURACY) {
+      return {
+        isValid: true,
+        isSuspicious: false,
+        severity: 2,
+        message: 'Precisión GPS buena',
+        details: { accuracy, level: 'good' }
+      };
+    }
+
+    if (accuracy <= this.ACCEPTABLE_GPS_ACCURACY) {
+      return {
+        isValid: true,
+        isSuspicious: true,
+        severity: 8,
+        message: 'Precisión GPS aceptable',
+        details: { accuracy, level: 'acceptable' }
+      };
+    }
+
+    // Entre ACCEPTABLE y POOR - aún válido pero con mayor severidad
+    return {
+      isValid: true,
+      isSuspicious: true,
+      severity: 15,
+      message: 'Precisión GPS pobre pero usable',
+      details: { accuracy, level: 'poor' }
+    };
+  }
+
+  private calculateLocationSeverity(distance: number, effectiveRadius: number, gpsAccuracy: number): number {
+    const exceedsBy = distance - effectiveRadius;
+    const exceedsRatio = exceedsBy / effectiveRadius;
+
+    // Base severity ajustada por precisión GPS
+    let severity = 10;
+
+    // Agregar penalización por GPS impreciso
+    if (gpsAccuracy > this.ACCEPTABLE_GPS_ACCURACY) {
+      severity += 5;
+    }
+
     // Add points based on how far outside the radius
-    if (exceedsRatio > 2) { // More than 2x outside radius
-      severity += 25;
-    } else if (exceedsRatio > 1) { // More than 1x outside radius
+    if (exceedsRatio > 3) { // More than 3x outside effective radius
+      severity += 30;
+    } else if (exceedsRatio > 2) { // More than 2x outside effective radius
+      severity += 20;
+    } else if (exceedsRatio > 1) { // More than 1x outside effective radius
       severity += 15;
-    } else if (exceedsRatio > 0.5) { // More than 50% outside radius
+    } else if (exceedsRatio > 0.5) { // More than 50% outside effective radius
       severity += 10;
     } else {
       severity += 5;
     }
-    
-    return Math.min(severity, 40); // Cap at 40
+
+    return Math.min(severity, 45); // Cap at 45
   }
 
   private getDecimalPlaces(value: number): number {

@@ -433,9 +433,12 @@ export class AttendanceProcessingService {
           errors.push({
             level: category,
             error: result.message,
-            severity: result.severity > 25 ? 'critical' : result.severity > 10 ? 'error' : 'warning',
+            severity: result.severity || 0, // Mantener severidad numérica
+            severityLevel: result.severity > 25 ? 'critical' : result.severity > 10 ? 'error' : 'warning',
             reason: result.reason,
             details: result.details,
+            isValid: result.isValid || false,
+            isSuspicious: result.isSuspicious || false,
           });
         }
       });
