@@ -21,10 +21,10 @@ export class TemporalValidatorDomainService {
    */
   validateQRTiming(qrTimestamp: Date, currentTime: Date): ValidationResult {
     const diffMinutes = Math.abs(currentTime.getTime() - qrTimestamp.getTime()) / (1000 * 60);
-    
+
     if (diffMinutes > this.QR_TOLERANCE_MINUTES) {
       const isFromFuture = qrTimestamp.getTime() > currentTime.getTime();
-      
+
       return {
         isValid: false,
         isSuspicious: false,
@@ -67,7 +67,7 @@ export class TemporalValidatorDomainService {
    */
   validateDeviceTime(deviceTimestamp: Date, serverTime: Date): ValidationResult {
     const diffMinutes = Math.abs(serverTime.getTime() - deviceTimestamp.getTime()) / (1000 * 60);
-    
+
     if (diffMinutes > this.DEVICE_TIME_TOLERANCE_MINUTES) {
       return {
         isValid: false,
@@ -106,7 +106,7 @@ export class TemporalValidatorDomainService {
     }
 
     const diffMinutes = (currentRecordTime.getTime() - lastRecordTime.getTime()) / (1000 * 60);
-    
+
     // Check for records too close together (possible duplicate or rapid-fire attempt)
     if (diffMinutes < minIntervalMinutes) {
       return {
@@ -152,31 +152,34 @@ export class TemporalValidatorDomainService {
    * Validar horarios de trabajo normales
    */
   validateWorkingHours(recordTime: Date, isEntry: boolean): ValidationResult {
-    const hour = recordTime.getHours();
-    const minute = recordTime.getMinutes();
+    // Convertir a hora de Ecuador (UTC-5)
+    const ecuadorTime = new Date(recordTime.getTime() - (5 * 60 * 60 * 1000));
+    const hour = ecuadorTime.getHours();
+    const minute = ecuadorTime.getMinutes();
     const timeDecimal = hour + minute / 60;
 
     let expectedRange: { start: number; end: number; name: string };
-    
+
     if (isEntry) {
-      expectedRange = { start: 6, end: 10, name: 'entry' }; // 6:00 AM - 10:00 AM
+      expectedRange = { start: 21, end: 23, name: 'entry' }; // 9:00 PM - 11:00 PM Ecuador (turnos nocturnos)
     } else {
-      expectedRange = { start: 14, end: 20, name: 'exit' }; // 2:00 PM - 8:00 PM
+      expectedRange = { start: 6, end: 8, name: 'exit' }; // 6:00 AM - 8:00 AM Ecuador (turnos nocturnos)
     }
 
     // Check if outside normal hours
     if (timeDecimal < expectedRange.start || timeDecimal > expectedRange.end) {
-      const isVeryUnusual = (isEntry && (timeDecimal < 4 || timeDecimal > 12)) || 
-                           (!isEntry && (timeDecimal < 12 || timeDecimal > 22));
-      
+      const isVeryUnusual = (isEntry && (timeDecimal < 19 || timeDecimal > 24)) ||
+        (!isEntry && (timeDecimal < 4 || timeDecimal > 10));
+
       return {
         isValid: true,
         isSuspicious: true,
         reason: FraudReason.UNUSUAL_WORK_HOURS,
-        message: `${expectedRange.name} time outside normal hours (${recordTime.toLocaleTimeString()})`,
+        message: `${expectedRange.name} time outside normal hours (${ecuadorTime.toLocaleTimeString('es-EC')})`,
         severity: isVeryUnusual ? 15 : 8,
         details: {
           recordTime: recordTime.toISOString(),
+          ecuadorTime: ecuadorTime.toISOString(),
           hour: timeDecimal.toFixed(2),
           expectedRange,
           isVeryUnusual,
