@@ -35,6 +35,10 @@ export class GenerateWorkerLoginQRUseCase {
     console.log('[DEBUG] Backend - Primeros 10 caracteres:', qrToken.getValue().substring(0, 10));
     console.log('[DEBUG] Backend - Últimos 10 caracteres:', qrToken.getValue().substring(qrToken.getValue().length - 10));
 
+    // 4.5. Generar código de 6 dígitos
+    const shortCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('[DEBUG] Backend - Generando short code:', shortCode);
+
     // 5. Calcular expiración
     const expiresAt = dto.expiresInMinutes 
       ? new Date(Date.now() + dto.expiresInMinutes * 60 * 1000)
@@ -45,6 +49,7 @@ export class GenerateWorkerLoginQRUseCase {
     // 6. Crear registro en BD
     const loginQR = await this.workerAuthRepository.createLoginQR({
       qrToken: qrToken.getValue(),
+      shortCode,
       workerId: dto.workerId,
       adminId,
       expiresAt,
@@ -62,6 +67,7 @@ export class GenerateWorkerLoginQRUseCase {
 
     return {
       qrToken: loginQR.qrToken.getValue(),
+      shortCode: loginQR.shortCode,
       workerId: dto.workerId,
       worker: {
         employeeId: worker.employeeId,

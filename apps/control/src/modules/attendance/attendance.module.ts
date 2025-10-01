@@ -28,12 +28,13 @@ import { AttendanceRepository } from './infrastructure/repositories/attendance.r
 
 // External Dependencies (assuming PrismaService is available)
 import { PrismaService } from '../../prisma.service'; // Adjust path as needed
-import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
+import { ExceptionCodesModule } from '../exception-codes/exception-codes.module';
 import { WorkersModule } from '../workers/workers.module';
 import { AuthModule } from '../auth/auth.module';
+import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
 
 @Module({
-  imports: [WorkerAuthModule, WorkersModule, AuthModule],
+  imports: [ExceptionCodesModule, WorkersModule, AuthModule, WorkerAuthModule],
   controllers: [AttendanceController],
   providers: [
     // External dependencies

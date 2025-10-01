@@ -16,7 +16,8 @@ export interface CreateAttendanceRecordData {
   type: AttendanceType;
   timestamp: Date;
   status: RecordStatus;
-  qrCodeUsed: string;
+  qrCodeUsed?: string;
+  exceptionCode?: string;
   photoPath: string;
   photoMetadata?: string | null;
   latitude?: number | null;

@@ -10,6 +10,7 @@ export interface CreateLoginQRParams {
   adminId: string;
   expiresAt?: Date;
   status: LoginQRStatus;
+  shortCode?: string;
 }
 
 export interface CreateDeviceParams {
@@ -35,6 +36,7 @@ export interface WorkerAuthRepositoryInterface {
   // QR operations
   createLoginQR(params: CreateLoginQRParams): Promise<LoginQREntity>;
   findQRByToken(qrToken: string): Promise<LoginQREntity | null>;
+  findQRByShortCode(shortCode: string): Promise<LoginQREntity | null>;
   updateQRStatus(qrId: string, status: LoginQRStatus, usedAt?: Date): Promise<void>;
   expireWorkerQRs(workerId: string): Promise<void>;
   getAllActiveQRs(): Promise<any[]>; // Para debugging

@@ -10,8 +10,10 @@ import {
   Request,
   HttpCode,
   HttpStatus,
-  ValidationPipe
+  ValidationPipe,
+  UseInterceptors
 } from '@nestjs/common';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { WorkerAuthService } from './application/services/worker-auth.service';
 import { SessionManagerService } from './application/services/session-manager.service';
 import { GenerateLoginQRDto } from './application/dto/generate-login-qr.dto';
@@ -23,6 +25,7 @@ import { WorkerAuthGuard } from './guards/worker-auth.guard';
 import { WorkersService } from '../workers/workers.service';
 
 @Controller('worker-auth')
+@UseInterceptors(ClassSerializerInterceptor)
 export class WorkerAuthController {
   constructor(
     private readonly workerAuthService: WorkerAuthService,
@@ -40,7 +43,12 @@ export class WorkerAuthController {
     @Body(ValidationPipe) dto: GenerateLoginQRDto,
     @Request() req
   ) {
-    return this.workerAuthService.generateLoginQR(dto, req.user.id);
+    const result = await this.workerAuthService.generateLoginQR(dto, req.user.id);
+    
+    console.log('[DEBUG] Controller - Respuesta completa del servicio:', JSON.stringify(result, null, 2));
+    console.log('[DEBUG] Controller - ShortCode en respuesta:', result.data?.shortCode);
+    
+    return result;
   }
 
   @Get('qr-status/:qrToken')

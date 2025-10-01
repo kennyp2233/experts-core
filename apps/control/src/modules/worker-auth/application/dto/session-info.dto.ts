@@ -55,14 +55,26 @@ export class SessionInfoDto {
 }
 
 export class LoginQRResponseDto {
+  @Expose()
   qrToken: string;
+  
+  @Expose()
+  shortCode?: string;
+  
+  @Expose()
   workerId: string;
+  
+  @Expose()
   worker?: {
     employeeId: string;
     firstName: string;
     lastName: string;
   };
+  
+  @Expose()
   expiresAt?: Date;
+  
+  @Expose()
   generatedAt: Date;
 }
 

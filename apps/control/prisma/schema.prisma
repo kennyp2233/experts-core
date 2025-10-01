@@ -36,6 +36,7 @@ model Admin {
 
     // QRs de login generados por este admin
     generatedLoginQRs WorkerLoginQR[]
+    exceptionCodes    ExceptionCode[] // Códigos de excepción generados por este admin
 
     @@map("admins")
 }
@@ -43,6 +44,7 @@ model Admin {
 model WorkerLoginQR {
     id          String    @id @default(cuid())
     qrToken     String    @unique // Token único para el QR
+    shortCode   String?   @unique // Código de 6 dígitos alternativo
     status      String    @default("PENDING") // PENDING | USED | EXPIRED
     expiresAt   DateTime? // Opcional, si quieres que expiren
     usedAt      DateTime?
@@ -108,6 +110,7 @@ model Worker {
     attendances       Attendance[]
     attendanceRecords AttendanceRecord[]
     loginQRs          WorkerLoginQR[] // QRs generados para este worker
+    exceptionCodes    ExceptionCode[] // Códigos de excepción generados para este worker
 
     @@map("workers")
 }
@@ -172,7 +175,8 @@ model AttendanceRecord {
     status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | SUSPICIOUS
 
     // Validaciones anti-fraude
-    qrCodeUsed    String  // Hash del código QR de asistencia utilizado
+    qrCodeUsed    String?  // Hash del código QR de asistencia utilizado (opcional para códigos de excepción)
+    exceptionCode String?  // Código de excepción utilizado (opcional)
     photoPath     String  // Path de la selfie tomada
     photoMetadata String? // Metadatos de la foto (JSON)
     latitude      Float?  // GPS - Latitud
@@ -216,4 +220,22 @@ model AttendanceQRCode {
     depot   Depot  @relation(fields: [depotId], references: [id])
 
     @@map("attendance_qr_codes")
+}
+
+model ExceptionCode {
+    id        String   @id @default(cuid())
+    code      String   @unique // Código de 6 dígitos
+    status    String   @default("PENDING") // PENDING | USED | EXPIRED
+    expiresAt DateTime // Cuándo expira el código
+    usedAt    DateTime?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relaciones
+    workerId String
+    worker   Worker @relation(fields: [workerId], references: [id])
+    adminId  String
+    admin    Admin  @relation(fields: [adminId], references: [id])
+
+    @@map("exception_codes")
 }

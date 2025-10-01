@@ -15,7 +15,8 @@ import { CryptoUtils } from '../../../../utils/crypto.utils';
 export interface AttendanceRecordValidationData {
   type: AttendanceType;
   timestamp: Date;
-  qrCodeUsed: string;
+  qrCodeUsed?: string;
+  exceptionCodeUsed?: string;
   photoPath: string;
   photoMetadata?: {
     timestamp: string;
@@ -134,10 +135,20 @@ export class AntiFraudValidatorDomainService {
     const results: ValidationResult[] = [];
     const currentTime = new Date();
 
-    // Validar timing del QR (asumiendo que el QR contiene timestamp)
-    const qrTimestamp = this.extractTimestampFromQR(data.qrCodeUsed);
-    if (qrTimestamp) {
-      results.push(this.temporalValidator.validateQRTiming(qrTimestamp, currentTime));
+    // Validar timing del QR solo si se usó QR (no código de excepción)
+    if (data.qrCodeUsed) {
+      const qrTimestamp = this.extractTimestampFromQR(data.qrCodeUsed);
+      if (qrTimestamp) {
+        results.push(this.temporalValidator.validateQRTiming(qrTimestamp, currentTime));
+      }
+    } else if (data.exceptionCodeUsed) {
+      // Para códigos de excepción, agregar una validación temporal básica
+      results.push({
+        isValid: true,
+        isSuspicious: false,
+        severity: 0,
+        message: 'Registro usando código de excepción - validación temporal limitada',
+      });
     }
 
     // Validar tiempo del dispositivo
@@ -168,6 +179,32 @@ export class AntiFraudValidatorDomainService {
     context: ValidationContext,
   ): Promise<ValidationResult[]> {
     const results: ValidationResult[] = [];
+
+    // Si se usó código de excepción, saltar validación criptográfica del QR
+    if (data.exceptionCodeUsed) {
+      results.push({
+        isValid: true,
+        isSuspicious: false,
+        severity: 0,
+        message: 'Registro usando código de excepción - validación criptográfica omitida',
+      });
+      return results;
+    }
+
+    // Si no hay qrCodeUsed, es un error
+    if (!data.qrCodeUsed) {
+      results.push({
+        isValid: false,
+        isSuspicious: false,
+        reason: FraudReason.MALFORMED_QR_CODE,
+        message: 'No se proporcionó código QR ni código de excepción',
+        severity: 40,
+        details: {
+          hasExceptionCode: !!data.exceptionCodeUsed,
+        },
+      });
+      return results;
+    }
 
     try {
       // Extraer timestamp y signature del QR JSON

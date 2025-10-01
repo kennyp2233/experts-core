@@ -4,6 +4,7 @@ import { WorkerLoginDto } from '../dto/worker-login.dto';
 import { SessionInfoDto } from '../dto/session-info.dto';
 import { SessionToken } from '../../domain/value-objects/session-token.vo';
 import { LoginQRStatus } from '../../domain/enums/login-qr-status.enum';
+import { LoginQREntity } from '../../domain/entities/login-qr.entity';
 import { plainToClass } from 'class-transformer';
 
 @Injectable()
@@ -14,8 +15,8 @@ export class AuthenticateWorkerUseCase {
   ) {}
 
   async execute(dto: WorkerLoginDto): Promise<SessionInfoDto> {
-    // 1. Validar QR
-    const qr = await this.validateQRToken(dto.qrToken);
+    // 1. Validar QR o short code
+    const qr = await this.validateAuthToken(dto.authToken);
     
     // 2. Buscar o crear device
     const device = await this.findOrCreateDevice(dto.deviceInfo, qr.workerId);
@@ -41,16 +42,26 @@ export class AuthenticateWorkerUseCase {
     return this.buildSessionInfo(sessionToken.getValue(), updatedWorker, device);
   }
 
-  private async validateQRToken(qrToken: string) {
-    console.log('[DEBUG] Backend - Buscando QR token:', qrToken);
-    console.log('[DEBUG] Backend - Longitud del token:', qrToken.length);
+  private async validateAuthToken(authToken: string) {
+    console.log('[DEBUG] Backend - Buscando auth token:', authToken);
+    console.log('[DEBUG] Backend - Longitud del token:', authToken.length);
     
-    const qr = await this.workerAuthRepository.findQRByToken(qrToken);
+    let qr: LoginQREntity | null = null;
+
+    if (authToken.length === 64 && /^[a-f0-9]{64}$/.test(authToken)) {
+      // Es un QR token
+      qr = await this.workerAuthRepository.findQRByToken(authToken);
+    } else if (authToken.length === 6 && /^\d{6}$/.test(authToken)) {
+      // Es un short code
+      qr = await this.workerAuthRepository.findQRByShortCode(authToken);
+    } else {
+      throw new BadRequestException('Formato de token de autenticación inválido');
+    }
     
     if (!qr) {
-      console.log('[DEBUG] Backend - QR no encontrado en la base de datos');
+      console.log('[DEBUG] Backend - Token no encontrado en la base de datos');
       
-      // Buscar QRs similares para debugging
+      // Buscar tokens similares para debugging
       try {
         const allQRs = await this.workerAuthRepository.getAllActiveQRs();
         console.log('[DEBUG] Backend - QRs activos en la base de datos:', allQRs.length);
@@ -69,22 +80,23 @@ export class AuthenticateWorkerUseCase {
         console.log('[DEBUG] Backend - Error obteniendo QRs activos:', error);
       }
       
-      throw new BadRequestException('Código QR no encontrado');
+      throw new BadRequestException('Token de autenticación no encontrado');
     }
     
-    console.log('[DEBUG] Backend - QR encontrado:', {
+    console.log('[DEBUG] Backend - Token encontrado:', {
       id: qr.id,
       workerId: qr.workerId,
       status: qr.status,
       createdAt: qr.createdAt,
-      expiresAt: qr.expiresAt
+      expiresAt: qr.expiresAt,
+      isShortCode: !!qr.shortCode
     });
     
     if (!qr.canBeUsed()) {
       if (qr.isExpired()) {
-        throw new BadRequestException('Código QR ha expirado');
+        throw new BadRequestException('El token de autenticación ha expirado');
       }
-      throw new BadRequestException('Código QR ya fue utilizado o no está disponible');
+      throw new BadRequestException('El token de autenticación ya fue utilizado o no está disponible');
     }
     
     return qr;

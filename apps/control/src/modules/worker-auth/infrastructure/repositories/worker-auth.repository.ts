@@ -54,6 +54,7 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
     const qr = await this.prisma.workerLoginQR.create({
       data: {
         qrToken: params.qrToken,
+        shortCode: params.shortCode,
         workerId: params.workerId,
         adminId: params.adminId,
         status: params.status,
@@ -75,12 +76,13 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
       id: qr.id,
       qrToken: qr.qrToken,
       qrTokenLength: qr.qrToken.length,
+      shortCode: qr.shortCode,
       workerId: qr.workerId,
       adminId: qr.adminId,
       status: qr.status
     });
 
-    return new LoginQREntity(
+    const entity = new LoginQREntity(
       qr.id,
       QRLoginToken.fromValue(qr.qrToken),
       qr.workerId,
@@ -89,8 +91,19 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
       qr.createdAt,
       qr.expiresAt || undefined,
       qr.usedAt || undefined,
-      qr.updatedAt
+      qr.updatedAt,
+      qr.shortCode || undefined
     );
+
+    console.log('[DEBUG] Backend - Entidad LoginQREntity creada:', {
+      id: entity.id,
+      qrToken: entity.qrToken.getValue(),
+      shortCode: entity.shortCode,
+      workerId: entity.workerId,
+      status: entity.status
+    });
+
+    return entity;
   }
 
   async findQRByToken(qrToken: string): Promise<LoginQREntity | null> {
@@ -122,7 +135,42 @@ export class WorkerAuthRepository implements WorkerAuthRepositoryInterface {
       qr.createdAt,
       qr.expiresAt || undefined,
       qr.usedAt || undefined,
-      qr.updatedAt
+      qr.updatedAt,
+      qr.shortCode || undefined
+    );
+  }
+
+  async findQRByShortCode(shortCode: string): Promise<LoginQREntity | null> {
+    const qr = await this.prisma.workerLoginQR.findUnique({
+      where: { shortCode },
+      include: {
+        worker: {
+          select: {
+            id: true,
+            employeeId: true,
+            firstName: true,
+            lastName: true,
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!qr) {
+      return null;
+    }
+
+    return new LoginQREntity(
+      qr.id,
+      QRLoginToken.fromValue(qr.qrToken),
+      qr.workerId,
+      qr.adminId,
+      qr.status as LoginQRStatus,
+      qr.createdAt,
+      qr.expiresAt || undefined,
+      qr.usedAt || undefined,
+      qr.updatedAt,
+      qr.shortCode || undefined
     );
   }
 

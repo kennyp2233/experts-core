@@ -28,8 +28,8 @@ export class BasicDeviceInfoDto {
 
 export class WorkerLoginDto {
   @IsString()
-  @IsNotEmpty({ message: 'QR Token es requerido' })
-  qrToken: string;
+  @IsNotEmpty({ message: 'Auth Token es requerido' })
+  authToken: string;
 
   @ValidateNested()
   @Type(() => BasicDeviceInfoDto)

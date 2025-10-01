@@ -9,7 +9,8 @@ export interface AttendanceRecordProps {
   type: AttendanceType;
   timestamp: Date;
   status: RecordStatus;
-  qrCodeUsed: string;
+  qrCodeUsed?: string;
+  exceptionCode?: string;
   photoPath: string;
   photoMetadata: PhotoMetadata | null;
   gpsCoordinate: GPSCoordinate | null;
@@ -57,8 +58,9 @@ export class AttendanceRecordEntity {
       throw new Error('Attendance ID is required');
     }
 
-    if (!this.props.qrCodeUsed) {
-      throw new Error('QR code is required');
+    // Validar que al menos se proporcione qrCodeUsed o exceptionCode
+    if (!this.props.qrCodeUsed && !this.props.exceptionCode) {
+      throw new Error('Either QR code or exception code is required');
     }
 
     if (!this.props.photoPath) {
@@ -89,8 +91,12 @@ export class AttendanceRecordEntity {
     return this.props.status;
   }
 
-  get qrCodeUsed(): string {
+  get qrCodeUsed(): string | undefined {
     return this.props.qrCodeUsed;
+  }
+
+  get exceptionCode(): string | undefined {
+    return this.props.exceptionCode;
   }
 
   get photoPath(): string {
@@ -295,6 +301,7 @@ export class AttendanceRecordEntity {
       timestamp: this.props.timestamp.toISOString(),
       status: this.props.status,
       qrCodeUsed: this.props.qrCodeUsed,
+      exceptionCode: this.props.exceptionCode,
       photoPath: this.props.photoPath,
       photoMetadata: this.props.photoMetadata?.toJSON() || null,
       gpsCoordinate: this.props.gpsCoordinate?.toJSON() || null,

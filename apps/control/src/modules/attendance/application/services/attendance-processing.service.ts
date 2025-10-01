@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { AntiFraudValidatorDomainService, ValidationContext } from '../../domain/services/anti-fraud-validator.domain-service';
 import { AttendanceType } from '../../domain/enums/attendance-type.enum';
@@ -7,6 +7,7 @@ import { RecordAttendanceDto } from '../dto/record-attendance.dto';
 import { AttendanceResponseDto } from '../dto/attendance-response.dto';
 import { PrismaService } from '../../../../prisma.service';
 import { PhotoStorageService } from '../../infrastructure/services/photo-storage.service';
+import { ExceptionCodeService } from '../../../exception-codes/application/services/exception-code.service';
 
 @Injectable()
 export class AttendanceProcessingService {
@@ -15,6 +16,8 @@ export class AttendanceProcessingService {
     private readonly antiFraudValidator: AntiFraudValidatorDomainService,
     private readonly prisma: PrismaService,
     private readonly photoStorageService: PhotoStorageService,
+    @Inject(forwardRef(() => ExceptionCodeService))
+    private readonly exceptionCodeService: ExceptionCodeService,
   ) {}
 
   async processAttendanceRecord(
@@ -40,8 +43,41 @@ export class AttendanceProcessingService {
     this.validateWorker(workerId);
     console.log('[AttendanceProcessingService] ✅ Worker válido');
 
-    // 2. Preparar contexto para validación
-    console.log('[AttendanceProcessingService] Paso 2: Construyendo contexto de validación...');
+    // 2. Validar código de excepción si se proporcionó
+    console.log('[AttendanceProcessingService] Paso 2: Validando código de excepción...');
+    let exceptionCodeValidation: { isValid: boolean; workerId?: string; error?: string } | null = null;
+    
+    if (dto.exceptionCode) {
+      console.log('[AttendanceProcessingService] Validando código de excepción:', dto.exceptionCode);
+      try {
+        const validationResult = await this.exceptionCodeService.validateExceptionCode({
+          code: dto.exceptionCode
+        });
+        
+        exceptionCodeValidation = {
+          isValid: validationResult.data.isValid,
+          workerId: validationResult.data.exceptionCode?.workerId,
+          error: validationResult.data.error
+        };
+        
+        console.log('[AttendanceProcessingService] Resultado validación código de excepción:', exceptionCodeValidation);
+        
+        // Si el código es inválido, marcar como fraudulento pero permitir el registro
+        if (!exceptionCodeValidation.isValid) {
+          console.log('[AttendanceProcessingService] Código de excepción inválido - marcando como fraudulento');
+        }
+      } catch (error) {
+        console.error('[AttendanceProcessingService] Error validando código de excepción:', error);
+        exceptionCodeValidation = {
+          isValid: false,
+          error: 'Error interno validando código de excepción'
+        };
+      }
+    }
+    console.log('[AttendanceProcessingService] ✅ Validación de código de excepción completada');
+
+    // 3. Preparar contexto para validación
+    console.log('[AttendanceProcessingService] Paso 3: Construyendo contexto de validación...');
     const context = await this.buildValidationContext(workerId, dto, depotId);
     console.log('[AttendanceProcessingService] ✅ Contexto construido:', {
       depotId: context.depot.id,
@@ -347,6 +383,7 @@ export class AttendanceProcessingService {
       type,
       timestamp: new Date(dto.timestamp),
       qrCodeUsed: dto.qrCodeUsed,
+      exceptionCodeUsed: dto.exceptionCode,
       photoPath: dto.photo, // Usar dto.photo para validaciones (pero se procesará después)
       photoMetadata: dto.photoMetadata,
       location: dto.location,
@@ -370,6 +407,7 @@ export class AttendanceProcessingService {
       timestamp: new Date(dto.timestamp),
       status: validationResult.overallStatus,
       qrCodeUsed: dto.qrCodeUsed,
+      exceptionCode: dto.exceptionCode,
       photoPath: photoPath,
       photoMetadata: dto.photoMetadata ? JSON.stringify(dto.photoMetadata) : null,
       latitude: dto.location.latitude,

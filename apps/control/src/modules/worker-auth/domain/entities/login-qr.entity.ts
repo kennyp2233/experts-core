@@ -11,8 +11,17 @@ export class LoginQREntity {
     public readonly createdAt: Date,
     public readonly expiresAt?: Date,
     public readonly usedAt?: Date,
-    public readonly updatedAt?: Date
-  ) {}
+    public readonly updatedAt?: Date,
+    public readonly shortCode?: string
+  ) {
+    this.validateShortCode();
+  }
+
+  private validateShortCode(): void {
+    if (this.shortCode && (!/^\d{6}$/.test(this.shortCode))) {
+      throw new Error('Short code must be exactly 6 digits');
+    }
+  }
 
   isExpired(): boolean {
     if (!this.expiresAt) {
@@ -43,7 +52,8 @@ export class LoginQREntity {
       this.createdAt,
       this.expiresAt,
       new Date(),
-      new Date()
+      new Date(),
+      this.shortCode
     );
   }
 
@@ -57,7 +67,8 @@ export class LoginQREntity {
       this.createdAt,
       this.expiresAt,
       this.usedAt,
-      new Date()
+      new Date(),
+      this.shortCode
     );
   }
 }

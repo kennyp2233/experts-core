@@ -26,6 +26,9 @@ export class WorkerAuthService {
   async generateLoginQR(dto: GenerateLoginQRDto, adminId: string): Promise<QRGenerateResponseDto> {
     const result = await this.generateQRUseCase.execute(dto, adminId);
     
+    console.log('[DEBUG] Service - Resultado del use case:', JSON.stringify(result, null, 2));
+    console.log('[DEBUG] Service - ShortCode en resultado:', result.shortCode);
+    
     return {
       success: true,
       data: result,

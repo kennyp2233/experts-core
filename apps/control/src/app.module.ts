@@ -7,10 +7,11 @@ import { DepotsModule } from './modules/depots/depots.module';
 import { WorkerAuthModule } from './modules/worker-auth/worker-auth.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { MediaModule } from './modules/media/media.module';
+import { ExceptionCodesModule } from './modules/exception-codes/exception-codes.module';
 import { PrismaService } from './prisma.service';
 
 @Module({
-  imports: [AuthModule, WorkersModule, DepotsModule, WorkerAuthModule, AttendanceModule, MediaModule],
+  imports: [AuthModule, WorkersModule, DepotsModule, WorkerAuthModule, AttendanceModule, MediaModule, ExceptionCodesModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })

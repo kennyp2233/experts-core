@@ -11,6 +11,7 @@ import {
   ValidateNested,
   IsObject,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ATTENDANCE_TYPE_VALUES } from '../../domain/enums/attendance-type.enum';
@@ -75,9 +76,18 @@ export class RecordAttendanceDto {
   @IsIn(ATTENDANCE_TYPE_VALUES)
   type: string;
 
-  @IsNotEmpty()
+  @ValidateIf(o => !o.exceptionCode)
+  @IsNotEmpty({ message: 'Se requiere qrCodeUsed o exceptionCode' })
   @IsString()
-  qrCodeUsed: string;
+  qrCodeUsed?: string;
+
+  @ValidateIf(o => !o.qrCodeUsed)
+  @IsNotEmpty({ message: 'Se requiere qrCodeUsed o exceptionCode' })
+  @IsString()
+  @Matches(/^\d{6}$/, {
+    message: 'El código de excepción debe ser exactamente 6 dígitos'
+  })
+  exceptionCode?: string;
 
   @IsNotEmpty()
   @IsString()
