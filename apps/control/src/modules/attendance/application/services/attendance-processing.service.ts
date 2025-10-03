@@ -62,16 +62,15 @@ export class AttendanceProcessingService {
         
         console.log('[AttendanceProcessingService] Resultado validación código de excepción:', exceptionCodeValidation);
         
-        // Si el código es inválido, marcar como fraudulento pero permitir el registro
+        // Si el código es inválido, rechazar el registro inmediatamente
         if (!exceptionCodeValidation.isValid) {
-          console.log('[AttendanceProcessingService] Código de excepción inválido - marcando como fraudulento');
+          console.log('[AttendanceProcessingService] ❌ Código de excepción inválido - rechazando registro');
+          throw new Error(exceptionCodeValidation.error || 'Código de excepción inválido o expirado');
         }
       } catch (error) {
-        console.error('[AttendanceProcessingService] Error validando código de excepción:', error);
-        exceptionCodeValidation = {
-          isValid: false,
-          error: 'Error interno validando código de excepción'
-        };
+        console.error('[AttendanceProcessingService] ❌ Error validando código de excepción:', error);
+        // Si hay error validando el código, rechazar el registro
+        throw error;
       }
     }
     console.log('[AttendanceProcessingService] ✅ Validación de código de excepción completada');
