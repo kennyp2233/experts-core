@@ -276,6 +276,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
           longitude: data.longitude || null,
           accuracy: data.accuracy || null,
           validationErrors: data.validationErrors || null,
+          fraudScore: data.fraudScore || null,
           processedAt: data.processedAt || null,
           createdOffline: data.createdOffline,
           syncedAt: data.syncedAt || null,
@@ -699,21 +700,30 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     let photoMetadata: PhotoMetadata | null = null;
     if (record.photoMetadata) {
       try {
-        photoMetadata = PhotoMetadata.fromJSON(record.photoMetadata);
+        // Skip validation for historical data (may have incomplete metadata)
+        photoMetadata = PhotoMetadata.fromJSON(record.photoMetadata, true);
       } catch (error) {
         console.warn('Failed to parse photo metadata:', error);
       }
     }
 
-    // Parse fraud score if available
+    // Parse fraud score if available - primero intentar usar el campo directo
     let fraudScore: FraudScore | null = null;
-    if (record.validationErrors) {
+    if (record.fraudScore !== null && record.fraudScore !== undefined) {
+      // Usar el fraudScore guardado directamente
+      fraudScore = FraudScore.createFromViolations([{
+        reason: 'VALIDATION_FAILURE' as any, // Placeholder
+        severity: record.fraudScore,
+        details: {}
+      }]);
+    } else if (record.validationErrors) {
+      // Fallback: parsear desde validationErrors (para registros antiguos)
       try {
         const errors = JSON.parse(record.validationErrors);
         const violations = errors.map((error: any) => ({
           reason: error.reason as FraudReason,
-          severity: error.severity || 0,
-          details: error.details,
+          severity: error.severidad || error.severity || 0,
+          details: error.detalles || error.details,
         }));
         fraudScore = FraudScore.createFromViolations(violations);
       } catch (error) {

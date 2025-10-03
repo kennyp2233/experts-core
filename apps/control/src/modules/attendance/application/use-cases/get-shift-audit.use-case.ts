@@ -69,10 +69,12 @@ export class GetShiftAuditUseCase {
               longitude: record.gpsCoordinate.longitude,
               accuracy: record.gpsCoordinate.accuracy,
               address: undefined, // TODO: Implementar geocoding si es necesario
+              googleMapsUrl: `https://www.google.com/maps?q=${record.gpsCoordinate.latitude},${record.gpsCoordinate.longitude}`,
             } : {
               latitude: 0,
               longitude: 0,
               accuracy: 0,
+              googleMapsUrl: '',
             },
             photo: {
               hasPhoto: !!record.photoPath,
@@ -95,7 +97,7 @@ export class GetShiftAuditUseCase {
               deviceId: record.deviceId,
               createdOffline: record.createdOffline,
               syncStatus: record.syncedAt ? 'SYNCED' : 'PENDING',
-              qrTokenUsed: record.qrCodeUsed,
+              qrTokenUsed: record.qrCodeUsed || '',
               processedAt: record.processedAt || record.createdAt,
             },
           };
@@ -193,7 +195,21 @@ export class GetShiftAuditUseCase {
   }
 
   private extractValidationByType(validationErrors: any[], type: string): { valid: boolean; score: number; issues: string[] } {
-    const typeErrors = validationErrors.filter(error => error.level === type);
+    // Mapeo de nombres de tipos para compatibilidad
+    const typeMap: Record<string, string[]> = {
+      'temporal': ['Temporal', 'temporal'],
+      'cryptographic': ['Criptográfica', 'cryptographic'],
+      'geolocation': ['Geolocalización', 'geolocation'],
+      'photo': ['Fotográfica', 'photo'],
+      'pattern': ['Patrones', 'pattern']
+    };
+
+    // Filtrar errores por categoría (nuevo formato en español) o level (formato antiguo)
+    const typeErrors = validationErrors.filter(error => {
+      const matchCategories = typeMap[type] || [type];
+      return matchCategories.includes(error.categoria) || matchCategories.includes(error.level);
+    });
+
     const valid = typeErrors.length === 0;
 
     // Calcular fraud score basado en cantidad y severidad de errores
@@ -204,13 +220,16 @@ export class GetShiftAuditUseCase {
 
       // Agregar severidad acumulada de todos los errores
       const totalSeverity = typeErrors.reduce((sum, error) => {
-        return sum + (error.severity || 10); // Default 10 si no hay severidad
+        return sum + (error.severidad || error.severity || 10); // Soportar ambos formatos
       }, 0);
 
       fraudScore = Math.min(fraudScore + totalSeverity, 100);
     }
 
-    const issues = typeErrors.map(error => error.error || error.message || 'Problema desconocido');
+    // Extraer mensajes en español (nuevo formato) o inglés (formato antiguo)
+    const issues = typeErrors.map(error => 
+      error.mensaje || error.message || error.error || 'Problema desconocido'
+    );
 
     console.log(`[GetShiftAudit] Validation for ${type}: ${typeErrors.length} errors, fraud score: ${fraudScore}`);
 

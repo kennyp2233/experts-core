@@ -49,28 +49,28 @@ export class AttendanceProcessingService {
     
     if (dto.exceptionCode) {
       console.log('[AttendanceProcessingService] Validando código de excepción:', dto.exceptionCode);
-      try {
-        const validationResult = await this.exceptionCodeService.validateExceptionCode({
-          code: dto.exceptionCode
+      
+      const validationResult = await this.exceptionCodeService.validateExceptionCode({
+        code: dto.exceptionCode
+      });
+      
+      exceptionCodeValidation = {
+        isValid: validationResult.data.isValid,
+        workerId: validationResult.data.exceptionCode?.workerId,
+        error: validationResult.data.error
+      };
+      
+      console.log('[AttendanceProcessingService] Resultado validación código de excepción:', exceptionCodeValidation);
+      
+      // ❌ Si el código es inválido, lanzar BadRequestException (HTTP 400)
+      // El frontend detectará esto automáticamente como error no-reintentable
+      if (!exceptionCodeValidation.isValid) {
+        console.log('[AttendanceProcessingService] ❌ Código de excepción inválido - lanzando BadRequestException');
+        const { BadRequestException } = require('@nestjs/common');
+        throw new BadRequestException({
+          error: 'INVALID_EXCEPTION_CODE',
+          message: exceptionCodeValidation.error || 'Código de excepción inválido o expirado'
         });
-        
-        exceptionCodeValidation = {
-          isValid: validationResult.data.isValid,
-          workerId: validationResult.data.exceptionCode?.workerId,
-          error: validationResult.data.error
-        };
-        
-        console.log('[AttendanceProcessingService] Resultado validación código de excepción:', exceptionCodeValidation);
-        
-        // Si el código es inválido, rechazar el registro inmediatamente
-        if (!exceptionCodeValidation.isValid) {
-          console.log('[AttendanceProcessingService] ❌ Código de excepción inválido - rechazando registro');
-          throw new Error(exceptionCodeValidation.error || 'Código de excepción inválido o expirado');
-        }
-      } catch (error) {
-        console.error('[AttendanceProcessingService] ❌ Error validando código de excepción:', error);
-        // Si hay error validando el código, rechazar el registro
-        throw error;
       }
     }
     console.log('[AttendanceProcessingService] ✅ Validación de código de excepción completada');
@@ -207,7 +207,8 @@ export class AttendanceProcessingService {
     console.log('[AttendanceProcessingService] 🎉 Procesamiento completado exitosamente:', {
       recordId: response.recordId,
       attendanceId: response.attendanceId,
-      status: response.status,
+      success: response.success,
+      recordStatus: response.recordStatus,
       fraudScore: response.fraudScore
     });
 
@@ -432,6 +433,9 @@ export class AttendanceProcessingService {
     validationResult: any,
     attendanceId: string,
   ) {
+    // Extraer y formatear errores de validación en español
+    const validationErrors = this.extractValidationErrorsForStorage(validationResult);
+    
     return await this.attendanceRepository.createAttendanceRecord({
       type,
       timestamp: new Date(dto.timestamp),
@@ -443,13 +447,68 @@ export class AttendanceProcessingService {
       latitude: dto.location.latitude,
       longitude: dto.location.longitude,
       accuracy: dto.location.accuracy,
-      validationErrors: this.serializeValidationErrors(validationResult),
+      validationErrors: JSON.stringify(validationErrors),
+      fraudScore: validationResult.fraudScore?.score || 0,
       processedAt: new Date(),
       createdOffline: dto.createdOffline || false,
       workerId,
       deviceId: deviceId, // Usar deviceId real
       attendanceId,
     });
+  }
+
+  /**
+   * Extraer errores de validación en formato comprensible para guardar en BD
+   */
+  private extractValidationErrorsForStorage(validationResult: any): Array<{
+    categoria: string;
+    nivel: 'critico' | 'sospechoso' | 'advertencia';
+    mensaje: string;
+    severidad: number;
+    detalles?: any;
+  }> {
+    const errors: Array<{
+      categoria: string;
+      nivel: 'critico' | 'sospechoso' | 'advertencia';
+      mensaje: string;
+      severidad: number;
+      detalles?: any;
+    }> = [];
+
+    if (!validationResult?.validationResults) {
+      return errors;
+    }
+
+    // Procesar cada categoría de validación
+    const categories = {
+      temporal: 'Temporal',
+      cryptographic: 'Criptográfica',
+      geolocation: 'Geolocalización',
+      photo: 'Fotográfica',
+      pattern: 'Patrones'
+    };
+
+    for (const [key, categoryName] of Object.entries(categories)) {
+      const results = validationResult.validationResults[key] || [];
+      
+      results.forEach((result: any) => {
+        // Solo incluir validaciones que fallaron o son sospechosas
+        if (!result.isValid || result.isSuspicious) {
+          const nivel = !result.isValid ? 'critico' : 
+                       result.isSuspicious ? 'sospechoso' : 'advertencia';
+          
+          errors.push({
+            categoria: categoryName,
+            nivel,
+            mensaje: result.message || 'Error de validación',
+            severidad: result.severity || 0,
+            detalles: result.details || null
+          });
+        }
+      });
+    }
+
+    return errors;
   }
 
   private async updateAttendanceTime(attendanceId: string, timestamp: string, type: AttendanceType) {
@@ -473,15 +532,16 @@ export class AttendanceProcessingService {
   ): AttendanceResponseDto {
     const isComplete = attendance.entryTime && attendance.exitTime;
     
+    // ✅ NUEVA LÓGICA: Siempre success=true porque el registro se guardó y el turno se actualizó
+    // recordStatus (ACCEPTED/SUSPICIOUS/REJECTED) es solo informativo para el admin
+    // El trabajador SIEMPRE ve "Entrada/Salida registrada exitosamente"
     return {
-      success: true,
       recordId: record.id,
       attendanceId: attendance.id,
-      status: validationResult.overallStatus,
+      success: true, // ✅ Siempre true - el registro se guardó y el turno se actualizó
+      recordStatus: validationResult.overallStatus, // ℹ️ Solo para dashboard de admin
       fraudScore: validationResult.fraudScore.score,
-      message: this.getStatusMessage(validationResult.overallStatus, validationResult.summary, type),
-      needsManualReview: validationResult.needsManualReview,
-      validationErrors: this.mapValidationErrors(validationResult),
+      message: this.getWorkerFriendlyMessage(type), // ✅ Mensaje simple para el trabajador
       shift: {
         date: attendance.date.toISOString().split('T')[0],
         entryTime: attendance.entryTime?.toISOString() || null,
@@ -492,61 +552,33 @@ export class AttendanceProcessingService {
     };
   }
 
-  private serializeValidationErrors(validationResult: any): string {
-    const errors: any[] = [];
-
-    Object.entries(validationResult.validationResults).forEach(([category, results]: [string, any[]]) => {
-      results.forEach(result => {
-        if (!result.isValid || result.isSuspicious) {
-          errors.push({
-            level: category,
-            error: result.message,
-            severity: result.severity || 0, // Mantener severidad numérica
-            severityLevel: result.severity > 25 ? 'critical' : result.severity > 10 ? 'error' : 'warning',
-            reason: result.reason,
-            details: result.details,
-            isValid: result.isValid || false,
-            isSuspicious: result.isSuspicious || false,
-          });
-        }
-      });
-    });
-
-    return JSON.stringify(errors);
+  /**
+   * Mensaje simple y amigable para el trabajador
+   * Siempre positivo - el trabajador no necesita saber sobre validaciones antifraude
+   */
+  private getWorkerFriendlyMessage(type: AttendanceType): string {
+    return type === AttendanceType.ENTRY 
+      ? 'Entrada registrada exitosamente' 
+      : 'Salida registrada exitosamente';
   }
 
+  /**
+   * Método legacy - mantener para compatibilidad si se usa en otros lugares
+   */
   private getStatusMessage(status: RecordStatus, summary: string, type: AttendanceType): string {
     const actionText = type === AttendanceType.ENTRY ? 'Entrada' : 'Salida';
     
+    // ✅ SIMPLE: Siempre mostrar mensaje positivo al trabajador
+    // El status real (ACCEPTED/SUSPICIOUS/REJECTED) lo revisa el admin en el dashboard
     switch (status) {
       case RecordStatus.ACCEPTED:
-        return `${actionText} registrada exitosamente`;
       case RecordStatus.SUSPICIOUS:
-        return `${actionText} registrada pero requiere revisión manual`;
       case RecordStatus.REJECTED:
-        return `${actionText} rechazada por validaciones de seguridad`;
+        return `${actionText} registrada exitosamente`;
       case RecordStatus.PENDING:
         return `${actionText} pendiente de procesamiento`;
       default:
         return summary;
     }
-  }
-
-  private mapValidationErrors(validationResult: any) {
-    const errors: any[] = [];
-
-    Object.entries(validationResult.validationResults).forEach(([category, results]: [string, any[]]) => {
-      results.forEach(result => {
-        if (!result.isValid || result.isSuspicious) {
-          errors.push({
-            level: category,
-            error: result.message,
-            severity: result.severity > 25 ? 'critical' : result.severity > 10 ? 'error' : 'warning',
-          });
-        }
-      });
-    });
-
-    return errors;
   }
 }

@@ -1,17 +1,11 @@
 export class AttendanceResponseDto {
-  success: boolean;
   recordId: string;
   attendanceId: string;
-  status: string;
+  success: boolean; // TRUE = registro exitoso (turno actualizado), FALSE = error técnico
+  recordStatus: string; // ACCEPTED, SUSPICIOUS, REJECTED - Solo informativo para admin
   fraudScore: number;
   message: string;
-  needsManualReview: boolean;
-  validationErrors?: Array<{
-    level: string;
-    error: string;
-    severity: string;
-  }>;
-  shift?: {
+  shift: {
     date: string;
     entryTime: string | null;
     exitTime: string | null;

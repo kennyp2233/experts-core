@@ -95,7 +95,8 @@ export class AttendanceController {
       console.log('[AttendanceController] ✅ Registro de entrada exitoso:', {
         recordId: result.recordId,
         attendanceId: result.attendanceId,
-        status: result.status,
+        success: result.success,
+        recordStatus: result.recordStatus,
         fraudScore: result.fraudScore
       });
       return result;
@@ -133,7 +134,8 @@ export class AttendanceController {
       console.log('[AttendanceController] ✅ Registro de salida exitoso:', {
         recordId: result.recordId,
         attendanceId: result.attendanceId,
-        status: result.status,
+        success: result.success,
+        recordStatus: result.recordStatus,
         fraudScore: result.fraudScore
       });
       return result;
@@ -256,6 +258,33 @@ export class AttendanceController {
       return result;
     } catch (error) {
       console.error('[AttendanceController] ❌ Error obteniendo turnos recientes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Endpoint para que los workers obtengan su propio estado de turno
+   * Autenticado con WorkerAuthGuard (token de worker)
+   */
+  @Get('my-shift-status')
+  @UseGuards(WorkerAuthGuard)
+  async getMyShiftStatus(@Request() req): Promise<WorkerShiftHistoryResponseDto> {
+    const workerId = req.user.workerId; // El WorkerAuthGuard pone el workerId en req.user
+    console.log('[AttendanceController] 🕐 GET /attendance/my-shift-status - Worker obteniendo su estado');
+    console.log('[AttendanceController] Worker ID:', workerId);
+
+    try {
+      // Obtener últimos 5 turnos + turno activo si existe
+      const result = await this.getWorkerShiftHistoryUseCase.execute(workerId, {
+        limit: 5,
+        offset: 0
+      });
+      console.log('[AttendanceController] ✅ Estado de turno obtenido exitosamente:', {
+        shiftsCount: result.shifts.length
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo estado de turno:', error);
       throw error;
     }
   }

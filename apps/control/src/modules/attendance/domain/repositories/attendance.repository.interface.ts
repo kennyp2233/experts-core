@@ -24,6 +24,7 @@ export interface CreateAttendanceRecordData {
   longitude?: number | null;
   accuracy?: number | null;
   validationErrors?: string | null;
+  fraudScore?: number | null;
   processedAt?: Date | null;
   createdOffline: boolean;
   syncedAt?: Date | null;

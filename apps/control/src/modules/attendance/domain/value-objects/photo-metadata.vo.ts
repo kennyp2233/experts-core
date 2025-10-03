@@ -32,8 +32,21 @@ export class PhotoMetadata {
     return new PhotoMetadata(timestamp, hasCameraInfo, fileSize, dimensions, cameraInfo, originalPath);
   }
 
-  static fromJSON(json: string): PhotoMetadata {
+  static fromJSON(json: string, skipValidation: boolean = false): PhotoMetadata {
     const data = JSON.parse(json);
+    
+    // Para datos históricos, crear instancia sin validación estricta
+    if (skipValidation) {
+      const instance = Object.create(PhotoMetadata.prototype);
+      instance._timestamp = new Date(data.timestamp);
+      instance._hasCameraInfo = data.hasCameraInfo;
+      instance._fileSize = data.fileSize || 0;
+      instance._dimensions = data.dimensions;
+      instance._cameraInfo = data.cameraInfo;
+      instance._originalPath = data.originalPath;
+      return instance;
+    }
+    
     return new PhotoMetadata(
       new Date(data.timestamp),
       data.hasCameraInfo,

@@ -185,6 +185,7 @@ model AttendanceRecord {
 
     // Validaciones del servidor
     validationErrors String?   // Errores de validación (JSON)
+    fraudScore       Int?      // Puntuación de fraude (0-100)
     processedAt      DateTime? // Cuándo fue procesado por el servidor
 
     // Datos offline

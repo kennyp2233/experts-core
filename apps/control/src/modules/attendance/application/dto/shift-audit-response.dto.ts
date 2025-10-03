@@ -21,6 +21,7 @@ export class AuditRecordDto {
     longitude: number;
     accuracy: number;
     address?: string;
+    googleMapsUrl: string;
   };
 
   @Expose()
