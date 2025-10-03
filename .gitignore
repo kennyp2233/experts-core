@@ -16,6 +16,11 @@ dev.db
 test.db
 production.db
 
+# Uploads
+uploads/
+apps/*/uploads/
+**/attendance-photos/
+
 # Prisma
 prisma/migrations/*
 !prisma/migrations/.gitkeep
