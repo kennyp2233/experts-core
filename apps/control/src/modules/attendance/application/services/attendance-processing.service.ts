@@ -90,10 +90,26 @@ export class AttendanceProcessingService {
       this.mapDtoToValidationData(dto, workerId, deviceId, type),
       context,
     );
+    
+    // 3.1. Agregar información del código de excepción al resultado de validación
+    if (dto.exceptionCode && exceptionCodeValidation?.isValid) {
+      const exceptionCodeDetails = await this.exceptionCodeService.validateExceptionCode({
+        code: dto.exceptionCode
+      });
+      
+      if (exceptionCodeDetails.data.exceptionCode) {
+        validationResult.exceptionCode = {
+          id: exceptionCodeDetails.data.exceptionCode.id,
+          code: exceptionCodeDetails.data.exceptionCode.code
+        };
+      }
+    }
+    
     console.log('[AttendanceProcessingService] ✅ Validaciones completadas:', {
       status: validationResult.overallStatus,
       fraudScore: validationResult.fraudScore.score,
-      needsManualReview: validationResult.needsManualReview
+      needsManualReview: validationResult.needsManualReview,
+      hasExceptionCode: !!validationResult.exceptionCode
     });
 
     // 4. Procesar y guardar imagen
@@ -150,6 +166,21 @@ export class AttendanceProcessingService {
       recordId: record.id,
       status: record.status
     });
+
+    // 7.1. Marcar código de excepción como usado (SOLO después del registro exitoso)
+    if (dto.exceptionCode && validationResult?.exceptionCode) {
+      console.log('[AttendanceProcessingService] Paso 7.1: Marcando código de excepción como usado...');
+      try {
+        await this.exceptionCodeService.markExceptionCodeAsUsed(
+          validationResult.exceptionCode.id,
+          record.id
+        );
+        console.log('[AttendanceProcessingService] ✅ Código de excepción marcado como usado');
+      } catch (error) {
+        // Log pero no falla el proceso (el registro ya se creó exitosamente)
+        console.error('[AttendanceProcessingService] ⚠️ Error al marcar código como usado:', error);
+      }
+    }
 
     // 8. Actualizar attendance con los tiempos correspondientes
     console.log('[AttendanceProcessingService] Paso 8: Actualizando tiempos de attendance...');

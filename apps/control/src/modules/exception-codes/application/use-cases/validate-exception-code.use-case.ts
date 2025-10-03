@@ -60,16 +60,10 @@ export class ValidateExceptionCodeUseCase {
       };
     }
 
-    // 3. Marcar como usado
-    await this.exceptionCodeRepository.updateExceptionCodeStatus(
-      exceptionCode.id,
-      ExceptionCodeStatus.USED,
-      new Date()
-    );
+    // ⚠️ NO MARCAR COMO USADO AQUÍ - Se marcará después del registro exitoso
+    console.log('[DEBUG] Backend - Código de excepción es válido (aún no marcado como usado)');
 
-    console.log('[DEBUG] Backend - Código de excepción marcado como usado:', exceptionCode.id);
-
-    // 4. Obtener información del worker
+    // 3. Obtener información del worker
     const worker = await this.exceptionCodeRepository.findWorkerById(exceptionCode.workerId);
     if (!worker) {
       console.error('[DEBUG] Backend - Worker no encontrado para código:', exceptionCode.workerId);

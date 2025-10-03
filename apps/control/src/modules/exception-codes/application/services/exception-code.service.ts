@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { GenerateExceptionCodeUseCase } from '../use-cases/generate-exception-code.use-case';
 import { ValidateExceptionCodeUseCase } from '../use-cases/validate-exception-code.use-case';
 import { ListExceptionCodesUseCase } from '../use-cases/list-exception-codes.use-case';
@@ -6,6 +6,8 @@ import { GenerateExceptionCodeDto } from '../dto/generate-exception-code.dto';
 import { ValidateExceptionCodeDto, ExceptionCodeValidationResult } from '../use-cases/validate-exception-code.use-case';
 import { ListExceptionCodesDto, ListExceptionCodesResult } from '../use-cases/list-exception-codes.use-case';
 import { GenerateExceptionCodeResponseDto } from '../dto/exception-code.dto';
+import type { ExceptionCodeRepositoryInterface } from '../../domain/repositories/exception-code.repository.interface';
+import { ExceptionCodeStatus } from '../../domain/enums/exception-code-status.enum';
 
 @Injectable()
 export class ExceptionCodeService {
@@ -13,6 +15,8 @@ export class ExceptionCodeService {
     private readonly generateExceptionCodeUseCase: GenerateExceptionCodeUseCase,
     private readonly validateExceptionCodeUseCase: ValidateExceptionCodeUseCase,
     private readonly listExceptionCodesUseCase: ListExceptionCodesUseCase,
+    @Inject('ExceptionCodeRepository')
+    private readonly exceptionCodeRepository: ExceptionCodeRepositoryInterface,
   ) {}
 
   async generateExceptionCode(dto: GenerateExceptionCodeDto, adminId: string): Promise<GenerateExceptionCodeResponseDto> {
@@ -51,5 +55,26 @@ export class ExceptionCodeService {
       data: result,
       message: 'Códigos de excepción obtenidos exitosamente'
     };
+  }
+
+  /**
+   * Marca un código de excepción como usado después de un registro exitoso
+   * @param codeId ID del código de excepción
+   * @param attendanceRecordId ID del registro de asistencia (para logging)
+   */
+  async markExceptionCodeAsUsed(codeId: string, attendanceRecordId?: string): Promise<void> {
+    console.log('[DEBUG] Backend - Marcando código de excepción como usado:', {
+      codeId,
+      attendanceRecordId,
+      usedAt: new Date().toISOString()
+    });
+
+    await this.exceptionCodeRepository.updateExceptionCodeStatus(
+      codeId,
+      ExceptionCodeStatus.USED,
+      new Date()
+    );
+
+    console.log('[DEBUG] Backend - Código de excepción marcado como usado exitosamente');
   }
 }

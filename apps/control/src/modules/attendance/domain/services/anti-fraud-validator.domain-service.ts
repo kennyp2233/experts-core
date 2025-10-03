@@ -59,6 +59,10 @@ export interface ComprehensiveValidationResult {
   needsManualReview: boolean;
   recommendedAction: 'ACCEPT' | 'REVIEW' | 'REJECT';
   summary: string;
+  exceptionCode?: {
+    id: string;
+    code: string;
+  };
 }
 
 @Injectable()
