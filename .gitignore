@@ -21,11 +21,8 @@ uploads/
 apps/*/uploads/
 **/attendance-photos/
 
-# Prisma
-prisma/migrations/*
-!prisma/migrations/.gitkeep
-apps/*/prisma/migrations/*
-!apps/*/prisma/migrations/.gitkeep
+# Prisma - NO ignorar migraciones (son necesarias para producción)
+# Solo ignorar el archivo .gitkeep si existe
 
 # Logs
 logs
