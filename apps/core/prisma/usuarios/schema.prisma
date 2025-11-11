@@ -1,0 +1,32 @@
+// Prisma schema for Usuarios Bounded Context
+generator usuariosClient {
+    provider = "prisma-client-js"
+    output = "../../node_modules/.prisma/usuarios-client"
+}
+
+datasource usuariosDb {
+    provider = "postgresql"
+    url      = env("DATABASE_URL_USUARIOS")
+}
+
+// ===== ENUMS =====
+enum Role {
+    USER
+    ADMIN
+    FINCA
+    CLIENTE
+}
+
+// ===== USUARIOS MODELS =====
+model User {
+    id        String   @id @default(cuid())
+    email     String   @unique
+    username  String   @unique
+    password  String
+    firstName String
+    lastName  String
+    isActive  Boolean  @default(true)
+    role      Role     @default(USER)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}

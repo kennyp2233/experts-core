@@ -1,0 +1,14 @@
+// Prisma schema for Documentos Bounded Context
+generator documentosClient {
+    provider = "prisma-client-js"
+    outputMode = "outputDir"
+    output = "../../node_modules/.prisma/documentos-client"
+}
+
+datasource documentosDb {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ===== DOCUMENTOS MODELS =====
+// Add your document models here

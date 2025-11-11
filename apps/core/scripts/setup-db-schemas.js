@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+/**
+ * Script para crear automáticamente todos los schemas de Postgres
+ * necesarios para los diferentes contextos de Prisma
+ */
+
+const { execSync } = require('child_process');
+const path = require('path');
+
+// Configuración: mapeo de contexto -> schema de Postgres
+const SCHEMAS = [
+  { name: 'usuarios', path: './prisma/usuarios/schema.prisma' },
+  { name: 'datos_maestros', path: './prisma/datos-maestros/schema.prisma' },
+  { name: 'guias', path: './prisma/guias/schema.prisma' },
+  { name: 'documentos', path: './prisma/documentos/schema.prisma' },
+  // Agregar más según sea necesario
+];
+
+function runCommand(command, description) {
+  console.log(`\n🔧 ${description}...`);
+  try {
+    execSync(command, { stdio: 'inherit', cwd: process.cwd() });
+    console.log(`✅ ${description} - Completado`);
+    return true;
+  } catch (error) {
+    console.error(`❌ ${description} - Error:`, error.message);
+    return false;
+  }
+}
+
+function createSchema(schemaName, schemaPath) {
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`📦 Procesando schema: ${schemaName}`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+  // 1. Crear el schema de Postgres
+  const sqlFile = path.join(path.dirname(schemaPath), 'create_schema.sql');
+  const createSql = `CREATE SCHEMA IF NOT EXISTS ${schemaName};`;
+
+  // Escribir SQL temporal
+  require('fs').writeFileSync(sqlFile, createSql);
+
+  // 2. Ejecutar el SQL
+  const executeCmd = `npx prisma db execute --schema=${schemaPath} --file=${sqlFile}`;
+  if (!runCommand(executeCmd, `Crear schema '${schemaName}' en Postgres`)) {
+    return false;
+  }
+
+  return true;
+}
+
+function migrateSchema(schemaName, schemaPath) {
+  // 3. Ejecutar migraciones
+  const migrateCmd = `npx prisma migrate deploy --schema=${schemaPath}`;
+  return runCommand(migrateCmd, `Aplicar migraciones para '${schemaName}'`);
+}
+
+function generateClient(schemaName, schemaPath) {
+  // 4. Generar cliente Prisma
+  const generateCmd = `npx prisma generate --schema=${schemaPath}`;
+  return runCommand(generateCmd, `Generar Prisma Client para '${schemaName}'`);
+}
+
+async function main() {
+  console.log('🚀 Iniciando setup de schemas de base de datos...\n');
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const { name, path: schemaPath } of SCHEMAS) {
+    try {
+      // Crear schema
+      if (!createSchema(name, schemaPath)) {
+        failCount++;
+        continue;
+      }
+
+      // Generar cliente (las migraciones ya se ejecutaron con migrate dev)
+      if (!generateClient(name, schemaPath)) {
+        failCount++;
+        continue;
+      }
+      if (!migrateSchema(name, schemaPath)) {
+        failCount++;
+        continue;
+      }
+
+      successCount++;
+    } catch (error) {
+      console.error(`❌ Error procesando ${name}:`, error.message);
+      failCount++;
+    }
+  }
+
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📊 Resumen:');
+  console.log(`  ✅ Exitosos: ${successCount}`);
+  console.log(`  ❌ Fallidos: ${failCount}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  process.exit(failCount > 0 ? 1 : 0);
+}
+
+main().catch((error) => {
+  console.error('💥 Error fatal:', error);
+  process.exit(1);
+});

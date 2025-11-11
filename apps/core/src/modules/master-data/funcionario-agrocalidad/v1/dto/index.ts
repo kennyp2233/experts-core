@@ -1,0 +1,1 @@
+export * from './create-funcionario-agrocalidad.dto';
