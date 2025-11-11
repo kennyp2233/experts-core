@@ -1,0 +1,568 @@
+// Prisma schema for Productos Bounded Context (within Datos Maestros)
+generator productosClient {
+    provider   = "prisma-client-js"
+    outputMode = "outputDir"
+    output     = "../../node_modules/.prisma/productos-client"
+}
+
+datasource productosDb {
+    provider = "postgresql"
+    url      = env("DATABASE_URL_DATOS_MAESTROS")
+}
+
+// ===== PRODUCTOS MODELS =====
+model Producto {
+    id                  Int                  @id @default(autoincrement())
+    nombre              String
+    descripcion         String?
+    nombreBotanico      String?
+    especie             String?
+    medidaId            Int
+    precioUnitario      Decimal?
+    estado              Boolean              @default(true)
+    opcionId            Int?
+    stemsPorFull        Int?
+    sesaId              Int?
+    createdAt           DateTime             @default(now())
+    updatedAt           DateTime             @updatedAt
+    productosAranceles  ProductosAranceles[]
+    productosCompuestos ProductosCompuesto[]
+    productosMiPros     ProductosMiPro[]
+    fincasProductos     FincaProducto[]
+
+    // Relations
+    medida Medida @relation(fields: [medidaId], references: [id])
+}
+
+model ProductosAranceles {
+    id               Int      @id @default(autoincrement())
+    productId        Int
+    arancelesDestino String?
+    arancelesCodigo  String?
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    producto Producto @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductosCompuesto {
+    id          Int      @id @default(autoincrement())
+    productId   Int
+    destino     String?
+    declaracion String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    producto Producto @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductosMiPro {
+    id         Int      @id @default(autoincrement())
+    productId  Int
+    acuerdo    String?
+    djoCode    String?
+    tariffCode String?
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    producto Producto @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ===== MEDIDA MODEL =====
+
+model Medida {
+    id     Int     @id @default(autoincrement())
+    nombre String  @unique
+    estado Boolean @default(true)
+
+    // Relations
+    productos Producto[]
+}
+
+// ===== FUNCIONARIO AGROCALIDAD MODEL =====
+
+model FuncionarioAgrocalidad {
+    id        Int      @id @default(autoincrement())
+    nombre    String
+    telefono  String?
+    email     String?
+    estado    Boolean? @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+// ===== EMBARCADORES MODEL =====
+
+model Embarcador {
+    id                   Int     @id @default(autoincrement())
+    nombre               String
+    ci                   String?
+    direccion            String?
+    telefono             String?
+    email                String?
+    ciudad               String?
+    provincia            String?
+    pais                 String?
+    embarcadorCodigoPais String?
+    handling             Float?
+    estado               Boolean @default(true)
+
+    // Relations
+    consignatarios Consignatario[]
+}
+
+// ===== PAIS MODEL =====
+
+model Pais {
+    idPais     Int     @id @default(autoincrement())
+    siglasPais String  @unique
+    nombre     String
+    paisId     Int?
+    idAcuerdo  Int?
+    estado     Boolean @default(true)
+
+    // Relations
+    acuerdo  AcuerdoArancelario? @relation(fields: [idAcuerdo], references: [idAcuerdo])
+    destinos Destino[]
+    origenes Origen[]
+}
+
+// ===== ACUERDO ARANCELARIO MODEL =====
+
+model AcuerdoArancelario {
+    idAcuerdo Int    @id @default(autoincrement())
+    nombre    String
+
+    // Relations
+    paises Pais[]
+}
+
+// ===== DESTINO MODEL =====
+
+model Destino {
+    id          Int      @id @default(autoincrement())
+    nombre      String?
+    aeropuerto  String?
+    idPais      Int
+    sesaId      String?
+    leyendaFito String?
+    cobroFitos  Boolean? @default(false)
+
+    // Relations
+    pais               Pais?                @relation(fields: [idPais], references: [idPais])
+    consignatarioGuiaM ConsignatarioGuiaM[]
+    aerolineasRutas    AerolineaRuta[]
+}
+
+// ===== ORIGEN MODEL =====
+
+model Origen {
+    id          Int     @id @default(autoincrement())
+    nombre      String
+    aeropuerto  String?
+    idPais      Int?
+    idCaeAduana Int?
+
+    // Relations
+    pais            Pais?           @relation(fields: [idPais], references: [idPais])
+    caeAduana       CaeAduana?      @relation(fields: [idCaeAduana], references: [idCaeAduana])
+    aerolineasRutas AerolineaRuta[]
+}
+
+// ===== CAE ADUANA MODEL =====
+
+model CaeAduana {
+    idCaeAduana  Int    @id @default(autoincrement())
+    codigoAduana Int?
+    nombre       String
+
+    // Relations
+    origenes Origen[]
+}
+
+// ===== CLIENTE MODEL =====
+
+model Cliente {
+    id                Int      @id @default(autoincrement())
+    nombre            String
+    ruc               String?
+    direccion         String?
+    telefono          String?
+    email             String?
+    ciudad            String?
+    pais              String?
+    clienteCodigoPais String?
+    fitosValor        Float?
+    formA             Int?
+    transport         Int?
+    termo             Int?
+    mica              Int?
+    handling          Float?
+    cuentaContable    String?
+    nombreFactura     String?
+    rucFactura        String?
+    direccionFactura  String?
+    telefonoFactura   String?
+    estado            Boolean  @default(true)
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    // Relations
+    consignatarios Consignatario[]
+}
+
+// ===== CONSIGNATARIO MODELS =====
+
+model Consignatario {
+    id           Int      @id @default(autoincrement())
+    nombre       String
+    ruc          String?
+    direccion    String?
+    idEmbarcador Int
+    idCliente    Int
+    telefono     String?
+    email        String?
+    ciudad       String?
+    pais         String?
+    estado       Boolean  @default(true)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relations
+    embarcador  Embarcador                @relation(fields: [idEmbarcador], references: [id])
+    cliente     Cliente                   @relation(fields: [idCliente], references: [id])
+    caeSice     ConsignatarioCaeSice?
+    facturacion ConsignatarioFacturacion?
+    fito        ConsignatarioFito?
+    guiaH       ConsignatarioGuiaH?
+    guiaM       ConsignatarioGuiaM?
+    transmision ConsignatarioTransmision?
+}
+
+model ConsignatarioCaeSice {
+    idConsignatario        Int     @id
+    consigneeNombre        String?
+    consigneeDireccion     String?
+    consigneeDocumento     String?
+    consigneeSiglasPais    String?
+    notifyNombre           String?
+    notifyDireccion        String?
+    notifyDocumento        String?
+    notifySiglasPais       String?
+    hawbNombre             String?
+    hawbDireccion          String?
+    hawbDocumento          String?
+    hawbSiglasPais         String?
+    consigneeTipoDocumento String?
+    notifyTipoDocumento    String?
+    hawbTipoDocumento      String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+}
+
+model ConsignatarioFacturacion {
+    idConsignatario  Int     @id
+    facturaNombre    String?
+    facturaRuc       String?
+    facturaDireccion String?
+    facturaTelefono  String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+}
+
+model ConsignatarioFito {
+    idConsignatario  Int     @id
+    fitoDeclaredName String?
+    fitoFormaA       String?
+    fitoNombre       String?
+    fitoDireccion    String?
+    fitoPais         String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+}
+
+model ConsignatarioGuiaH {
+    idConsignatario Int     @id
+    guiaHConsignee  String?
+    guiaHNameAdress String?
+    guiaHNotify     String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+}
+
+model ConsignatarioGuiaM {
+    idConsignatario  Int     @id
+    idDestino        Int?
+    guiaMConsignee   String?
+    guiaMNameAddress String?
+    guiaMNotify      String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+    destino       Destino?      @relation(fields: [idDestino], references: [id])
+}
+
+model ConsignatarioTransmision {
+    idConsignatario         Int     @id
+    consigneeNombreTrans    String?
+    consigneeDireccionTrans String?
+    consigneeCiudadTrans    String?
+    consigneeProvinciaTrans String?
+    consigneePaisTrans      String?
+    consigneeEueoriTrans    String?
+    notifyNombreTrans       String?
+    notifyDireccionTrans    String?
+    notifyCiudadTrans       String?
+    notifyProvinciaTrans    String?
+    notifyPaisTrans         String?
+    notifyEueoriTrans       String?
+    hawbNombreTrans         String?
+    hawbDireccionTrans      String?
+    hawbCiudadTrans         String?
+    hawbProvinciaTrans      String?
+    hawbPaisTrans           String?
+    hawbEueoriTrans         String?
+
+    // Relations
+    consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
+}
+
+model FincaChofer {
+    idFincasChoferes Int @id @default(autoincrement())
+    idFinca          Int
+    idChofer         Int
+
+    // Relations
+    finca  Finca  @relation(fields: [idFinca], references: [id])
+    chofer Chofer @relation(fields: [idChofer], references: [id])
+}
+
+model FincaProducto {
+    idFincasProductos Int @id @default(autoincrement())
+    idFinca           Int
+    idProducto        Int
+
+    // Relations
+    finca    Finca    @relation(fields: [idFinca], references: [id])
+    producto Producto @relation(fields: [idProducto], references: [id])
+}
+
+model Finca {
+    id                      Int      @id @default(autoincrement())
+    nombreFinca             String
+    tag                     String?
+    rucFinca                String?
+    tipoDocumento           String
+    generaGuiasCertificadas Boolean? @default(false)
+    iGeneralTelefono        String?
+    iGeneralEmail           String?
+    iGeneralCiudad          String?
+    iGeneralProvincia       String?
+    iGeneralPais            String?
+    iGeneralCodSesa         String?
+    iGeneralCodPais         String?
+    aNombre                 String?
+    aCodigo                 String?
+    aDireccion              String?
+    estado                  Boolean  @default(true)
+    createdAt               DateTime @default(now())
+    updatedAt               DateTime @updatedAt
+
+    fincasChoferes  FincaChofer[]
+    fincasProductos FincaProducto[]
+}
+
+model Chofer {
+    id           Int      @id @default(autoincrement())
+    nombre       String
+    ruc          String
+    placasCamion String?
+    telefono     String?
+    camion       String?
+    estado       Boolean? @default(true)
+
+    // Relations
+    fincasChoferes FincaChofer[]
+}
+
+// ===== BODEGUERO MODEL =====
+
+model Bodeguero {
+    id          Int      @id @default(autoincrement())
+    nombre      String
+    ci          String
+    claveBodega String
+    estado      Boolean? @default(true)
+}
+
+// ===== AEROLINEA MODELS =====
+
+model Aerolinea {
+    id                Int            @id @default(autoincrement())
+    nombre            String
+    ciRuc             String?
+    direccion         String?
+    telefono          String?
+    email             String?
+    ciudad            String?
+    pais              String?
+    contacto          String?
+    modo              ModoAerolinea? @default(EN_PIEZAS) // en piezas, en fulles
+    maestraGuiasHijas Boolean?       @default(false)
+    codigo            String?
+    prefijoAwb        String?
+    codigoCae         String?
+    estado            Boolean?       @default(true)
+    afiliadoCass      Boolean?       @default(false)
+    guiasVirtuales    Boolean?       @default(true)
+    createdAt         DateTime       @default(now())
+    updatedAt         DateTime       @updatedAt
+
+    // Relations
+    aerolineasPlantilla AerolineasPlantilla?
+    rutas               AerolineaRuta[]
+    viasAerolineas      AerolineaRuta[]      @relation("ViaAerolinea")
+}
+
+model AerolineaRuta {
+    id             Int      @id @default(autoincrement())
+    aerolineaId    Int
+    tipoRuta       TipoRuta
+    origenId       Int? // Solo para ORIGEN
+    destinoId      Int? // Solo para DESTINO1, DESTINO2, DESTINO3
+    viaAerolineaId Int? // Solo para VIA1, VIA2, VIA3
+    orden          Int? // Para ordenar las rutas cuando sea necesario
+
+    // Relations
+    aerolinea    Aerolinea  @relation(fields: [aerolineaId], references: [id], onDelete: Cascade)
+    origen       Origen?    @relation(fields: [origenId], references: [id])
+    destino      Destino?   @relation(fields: [destinoId], references: [id])
+    viaAerolinea Aerolinea? @relation("ViaAerolinea", fields: [viaAerolineaId], references: [id])
+}
+
+enum TipoRuta {
+    ORIGEN
+    DESTINO1
+    VIA1
+    DESTINO2
+    VIA2
+    DESTINO3
+    VIA3
+}
+
+enum ModoAerolinea {
+    EN_PIEZAS
+    EN_FULLES
+}
+
+enum TipoConcepto {
+    COSTO_GUIA
+    COMBUSTIBLE
+    SEGURIDAD
+    AUX_CALCULO
+    IVA
+    OTROS
+    AUX1
+    AUX2
+}
+
+enum TipoMultiplicador {
+    GROSS_WEIGHT
+    CHARGEABLE_WEIGHT
+}
+
+model ConceptoCosto {
+    id            Int                @id @default(autoincrement())
+    plantillaId   Int
+    tipo          TipoConcepto
+    abreviatura   String?
+    valor         Float              @default(0)
+    multiplicador TipoMultiplicador?
+
+    plantilla AerolineasPlantilla @relation(fields: [plantillaId], references: [idAerolinea], onDelete: Cascade)
+}
+
+model AerolineasPlantilla {
+    idAerolinea               Int     @id
+    plantillaGuiaMadre        String?
+    plantillaFormatoAerolinea String?
+    plantillaReservas         String?
+    tarifaRate                Float?  @default(0)
+    pca                       Float?  @default(0)
+
+    // Relations
+    aerolinea Aerolinea       @relation(fields: [idAerolinea], references: [id], onDelete: Cascade)
+    conceptos ConceptoCosto[]
+}
+
+model AgenciaIata {
+    id                 Int     @id @default(autoincrement())
+    nombreShipper      String
+    rucShipper         String?
+    direccionShipper   String?
+    telefonoShipper    String?
+    ciudadShipper      String?
+    paisShipper        String?
+    nombreCarrier      String?
+    rucCarrier         String?
+    direccionCarrier   String?
+    telefonoCarrier    String?
+    ciudadCarrier      String?
+    paisCarrier        String?
+    iataCodeCarrier    String?
+    registroExportador String?
+    codigoOperador     String?
+    codigoConsolidador String?
+    comision           Float?
+    estado             Boolean @default(true)
+}
+
+model SubAgencia {
+    id            Int      @id @default(autoincrement())
+    nombre        String
+    ciRuc         String?
+    direccion     String?
+    telefono      String?
+    email         String?
+    ciudad        String?
+    pais          String?
+    provincia     String?
+    representante String?
+    comision      Float?
+    estado        Boolean? @default(true)
+}
+
+model TipoEmbarque {
+    id                  Int     @id @default(autoincrement())
+    nombre              String
+    idTipoCarga         Int?
+    idTipoEmbalaje      Int?
+    regimen             String?
+    mercancia           String?
+    harmonisedCommodity String?
+
+    // Relations
+    carga    TipoCarga?    @relation(fields: [idTipoCarga], references: [id])
+    embalaje TipoEmbalaje? @relation(fields: [idTipoEmbalaje], references: [id])
+}
+
+// Catalog models
+model TipoCarga {
+    id     Int    @id @default(autoincrement())
+    nombre String
+
+    // Relations
+    tiposEmbarque TipoEmbarque[]
+}
+
+model TipoEmbalaje {
+    id     Int    @id @default(autoincrement())
+    nombre String
+
+    // Relations
+    tiposEmbarque TipoEmbarque[]
+}
