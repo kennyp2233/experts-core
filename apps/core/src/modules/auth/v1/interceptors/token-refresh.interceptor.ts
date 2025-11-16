@@ -11,7 +11,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-// import { PrismaClient } from '.prisma/usuarios-client';
+import { PrismaClient } from '.prisma/usuarios-client';
 import { Response } from 'express';
 import { AuthService } from '../auth.service';
 
@@ -29,8 +29,8 @@ export class TokenRefreshInterceptor implements NestInterceptor {
     private jwtService: JwtService,
     private configService: ConfigService,
     private authService: AuthService,
-    // @Inject('PrismaClientUsuarios') private prisma: PrismaClient,
-  ) {}
+    @Inject('PrismaClientUsuarios') private prisma: PrismaClient,
+  ) { }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
@@ -77,26 +77,16 @@ export class TokenRefreshInterceptor implements NestInterceptor {
         throw new UnauthorizedException('Refresh token inválido o expirado');
       }
 
-      // TODO: Uncomment when Prisma client is generated
-      // Obtener usuario actualizado
-      // const user = await this.prisma.user.findUnique({
-      //   where: { id: userId, isActive: true },
-      // });
 
-      // if (!user) {
-      //   this.logger.warn(`User ${userId} not found or inactive`);
-      //   throw new UnauthorizedException('Usuario no encontrado o inactivo');
-      // }
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId, isActive: true },
+      });
 
-      // Temporary: Create user object from validated token
-      const user = {
-        id: userId,
-        username: 'user', // This will be populated from JWT payload
-        role: 'USER',
-        email: 'user@example.com',
-        firstName: 'User',
-        lastName: 'Name',
-      };
+      if (!user) {
+        this.logger.warn(`User ${userId} not found or inactive`);
+        throw new UnauthorizedException('Usuario no encontrado o inactivo');
+      }
+
 
       // Generar NUEVO access token
       const payload = {
@@ -109,7 +99,7 @@ export class TokenRefreshInterceptor implements NestInterceptor {
       };
 
       const expiresIn = this.configService.get<string>('app.jwtExpiresIn') || '15m';
-      const newAccessToken = this.jwtService.sign(payload, { expiresIn });
+      const newAccessToken = this.jwtService.sign(payload, { expiresIn: expiresIn as any });
 
       // Setear nueva cookie
       response.cookie('access_token', newAccessToken, {
