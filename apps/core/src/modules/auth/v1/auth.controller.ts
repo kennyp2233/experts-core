@@ -157,18 +157,17 @@ export class AuthControllerV1 {
   ) {
     const user = req.user;
 
-    // TODO: Uncomment when Prisma is ready
     // Verificar si el usuario tiene 2FA habilitado
-    // const userWith2FA = await this.authService['prisma'].user.findUnique({
-    //   where: { id: user.id },
-    //   select: { twoFactorEnabled: true },
-    // });
+    const userWith2FA = await this.authService['prisma'].user.findUnique({
+      where: { id: user.id },
+      select: { twoFactorEnabled: true },
+    });
 
     // Temporary: Check if user has 2FA enabled in Redis
-    const has2FA = await this.authService['redis'].get(`2fa:enabled:${user.id}`);
+    // const has2FA = await this.authService['redis'].get(`2fa:enabled:${user.id}`);
 
     // Si NO tiene 2FA, login normal
-    if (!has2FA) {
+    if (!userWith2FA?.twoFactorEnabled) {
       return this.completeLogin(user, request, res);
     }
 
@@ -401,33 +400,32 @@ export class AuthControllerV1 {
     // Verificar código 2FA
     await this.authService.verify2FACode(userId, dto.token);
 
-    // TODO: Uncomment when Prisma is ready
     // Obtener usuario completo de DB
-    // const user = await this.authService['prisma'].user.findUnique({
-    //   where: { id: userId },
-    //   select: {
-    //     id: true,
-    //     username: true,
-    //     email: true,
-    //     role: true,
-    //     firstName: true,
-    //     lastName: true,
-    //   },
-    // });
+    const user = await this.authService['prisma'].user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
 
-    // if (!user) {
-    //   throw new UnauthorizedException('Usuario no encontrado');
-    // }
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
 
     // Temporary: Create user object from userId (should come from DB)
-    const user = {
-      id: userId,
-      username: 'user',
-      email: 'user@example.com',
-      role: 'USER',
-      firstName: 'User',
-      lastName: 'Name',
-    };
+    // const user = {
+    //   id: userId,
+    //   username: 'user',
+    //   email: 'user@example.com',
+    //   role: 'USER',
+    //   firstName: 'User',
+    //   lastName: 'Name',
+    // };
 
     // Si usuario marcó "Confiar en este dispositivo"
     if (dto.trustDevice) {
