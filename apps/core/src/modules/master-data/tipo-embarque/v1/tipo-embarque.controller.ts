@@ -10,8 +10,9 @@ import {
     HttpCode,
     HttpStatus,
     Query,
+    ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/v1/guards/roles.guard';
 import { Roles } from '../../../auth/v1/decorators/roles.decorator';
@@ -21,6 +22,7 @@ import { CreateTipoEmbarqueDto, UpdateTipoEmbarqueDto } from './dto';
 import { TipoEmbarqueEntity } from './entities/tipo-embarque.entity';
 
 @ApiTags('tipo-embarque')
+@ApiBearerAuth()
 @Controller({
   path: 'master-data/tipo-embarque',
   version: '1',
@@ -77,6 +79,20 @@ export class TipoEmbarqueController {
         return this.tipoEmbarqueService.findAll(skipNum, takeNum, search);
     }
 
+    @Get('nombre/:nombre')
+    @ApiOperation({ summary: 'Get a tipo de embarque by nombre' })
+    @ApiResponse({
+        status: 200,
+        description: 'The tipo de embarque',
+        type: TipoEmbarqueEntity,
+    })
+    @ApiResponse({ status: 404, description: 'Not Found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    findByNombre(@Param('nombre') nombre: string) {
+        return this.tipoEmbarqueService.findByNombre(decodeURIComponent(nombre));
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get a tipo de embarque by ID' })
     @ApiResponse({
@@ -87,8 +103,8 @@ export class TipoEmbarqueController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    findOne(@Param('id') id: string) {
-        return this.tipoEmbarqueService.findOne(+id);
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.tipoEmbarqueService.findOne(id);
     }
 
     @Patch(':id')
@@ -102,8 +118,8 @@ export class TipoEmbarqueController {
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    update(@Param('id') id: string, @Body() updateDto: UpdateTipoEmbarqueDto) {
-        return this.tipoEmbarqueService.update(+id, updateDto);
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateTipoEmbarqueDto) {
+        return this.tipoEmbarqueService.update(id, updateDto);
     }
 
     @Delete(':id')
@@ -117,21 +133,7 @@ export class TipoEmbarqueController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    remove(@Param('id') id: string) {
-        return this.tipoEmbarqueService.remove(+id);
-    }
-
-    @Get('nombre/:nombre')
-    @ApiOperation({ summary: 'Get a tipo de embarque by nombre' })
-    @ApiResponse({
-        status: 200,
-        description: 'The tipo de embarque',
-        type: TipoEmbarqueEntity,
-    })
-    @ApiResponse({ status: 404, description: 'Not Found' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    findByNombre(@Param('nombre') nombre: string) {
-        return this.tipoEmbarqueService.findByNombre(decodeURIComponent(nombre));
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.tipoEmbarqueService.remove(id);
     }
 }

@@ -10,8 +10,9 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/v1/guards/roles.guard';
 import { Roles } from '../../../auth/v1/decorators/roles.decorator';
@@ -21,6 +22,7 @@ import { CreateFuncionarioAgrocalidadDto, UpdateFuncionarioAgrocalidadDto } from
 import { FuncionarioAgrocalidad } from './entities/funcionario-agrocalidad.entity';
 
 @ApiTags('funcionario-agrocalidad')
+@ApiBearerAuth()
 @Controller({
   path: 'master-data/funcionario-agrocalidad',
   version: '1',

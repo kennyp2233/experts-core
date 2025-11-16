@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
@@ -76,6 +77,20 @@ export class SubAgenciaController {
         return this.subAgenciaService.findByNombre(nombre);
     }
 
+    @Get('nombre/:nombre')
+    @ApiOperation({ summary: 'Get a sub agencia by nombre' })
+    @ApiResponse({
+        status: 200,
+        description: 'The sub agencia',
+        type: SubAgenciaEntity,
+    })
+    @ApiResponse({ status: 404, description: 'Not Found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    findByNombre(@Param('nombre') nombre: string) {
+        return this.subAgenciaService.findByNombre(decodeURIComponent(nombre));
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get a sub agencia by ID' })
     @ApiResponse({
@@ -86,8 +101,8 @@ export class SubAgenciaController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    findOne(@Param('id') id: string) {
-        return this.subAgenciaService.findOne(+id);
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.subAgenciaService.findOne(id);
     }
 
     @Patch(':id')
@@ -101,8 +116,8 @@ export class SubAgenciaController {
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    update(@Param('id') id: string, @Body() updateDto: UpdateSubAgenciaDto) {
-        return this.subAgenciaService.update(+id, updateDto);
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateSubAgenciaDto) {
+        return this.subAgenciaService.update(id, updateDto);
     }
 
     @Delete(':id')
@@ -116,21 +131,7 @@ export class SubAgenciaController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    remove(@Param('id') id: string) {
-        return this.subAgenciaService.remove(+id);
-    }
-
-    @Get('nombre/:nombre')
-    @ApiOperation({ summary: 'Get a sub agencia by nombre' })
-    @ApiResponse({
-        status: 200,
-        description: 'The sub agencia',
-        type: SubAgenciaEntity,
-    })
-    @ApiResponse({ status: 404, description: 'Not Found' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    findByNombre(@Param('nombre') nombre: string) {
-        return this.subAgenciaService.findByNombre(decodeURIComponent(nombre));
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.subAgenciaService.remove(id);
     }
 }

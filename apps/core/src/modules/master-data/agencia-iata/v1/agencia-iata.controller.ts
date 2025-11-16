@@ -10,6 +10,7 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
@@ -76,6 +77,20 @@ export class AgenciaIataController {
         return this.agenciaIataService.findByNombre(nombre);
     }
 
+    @Get('nombre/:nombre')
+    @ApiOperation({ summary: 'Get a agencia IATA by nombre shipper' })
+    @ApiResponse({
+        status: 200,
+        description: 'The agencia IATA',
+        type: AgenciaIataEntity,
+    })
+    @ApiResponse({ status: 404, description: 'Not Found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    findByNombreShipper(@Param('nombre') nombre: string) {
+        return this.agenciaIataService.findByNombreShipper(decodeURIComponent(nombre));
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get a agencia IATA by ID' })
     @ApiResponse({
@@ -86,8 +101,8 @@ export class AgenciaIataController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    findOne(@Param('id') id: string) {
-        return this.agenciaIataService.findOne(+id);
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.agenciaIataService.findOne(id);
     }
 
     @Patch(':id')
@@ -101,8 +116,8 @@ export class AgenciaIataController {
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    update(@Param('id') id: string, @Body() updateDto: UpdateAgenciaIataDto) {
-        return this.agenciaIataService.update(+id, updateDto);
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateAgenciaIataDto) {
+        return this.agenciaIataService.update(id, updateDto);
     }
 
     @Delete(':id')
@@ -116,21 +131,7 @@ export class AgenciaIataController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    remove(@Param('id') id: string) {
-        return this.agenciaIataService.remove(+id);
-    }
-
-    @Get('nombre/:nombre')
-    @ApiOperation({ summary: 'Get a agencia IATA by nombre shipper' })
-    @ApiResponse({
-        status: 200,
-        description: 'The agencia IATA',
-        type: AgenciaIataEntity,
-    })
-    @ApiResponse({ status: 404, description: 'Not Found' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    findByNombreShipper(@Param('nombre') nombre: string) {
-        return this.agenciaIataService.findByNombreShipper(decodeURIComponent(nombre));
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.agenciaIataService.remove(id);
     }
 }

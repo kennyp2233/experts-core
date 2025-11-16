@@ -87,7 +87,6 @@ export class MedidasController {
   }
 
   @Get('simple')
-  @UseGuards()
   @ApiOperation({ summary: 'Obtener medidas simples (id y nombre)' })
   @ApiResponse({
     status: 200,

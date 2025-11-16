@@ -104,7 +104,7 @@ export class AuthControllerV1 {
     status: 401,
     description: 'Credenciales inválidas',
   })
-  async login(@Request() req, @Res({ passthrough: true }) res: Response) {
+  async login(@Request() req: any, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(req.user);
     
     res.cookie('access_token', result.access_token, {
@@ -152,7 +152,7 @@ export class AuthControllerV1 {
       },
     },
   })
-  async getProfile(@Request() req) {
+  async getProfile(@Request() req: any) {
     return {
       id: req.user.sub,
       username: req.user.username,

@@ -38,6 +38,16 @@ export class AerolineaController {
     return this.aerolineaService.findAll();
   }
 
+  @Get('codigo/:codigo')
+  @ApiOperation({ summary: 'Buscar aerolínea por código' })
+  @ApiResponse({ status: 200, description: 'Aerolinea encontrada', type: AerolineaEntity })
+  @ApiResponse({ status: 404, description: 'Aerolinea no encontrada' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
+  findByCodigo(@Param('codigo') codigo: string): Promise<AerolineaEntity | null> {
+    return this.aerolineaService.findByCodigo(codigo);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una aerolínea por ID con todas sus relaciones' })
   @ApiResponse({ status: 200, description: 'Aerolinea encontrada con rutas y plantilla', type: AerolineaEntity })
@@ -70,15 +80,5 @@ export class AerolineaController {
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
   remove(@Param('id', ParseIntPipe) id: number): Promise<AerolineaEntity> {
     return this.aerolineaService.remove(id);
-  }
-
-  @Get('codigo/:codigo')
-  @ApiOperation({ summary: 'Buscar aerolínea por código' })
-  @ApiResponse({ status: 200, description: 'Aerolinea encontrada', type: AerolineaEntity })
-  @ApiResponse({ status: 404, description: 'Aerolinea no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'Rol insuficiente' })
-  findByCodigo(@Param('codigo') codigo: string): Promise<AerolineaEntity | null> {
-    return this.aerolineaService.findByCodigo(codigo);
   }
 }

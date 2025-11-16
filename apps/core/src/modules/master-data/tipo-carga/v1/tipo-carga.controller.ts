@@ -10,8 +10,9 @@ import {
     HttpCode,
     HttpStatus,
     Query,
+    ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/v1/guards/roles.guard';
 import { Roles } from '../../../auth/v1/decorators/roles.decorator';
@@ -21,6 +22,7 @@ import { CreateTipoCargaDto, UpdateTipoCargaDto } from './dto';
 import { TipoCargaEntity } from './entities/tipo-carga.entity';
 
 @ApiTags('tipo-carga')
+@ApiBearerAuth()
 @Controller({
   path: 'master-data/tipo-carga',
   version: '1',
@@ -77,6 +79,20 @@ export class TipoCargaController {
         return this.tipoCargaService.findAll(skipNum, takeNum, search);
     }
 
+    @Get('nombre/:nombre')
+    @ApiOperation({ summary: 'Get a tipo de carga by nombre' })
+    @ApiResponse({
+        status: 200,
+        description: 'The tipo de carga',
+        type: TipoCargaEntity,
+    })
+    @ApiResponse({ status: 404, description: 'Not Found' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
+    findByNombre(@Param('nombre') nombre: string) {
+        return this.tipoCargaService.findByNombre(decodeURIComponent(nombre));
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get a tipo de carga by ID' })
     @ApiResponse({
@@ -87,8 +103,8 @@ export class TipoCargaController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    findOne(@Param('id') id: string) {
-        return this.tipoCargaService.findOne(+id);
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.tipoCargaService.findOne(id);
     }
 
     @Patch(':id')
@@ -102,8 +118,8 @@ export class TipoCargaController {
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    update(@Param('id') id: string, @Body() updateDto: UpdateTipoCargaDto) {
-        return this.tipoCargaService.update(+id, updateDto);
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateTipoCargaDto) {
+        return this.tipoCargaService.update(id, updateDto);
     }
 
     @Delete(':id')
@@ -117,21 +133,7 @@ export class TipoCargaController {
     @ApiResponse({ status: 404, description: 'Not Found' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    remove(@Param('id') id: string) {
-        return this.tipoCargaService.remove(+id);
-    }
-
-    @Get('nombre/:nombre')
-    @ApiOperation({ summary: 'Get a tipo de carga by nombre' })
-    @ApiResponse({
-        status: 200,
-        description: 'The tipo de carga',
-        type: TipoCargaEntity,
-    })
-    @ApiResponse({ status: 404, description: 'Not Found' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
-    @ApiResponse({ status: 403, description: 'Forbidden' })
-    findByNombre(@Param('nombre') nombre: string) {
-        return this.tipoCargaService.findByNombre(decodeURIComponent(nombre));
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.tipoCargaService.remove(id);
     }
 }
