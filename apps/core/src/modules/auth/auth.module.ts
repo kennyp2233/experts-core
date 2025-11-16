@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthControllerV1 } from './v1/auth.controller';
+import { TrustedDevicesController } from './v1/trusted-devices.controller';
 import { AuthService as AuthServiceV1 } from './v1/auth.service';
 import { JwtStrategy as JwtStrategyV1 } from './v1/strategies/jwt.strategy';
 import { LocalStrategy as LocalStrategyV1 } from './v1/strategies/local.strategy';
@@ -37,7 +38,7 @@ import { PrismaClient } from '.prisma/usuarios-client';
     //   useClass: TokenRefreshInterceptor,
     // },
   ],
-  controllers: [AuthControllerV1],
+  controllers: [AuthControllerV1, TrustedDevicesController],
   exports: [AuthServiceV1],
 })
 export class AuthModule {}
