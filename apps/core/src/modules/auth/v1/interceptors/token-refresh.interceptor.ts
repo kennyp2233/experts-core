@@ -4,33 +4,30 @@ import {
   ExecutionContext,
   CallHandler,
   UnauthorizedException,
-  Inject,
   Logger,
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '.prisma/usuarios-client';
 import { Response } from 'express';
-import { AuthService } from '../auth.service';
+import { TokenService } from '../services/token.service';
+import { UserRepository } from '../repositories/user.repository';
+import { AuthConstants } from '../config/auth.constants';
 
 /**
- * Interceptor que detecta cuando un JWT expira y automáticamente
- * intenta renovarlo usando el refresh token de las cookies.
+ * Interceptor que detecta tokens JWT expirados y los renueva automáticamente
+ * usando el refresh token almacenado en cookies.
  *
- * Esto hace que el refresh sea transparente para el frontend.
+ * NOTA: Este interceptor está deshabilitado por defecto en AuthModule.
+ * Para habilitarlo, descomentar el provider APP_INTERCEPTOR en auth.module.ts
  */
 @Injectable()
 export class TokenRefreshInterceptor implements NestInterceptor {
   private readonly logger = new Logger(TokenRefreshInterceptor.name);
 
   constructor(
-    private jwtService: JwtService,
-    private configService: ConfigService,
-    private authService: AuthService,
-    @Inject('PrismaClientUsuarios') private prisma: PrismaClient,
-  ) { }
+    private readonly tokenService: TokenService,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
@@ -69,52 +66,41 @@ export class TokenRefreshInterceptor implements NestInterceptor {
         );
       }
 
-      // Validar refresh token
-      const userId = await this.authService.validateRefreshToken(refreshToken);
+      // Validar refresh token usando TokenService
+      const userId = await this.tokenService.validateRefreshToken(refreshToken);
 
       if (!userId) {
         this.logger.debug('Invalid or expired refresh token');
         throw new UnauthorizedException('Refresh token inválido o expirado');
       }
 
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId, isActive: true },
-      });
+      // Obtener usuario usando Repository
+      const user = await this.userRepository.findPublicInfo(userId);
 
       if (!user) {
         this.logger.warn(`User ${userId} not found or inactive`);
         throw new UnauthorizedException('Usuario no encontrado o inactivo');
       }
 
+      // Generar NUEVO access token usando TokenService
+      const newAccessToken = this.tokenService.generateAccessToken(user);
 
-      // Generar NUEVO access token
-      const payload = {
-        username: user.username,
-        sub: user.id,
-        role: user.role,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      };
-
-      const expiresIn = this.configService.get<string>('app.jwtExpiresIn') || '15m';
-      const newAccessToken = this.jwtService.sign(payload, { expiresIn: expiresIn as any });
-
-      // Setear nueva cookie
-      response.cookie('access_token', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutos
-        path: '/',
+      // Setear nueva cookie usando AuthConstants
+      const env = process.env.NODE_ENV || 'development';
+      response.cookie(AuthConstants.COOKIES.ACCESS_TOKEN_NAME, newAccessToken, {
+        httpOnly: AuthConstants.COOKIES.OPTIONS.httpOnly,
+        secure: AuthConstants.COOKIES.OPTIONS.secure(env),
+        sameSite: AuthConstants.COOKIES.OPTIONS.sameSite(env),
+        maxAge: AuthConstants.TOKENS.ACCESS_TOKEN_EXPIRES,
+        path: AuthConstants.COOKIES.OPTIONS.path,
       });
 
-      // Actualizar el request para que tenga el nuevo token
+      // Actualizar el request con el nuevo token
       request.cookies.access_token = newAccessToken;
 
-      // Actualizar también el user en el request para que los guards lo vean
+      // Actualizar el user en el request para los guards
       request.user = {
+        sub: user.id,
         userId: user.id,
         username: user.username,
         role: user.role,
