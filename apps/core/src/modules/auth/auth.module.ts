@@ -1,16 +1,28 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthControllerV1 } from './v1/auth.controller';
-import { TrustedDevicesController } from './v1/trusted-devices.controller';
-import { AuthService as AuthServiceV1 } from './v1/auth.service';
-import { JwtStrategy as JwtStrategyV1 } from './v1/strategies/jwt.strategy';
-import { LocalStrategy as LocalStrategyV1 } from './v1/strategies/local.strategy';
-import { RolesGuard } from './v1/guards/roles.guard';
-import { TokenRefreshInterceptor } from './v1/interceptors/token-refresh.interceptor';
 import { PrismaClient } from '.prisma/usuarios-client';
+
+// Controllers
+import { AuthControllerV1 } from './v1/controllers/auth.controller';
+import { TrustedDevicesController } from './v1/controllers/trusted-devices.controller';
+
+// Services
+import { AuthService } from './v1/services/auth.service';
+import { PasswordService } from './v1/services/password.service';
+import { TokenService } from './v1/services/token.service';
+import { TwoFactorService } from './v1/services/two-factor.service';
+import { TrustedDevicesService } from './v1/services/trusted-devices.service';
+
+// Repositories
+import { UserRepository } from './v1/repositories/user.repository';
+import { TrustedDeviceRepository } from './v1/repositories/trusted-device.repository';
+
+// Strategies & Guards
+import { JwtStrategy } from './v1/strategies/jwt.strategy';
+import { LocalStrategy } from './v1/strategies/local.strategy';
+import { RolesGuard } from './v1/guards/roles.guard';
 
 @Module({
   imports: [
@@ -27,18 +39,28 @@ import { PrismaClient } from '.prisma/usuarios-client';
     }),
   ],
   providers: [
-    AuthServiceV1,
-    JwtStrategyV1,
-    LocalStrategyV1,
-    RolesGuard,
+    // Prisma Client
     { provide: 'PrismaClientUsuarios', useClass: PrismaClient },
-    // TODO: Uncomment when Prisma clients are generated and tested
-    // {
-    //   provide: APP_INTERCEPTOR,
-    //   useClass: TokenRefreshInterceptor,
-    // },
+
+    // Repositories
+    UserRepository,
+    TrustedDeviceRepository,
+
+    // Services
+    AuthService,
+    PasswordService,
+    TokenService,
+    TwoFactorService,
+    TrustedDevicesService,
+
+    // Strategies
+    JwtStrategy,
+    LocalStrategy,
+
+    // Guards
+    RolesGuard,
   ],
   controllers: [AuthControllerV1, TrustedDevicesController],
-  exports: [AuthServiceV1],
+  exports: [AuthService],
 })
 export class AuthModule {}
