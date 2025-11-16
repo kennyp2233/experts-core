@@ -295,6 +295,10 @@ export class AuthService {
       //   },
       // });
 
+      // Temporary: Mark 2FA as enabled in Redis (no expiration)
+      await this.redis.set(`2fa:enabled:${userId}`, '1');
+      await this.redis.set(`2fa:secret:${userId}`, secret);
+
       // Limpiar temporal de Redis
       await this.redis.del(`2fa:pending:${userId}`);
 
@@ -324,12 +328,11 @@ export class AuthService {
       //   throw new BadRequestException('2FA no está habilitado');
       // }
 
-      // Temporary: get from Redis pending (for testing)
-      const data = await this.redis.get(`2fa:pending:${userId}`);
-      if (!data) {
-        throw new BadRequestException('No hay secreto 2FA configurado');
+      // Temporary: get from Redis (after confirmation)
+      const secret = await this.redis.get(`2fa:secret:${userId}`);
+      if (!secret) {
+        throw new BadRequestException('2FA no está habilitado para este usuario');
       }
-      const { secret } = JSON.parse(data);
 
       // Validar TOTP
       const isValid = authenticator.verify({
@@ -365,8 +368,10 @@ export class AuthService {
       //   },
       // });
 
-      // Limpiar cualquier sesión 2FA pendiente
+      // Limpiar de Redis
       await this.redis.del(`2fa:pending:${userId}`);
+      await this.redis.del(`2fa:enabled:${userId}`);
+      await this.redis.del(`2fa:secret:${userId}`);
 
       // Eliminar todos los dispositivos confiables
       await this.removeAllTrustedDevices(userId);
