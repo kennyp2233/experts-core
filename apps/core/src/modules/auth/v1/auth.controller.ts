@@ -18,6 +18,9 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { Enable2FADto } from './dto/enable-2fa.dto';
+import { Verify2FADto } from './dto/verify-2fa.dto';
+import { DeviceFingerprintUtils } from './utils/device-fingerprint.utils';
 
 @ApiTags('Authentication')
 @Controller({
@@ -220,6 +223,134 @@ export class AuthControllerV1 {
       role: req.user.role,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
+    };
+  }
+
+  // ==================== 2FA ENDPOINTS ====================
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/enable')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Habilitar 2FA - Genera código QR' })
+  @ApiResponse({
+    status: 200,
+    description: 'QR code generado exitosamente',
+    schema: {
+      example: {
+        secret: 'JBSWY3DPEHPK3PXP',
+        qrCode: 'data:image/png;base64,iVBORw0KG...',
+      },
+    },
+  })
+  async enable2FA(@Request() req: any) {
+    const userId = req.user.userId;
+    const email = req.user.email;
+
+    const result = await this.authService.generate2FASecret(userId, email);
+
+    return {
+      secret: result.secret,
+      qrCode: result.qrCode,
+      message: 'Escanea el código QR con Google Authenticator y confirma con un código',
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirmar habilitación de 2FA' })
+  @ApiBody({ type: Enable2FADto })
+  @ApiResponse({
+    status: 200,
+    description: '2FA habilitado exitosamente',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Sesión 2FA expirada',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Código 2FA inválido',
+  })
+  async confirm2FA(@Request() req: any, @Body() dto: Enable2FADto) {
+    const userId = req.user.userId;
+
+    await this.authService.confirm2FA(userId, dto.token);
+
+    return {
+      success: true,
+      message: '2FA habilitado exitosamente',
+    };
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verificar código 2FA durante login' })
+  @ApiBody({ type: Verify2FADto })
+  @ApiResponse({
+    status: 200,
+    description: '2FA verificado exitosamente',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Código 2FA inválido o sesión expirada',
+  })
+  async verify2FA(
+    @Body() dto: Verify2FADto,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Recuperar sesión temporal de Redis
+    const data = await this.authService['redis'].get(`2fa:login:${dto.tempToken}`);
+
+    if (!data) {
+      throw new UnauthorizedException('Sesión 2FA expirada');
+    }
+
+    const { userId, fingerprint, deviceInfo, ip } = JSON.parse(data);
+
+    // Verificar código 2FA
+    await this.authService.verify2FACode(userId, dto.token);
+
+    // Si usuario marcó "Confiar en este dispositivo"
+    if (dto.trustDevice) {
+      await this.authService.trustDevice(
+        userId,
+        fingerprint,
+        deviceInfo,
+        ip,
+      );
+    }
+
+    // Limpiar sesión temporal
+    await this.authService['redis'].del(`2fa:login:${dto.tempToken}`);
+
+    // TODO: Get user from DB and generate tokens
+    // For now, return success message
+    return {
+      success: true,
+      message: '2FA verificado exitosamente',
+      // In real implementation, set cookies and return user
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/disable')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Deshabilitar 2FA' })
+  @ApiResponse({
+    status: 200,
+    description: '2FA deshabilitado exitosamente',
+  })
+  async disable2FA(@Request() req: any) {
+    const userId = req.user.userId;
+
+    await this.authService.disable2FA(userId);
+
+    return {
+      success: true,
+      message: '2FA deshabilitado exitosamente. Todos los dispositivos confiables han sido eliminados.',
     };
   }
 }
