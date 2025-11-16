@@ -1,10 +1,12 @@
+import { Role } from '.prisma/usuarios-client';
+
 /**
  * Payload del JWT token
  */
 export interface TokenPayload {
   username: string;
   sub: string; // userId
-  role: string;
+  role: Role;
   email: string;
   firstName: string;
   lastName: string;
@@ -17,7 +19,7 @@ export interface UserForToken {
   id: string;
   username: string;
   email: string;
-  role: string;
+  role: Role;
   firstName: string;
   lastName: string;
 }
