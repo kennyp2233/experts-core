@@ -9,10 +9,12 @@ import {
   Get,
   Res,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { randomBytes } from 'crypto';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -114,32 +116,106 @@ export class AuthControllerV1 {
   @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 200,
-    description: 'Inicio de sesión exitoso',
+    description: 'Inicio de sesión exitoso O requiere 2FA',
     schema: {
-      example: {
-        user: {
-          id: 'cm3hj9k8l0000xjke8bqf5z9m',
-          username: 'johndoe',
-          email: 'user@example.com',
-          role: 'USER',
-          firstName: 'John',
-          lastName: 'Doe',
+      oneOf: [
+        {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                username: { type: 'string' },
+                email: { type: 'string' },
+                role: { type: 'string' },
+                firstName: { type: 'string' },
+                lastName: { type: 'string' },
+              },
+            },
+          },
         },
-      },
+        {
+          type: 'object',
+          properties: {
+            requires2FA: { type: 'boolean', example: true },
+            tempToken: { type: 'string', example: 'abc123...' },
+            message: { type: 'string' },
+          },
+        },
+      ],
     },
   })
   @ApiResponse({
     status: 401,
     description: 'Credenciales inválidas',
   })
-  async login(@Request() req: any, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.login(req.user);
+  async login(
+    @Request() req: any,
+    @Req() request: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const user = req.user;
+
+    // TODO: Uncomment when Prisma is ready
+    // Verificar si el usuario tiene 2FA habilitado
+    // const userWith2FA = await this.authService['prisma'].user.findUnique({
+    //   where: { id: user.id },
+    //   select: { twoFactorEnabled: true },
+    // });
+
+    // Temporary: Check if user has 2FA enabled in Redis
+    const has2FA = await this.authService['redis'].get(`2fa:enabled:${user.id}`);
+
+    // Si NO tiene 2FA, login normal
+    if (!has2FA) {
+      return this.completeLogin(user, request, res);
+    }
+
+    // Tiene 2FA: verificar si el dispositivo es confiable
+    const fingerprint = DeviceFingerprintUtils.generate(request);
+    const isTrusted = await this.authService.isDeviceTrusted(user.id, fingerprint);
+
+    if (isTrusted) {
+      // Dispositivo confiable: Skip 2FA
+      await this.authService.updateDeviceLastUsed(user.id, fingerprint, request.ip);
+      return this.completeLogin(user, request, res);
+    }
+
+    // Dispositivo NO confiable: Requiere 2FA
+    const tempToken = randomBytes(32).toString('hex');
+    const deviceInfo = DeviceFingerprintUtils.extractInfo(request);
+
+    // Guardar sesión temporal en Redis (5 minutos)
+    await this.authService['redis'].setex(
+      `2fa:login:${tempToken}`,
+      300,
+      JSON.stringify({
+        userId: user.id,
+        fingerprint,
+        deviceInfo,
+        ip: request.ip,
+      }),
+    );
+
+    return {
+      requires2FA: true,
+      tempToken,
+      message: 'Ingresa tu código 2FA de 6 dígitos',
+    };
+  }
+
+  /**
+   * Completa el login generando tokens y seteando cookies
+   */
+  private async completeLogin(user: any, request: any, res: Response) {
+    const result = await this.authService.login(user);
 
     // Generar refresh token
     const refreshToken = await this.authService.generateRefreshToken(
-      req.user.id,
-      req.headers['user-agent'],
-      req.ip,
+      user.id,
+      request.headers['user-agent'],
+      request.ip,
     );
 
     // Setear access token cookie (15 minutos)
@@ -290,7 +366,19 @@ export class AuthControllerV1 {
   @ApiBody({ type: Verify2FADto })
   @ApiResponse({
     status: 200,
-    description: '2FA verificado exitosamente',
+    description: '2FA verificado exitosamente - Login completo',
+    schema: {
+      example: {
+        user: {
+          id: 'cm3hj9k8l0000xjke8bqf5z9m',
+          username: 'johndoe',
+          email: 'user@example.com',
+          role: 'USER',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -313,6 +401,34 @@ export class AuthControllerV1 {
     // Verificar código 2FA
     await this.authService.verify2FACode(userId, dto.token);
 
+    // TODO: Uncomment when Prisma is ready
+    // Obtener usuario completo de DB
+    // const user = await this.authService['prisma'].user.findUnique({
+    //   where: { id: userId },
+    //   select: {
+    //     id: true,
+    //     username: true,
+    //     email: true,
+    //     role: true,
+    //     firstName: true,
+    //     lastName: true,
+    //   },
+    // });
+
+    // if (!user) {
+    //   throw new UnauthorizedException('Usuario no encontrado');
+    // }
+
+    // Temporary: Create user object from userId (should come from DB)
+    const user = {
+      id: userId,
+      username: 'user',
+      email: 'user@example.com',
+      role: 'USER',
+      firstName: 'User',
+      lastName: 'Name',
+    };
+
     // Si usuario marcó "Confiar en este dispositivo"
     if (dto.trustDevice) {
       await this.authService.trustDevice(
@@ -326,13 +442,8 @@ export class AuthControllerV1 {
     // Limpiar sesión temporal
     await this.authService['redis'].del(`2fa:login:${dto.tempToken}`);
 
-    // TODO: Get user from DB and generate tokens
-    // For now, return success message
-    return {
-      success: true,
-      message: '2FA verificado exitosamente',
-      // In real implementation, set cookies and return user
-    };
+    // Completar login: generar tokens y cookies
+    return this.completeLogin(user, req, res);
   }
 
   @UseGuards(JwtAuthGuard)
