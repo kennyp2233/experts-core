@@ -36,7 +36,8 @@ export default registerAs('app', () => {
 
     // Autenticación
     jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '60m',
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d',
 
     // Rate Limiting
     throttle: {
