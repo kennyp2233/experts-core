@@ -1,3 +1,5 @@
+import { Role } from '.prisma/usuarios-client';
+
 /**
  * Respuesta de autenticación exitosa
  */
@@ -26,7 +28,7 @@ export interface UserInfo {
   id: string;
   username: string;
   email: string;
-  role: string;
+  role: Role;
   firstName: string;
   lastName: string;
 }

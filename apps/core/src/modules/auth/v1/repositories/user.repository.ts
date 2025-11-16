@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '.prisma/usuarios-client';
+import { PrismaClient, Role } from '.prisma/usuarios-client';
 
 /**
  * Repositorio para operaciones de usuario
@@ -58,7 +58,7 @@ export class UserRepository {
     password: string;
     firstName: string;
     lastName: string;
-    role: string;
+    role: Role;
     isActive: boolean;
   }) {
     return this.prisma.user.create({

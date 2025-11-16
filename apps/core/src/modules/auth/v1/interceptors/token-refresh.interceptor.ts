@@ -13,7 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '.prisma/usuarios-client';
 import { Response } from 'express';
-import { AuthService } from '../auth.service';
+import { AuthService } from '../services/auth.service';
 
 /**
  * Interceptor que detecta cuando un JWT expira y automáticamente
@@ -70,7 +70,7 @@ export class TokenRefreshInterceptor implements NestInterceptor {
       }
 
       // Validar refresh token
-      const userId = await this.authService.validateRefreshToken(refreshToken);
+      const userId = await this.authService.tokens.validate(refreshToken);
 
       if (!userId) {
         this.logger.debug('Invalid or expired refresh token');

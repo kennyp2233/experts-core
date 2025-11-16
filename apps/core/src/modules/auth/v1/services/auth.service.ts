@@ -11,6 +11,7 @@ import { TokenService } from './token.service';
 import { TwoFactorService } from './two-factor.service';
 import { TrustedDevicesService } from './trusted-devices.service';
 import { UserInfo, UserForToken } from '../interfaces';
+import { Role } from '.prisma/usuarios-client';
 
 /**
  * Servicio principal de autenticación (Orquestador)
@@ -27,7 +28,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly twoFactorService: TwoFactorService,
     private readonly trustedDevicesService: TrustedDevicesService,
-  ) {}
+  ) { }
 
   /**
    * Valida credenciales de usuario (usado por LocalStrategy)
@@ -94,7 +95,7 @@ export class AuthService {
         password: hashedPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: 'USER', // Siempre USER por seguridad
+        role: Role.USER, // Siempre USER por seguridad
         isActive: true,
       });
 
