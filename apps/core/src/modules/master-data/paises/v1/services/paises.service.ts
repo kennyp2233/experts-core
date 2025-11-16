@@ -76,10 +76,20 @@ export class PaisesService {
         }
     }
 
-    async findAll(skip?: number, take?: number) {
+    async findAll(skip?: number, take?: number, search?: string) {
         try {
+            const where = search
+                ? {
+                    nombre: {
+                        contains: search,
+                        mode: 'insensitive' as const,
+                    },
+                }
+                : {};
+
             const [paises, total] = await Promise.all([
                 this.prisma.pais.findMany({
+                    where,
                     skip,
                     take,
                     include: {
@@ -89,7 +99,7 @@ export class PaisesService {
                         nombre: 'asc',
                     },
                 }),
-                this.prisma.pais.count(),
+                this.prisma.pais.count({ where }),
             ]);
 
             return {

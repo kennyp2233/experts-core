@@ -57,10 +57,14 @@ export class AuthService {
       sub: user.id,
       role: user.role,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
     };
 
+    const access_token = this.jwtService.sign(payload);
+    
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token,
       user: {
         id: user.id,
         username: user.username,
@@ -70,6 +74,19 @@ export class AuthService {
         lastName: user.lastName,
       },
     };
+  }
+
+  generateToken(user: any): string {
+    const payload = {
+      username: user.username,
+      sub: user.id,
+      role: user.role,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+
+    return this.jwtService.sign(payload);
   }
 
   async register(data: RegisterDto): Promise<any> {

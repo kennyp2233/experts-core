@@ -88,8 +88,20 @@ export class FincaService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, sortField?: string, sortOrder?: string) {
     try {
+      // Configurar ordenamiento por defecto
+      let orderBy: any = {
+        nombreFinca: 'asc',
+      };
+
+      // Aplicar ordenamiento personalizado si se proporciona
+      if (sortField && sortOrder) {
+        orderBy = {
+          [sortField]: sortOrder,
+        };
+      }
+
       const [fincas, total] = await Promise.all([
         this.prisma.finca.findMany({
           skip,
@@ -106,9 +118,7 @@ export class FincaService {
               },
             },
           },
-          orderBy: {
-            nombreFinca: 'asc',
-          },
+          orderBy,
         }),
         this.prisma.finca.count(),
       ]);

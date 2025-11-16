@@ -126,23 +126,39 @@ export class ConsignatariosService {
         }
     }
 
-    async findAll(skip?: number, take?: number) {
+    async findAll(skip?: number, take?: number, sortField?: string, sortOrder?: string) {
         try {
+            // Configurar ordenamiento por defecto
+            let orderBy: any = {
+                nombre: 'asc',
+            };
+
+            // Aplicar ordenamiento personalizado si se proporciona
+            if (sortField && sortOrder) {
+                orderBy = {
+                    [sortField]: sortOrder,
+                };
+            }
+
             const [consignatarios, total] = await Promise.all([
                 this.prisma.consignatario.findMany({
                     skip,
                     take,
                     include: {
+                        embarcador: true,
+                        cliente: true,
                         caeSice: true,
                         facturacion: true,
                         fito: true,
                         guiaH: true,
-                        guiaM: true,
+                        guiaM: {
+                            include: {
+                                destino: true,
+                            },
+                        },
                         transmision: true,
                     },
-                    orderBy: {
-                        nombre: 'asc',
-                    },
+                    orderBy,
                 }),
                 this.prisma.consignatario.count(),
             ]);
@@ -169,11 +185,17 @@ export class ConsignatariosService {
             const consignatario = await this.prisma.consignatario.findUnique({
                 where: { id },
                 include: {
+                    embarcador: true,
+                    cliente: true,
                     caeSice: true,
                     facturacion: true,
                     fito: true,
                     guiaH: true,
-                    guiaM: true,
+                    guiaM: {
+                        include: {
+                            destino: true,
+                        },
+                    },
                     transmision: true,
                 },
             });
@@ -266,11 +288,17 @@ export class ConsignatariosService {
                 where: { id },
                 data: updateData,
                 include: {
+                    embarcador: true,
+                    cliente: true,
                     caeSice: true,
                     facturacion: true,
                     fito: true,
                     guiaH: true,
-                    guiaM: true,
+                    guiaM: {
+                        include: {
+                            destino: true,
+                        },
+                    },
                     transmision: true,
                 },
             });
@@ -366,11 +394,17 @@ export class ConsignatariosService {
                     },
                 },
                 include: {
+                    embarcador: true,
+                    cliente: true,
                     caeSice: true,
                     facturacion: true,
                     fito: true,
                     guiaH: true,
-                    guiaM: true,
+                    guiaM: {
+                        include: {
+                            destino: true,
+                        },
+                    },
                     transmision: true,
                 },
             });

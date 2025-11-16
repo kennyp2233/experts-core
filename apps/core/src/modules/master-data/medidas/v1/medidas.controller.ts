@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  ParseIntPipe,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -79,10 +78,27 @@ export class MedidasController {
     description: 'Error interno del servidor',
   })
   findAll(
-    @Query('skip', ParseIntPipe) skip?: number,
-    @Query('take', ParseIntPipe) take?: number,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
   ) {
-    return this.medidasService.findAll(skip, take);
+    const skipNum = skip ? parseInt(skip, 10) : undefined;
+    const takeNum = take ? parseInt(take, 10) : undefined;
+    return this.medidasService.findAll(skipNum, takeNum);
+  }
+
+  @Get('simple')
+  @UseGuards()
+  @ApiOperation({ summary: 'Obtener medidas simples (id y nombre)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de medidas simples obtenida exitosamente',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error interno del servidor',
+  })
+  findSimple() {
+    return this.medidasService.findSimple();
   }
 
   @Get('search')
@@ -124,8 +140,9 @@ export class MedidasController {
     status: 500,
     description: 'Error interno del servidor',
   })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.medidasService.findOne(id);
+  findOne(@Param('id') id: string) {
+    const idNum = parseInt(id, 10);
+    return this.medidasService.findOne(idNum);
   }
 
   @Patch(':id')
@@ -152,10 +169,11 @@ export class MedidasController {
     description: 'Error interno del servidor',
   })
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateMedidaDto: UpdateMedidaDto,
   ) {
-    return this.medidasService.update(id, updateMedidaDto);
+    const idNum = parseInt(id, 10);
+    return this.medidasService.update(idNum, updateMedidaDto);
   }
 
   @Delete(':id')
@@ -178,7 +196,8 @@ export class MedidasController {
     status: 500,
     description: 'Error interno del servidor',
   })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.medidasService.remove(id);
+  remove(@Param('id') id: string) {
+    const idNum = parseInt(id, 10);
+    return this.medidasService.remove(idNum);
   }
 }

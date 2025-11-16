@@ -35,7 +35,7 @@ import { UserRole } from '../../../auth/v1/dto/update-user-role.dto';
 @ApiExtraModels(PaginationResponseDto, CaeAduanaEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller({
-  path: 'master-data/cae-aduanas',
+  path: 'master-data/cae-aduana',
   version: '1',
 })
 export class CaeAduanaController {

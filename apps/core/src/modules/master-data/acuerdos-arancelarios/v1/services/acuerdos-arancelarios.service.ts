@@ -52,17 +52,27 @@ export class AcuerdosArancelariosService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, search?: string) {
     try {
+      const where = search
+        ? {
+            nombre: {
+              contains: search,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {};
+
       const [acuerdos, total] = await Promise.all([
         this.prisma.acuerdoArancelario.findMany({
+          where,
           skip,
           take,
           orderBy: {
             nombre: 'asc',
           },
         }),
-        this.prisma.acuerdoArancelario.count(),
+        this.prisma.acuerdoArancelario.count({ where }),
       ]);
 
       return {

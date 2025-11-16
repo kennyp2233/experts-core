@@ -42,11 +42,13 @@ export class AgenciaIataService {
         }
     }
 
-    async findAll(): Promise<AgenciaIataEntity[]> {
+    async findAll(skip?: number, take?: number): Promise<AgenciaIataEntity[]> {
         try {
             const agencias = await this.prisma.agenciaIata.findMany({
                 where: { estado: true },
                 orderBy: { nombreShipper: 'asc' },
+                skip: skip,
+                take: take,
             });
 
             return agencias as AgenciaIataEntity[];
@@ -148,6 +150,27 @@ export class AgenciaIataService {
         } catch (error) {
             throw new BadRequestException(
                 'Error al buscar la agencia IATA por nombre: ' + error.message,
+            );
+        }
+    }
+
+    async findByNombre(nombre: string): Promise<AgenciaIataEntity[]> {
+        try {
+            const agencias = await this.prisma.agenciaIata.findMany({
+                where: {
+                    estado: true,
+                    nombreShipper: {
+                        contains: nombre,
+                        mode: 'insensitive',
+                    },
+                },
+                orderBy: { nombreShipper: 'asc' },
+            });
+
+            return agencias as AgenciaIataEntity[];
+        } catch (error) {
+            throw new BadRequestException(
+                'Error al buscar agencias IATA por nombre: ' + error.message,
             );
         }
     }

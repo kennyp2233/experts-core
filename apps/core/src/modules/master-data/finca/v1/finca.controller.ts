@@ -70,6 +70,18 @@ export class FincaController {
     type: Number,
     description: 'Número de registros a obtener',
   })
+  @ApiQuery({
+    name: 'sortField',
+    required: false,
+    type: String,
+    description: 'Campo por el cual ordenar',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    description: 'Orden de clasificación (asc o desc)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de fincas obtenida exitosamente',
@@ -79,10 +91,14 @@ export class FincaController {
     description: 'Error interno del servidor',
   })
   findAll(
-    @Query('skip', ParseIntPipe) skip?: number,
-    @Query('take', ParseIntPipe) take?: number,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: string,
   ) {
-    return this.fincaService.findAll(skip, take);
+    const skipNum = skip ? parseInt(skip, 10) : undefined;
+    const takeNum = take ? parseInt(take, 10) : undefined;
+    return this.fincaService.findAll(skipNum, takeNum, sortField, sortOrder);
   }
 
   @Get('search')

@@ -222,4 +222,29 @@ export class MedidasService {
       throw new InternalServerErrorException('Error al buscar medidas');
     }
   }
+
+  async findSimple() {
+    try {
+      const medidas = await this.prisma.medida.findMany({
+        select: {
+          id: true,
+          nombre: true,
+        },
+        where: {
+          estado: true,
+        },
+        orderBy: {
+          nombre: 'asc',
+        },
+      });
+
+      return medidas;
+    } catch (error) {
+      this.logger.error(
+        `Error al obtener medidas simples: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException('Error al obtener medidas simples');
+    }
+  }
 }

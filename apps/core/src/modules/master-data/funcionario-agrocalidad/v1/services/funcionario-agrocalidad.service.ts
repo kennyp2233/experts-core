@@ -68,15 +68,25 @@ export class FuncionarioAgrocalidadService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, sortField?: string, sortOrder?: string) {
     try {
+      // Configurar ordenamiento por defecto
+      let orderBy: any = {
+        nombre: 'asc',
+      };
+
+      // Aplicar ordenamiento personalizado si se proporciona
+      if (sortField && sortOrder) {
+        orderBy = {
+          [sortField]: sortOrder,
+        };
+      }
+
       const [funcionarios, total] = await Promise.all([
         this.prisma.funcionarioAgrocalidad.findMany({
           skip,
           take,
-          orderBy: {
-            nombre: 'asc',
-          },
+          orderBy,
         }),
         this.prisma.funcionarioAgrocalidad.count(),
       ]);

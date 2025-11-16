@@ -46,17 +46,35 @@ export class TipoEmbarqueService {
         }
     }
 
-    async findAll(): Promise<TipoEmbarqueEntity[]> {
+    async findAll(skip?: number, take?: number, search?: string): Promise<{ data: TipoEmbarqueEntity[], total: number, skip: number, take: number }> {
         try {
-            const tiposEmbarque = await this.prisma.tipoEmbarque.findMany({
-                include: {
-                    carga: true,
-                    embalaje: true,
+            const where = search ? {
+                nombre: {
+                    contains: search,
+                    mode: 'insensitive' as const,
                 },
-                orderBy: { nombre: 'asc' },
-            });
+            } : {};
 
-            return tiposEmbarque as TipoEmbarqueEntity[];
+            const [tiposEmbarque, total] = await Promise.all([
+                this.prisma.tipoEmbarque.findMany({
+                    where,
+                    include: {
+                        carga: true,
+                        embalaje: true,
+                    },
+                    orderBy: { nombre: 'asc' },
+                    skip,
+                    take,
+                }),
+                this.prisma.tipoEmbarque.count({ where }),
+            ]);
+
+            return {
+                data: tiposEmbarque as TipoEmbarqueEntity[],
+                total,
+                skip: skip || 0,
+                take: take || total,
+            };
         } catch (error) {
             throw new BadRequestException(
                 'Error al obtener los tipos de embarque: ' + error.message,

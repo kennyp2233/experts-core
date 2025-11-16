@@ -58,8 +58,22 @@ export class DestinoService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, sortField?: string, sortOrder?: string) {
     try {
+      // Configurar ordenamiento dinámico
+      let orderBy: any = { nombre: 'asc' }; // Default order
+
+      if (sortField && sortOrder) {
+        // Validar que sortOrder sea válido
+        const validSortOrder = sortOrder.toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+        // Validar que sortField sea un campo válido
+        const validFields = ['id', 'nombre', 'aeropuerto', 'sesaId', 'cobroFitos'];
+        if (validFields.includes(sortField)) {
+          orderBy = { [sortField]: validSortOrder };
+        }
+      }
+
       const [destinos, total] = await Promise.all([
         this.prisma.destino.findMany({
           skip,
@@ -67,9 +81,7 @@ export class DestinoService {
           include: {
             pais: true,
           },
-          orderBy: {
-            nombre: 'asc',
-          },
+          orderBy,
         }),
         this.prisma.destino.count(),
       ]);

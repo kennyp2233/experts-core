@@ -69,8 +69,22 @@ export class OrigenService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, sortField?: string, sortOrder?: string) {
     try {
+      // Configurar ordenamiento dinámico
+      let orderBy: any = { nombre: 'asc' }; // Default order
+
+      if (sortField && sortOrder) {
+        // Validar que sortOrder sea válido
+        const validSortOrder = sortOrder.toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+        // Validar que sortField sea un campo válido
+        const validFields = ['id', 'nombre', 'aeropuerto'];
+        if (validFields.includes(sortField)) {
+          orderBy = { [sortField]: validSortOrder };
+        }
+      }
+
       const [origenes, total] = await Promise.all([
         this.prisma.origen.findMany({
           skip,
@@ -79,9 +93,7 @@ export class OrigenService {
             pais: true,
             caeAduana: true,
           },
-          orderBy: {
-            nombre: 'asc',
-          },
+          orderBy,
         }),
         this.prisma.origen.count(),
       ]);

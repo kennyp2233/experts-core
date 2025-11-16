@@ -5,9 +5,15 @@ import {
   IsNumber,
   IsArray,
   ValidateNested,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+
+export enum OpcionProducto {
+  SIMPLE = 'simple',
+  COMPUESTO = 'compuesto',
+}
 
 export class ProductosArancelesDto {
   @ApiPropertyOptional({
@@ -150,12 +156,13 @@ export class CreateProductoDto {
   estado?: boolean;
 
   @ApiPropertyOptional({
-    description: 'ID de la opción',
-    example: 1,
+    description: 'Opción del producto',
+    enum: OpcionProducto,
+    example: OpcionProducto.SIMPLE,
   })
   @IsOptional()
-  @IsNumber()
-  opcionId?: number;
+  @IsEnum(OpcionProducto)
+  opcionId?: OpcionProducto;
 
   @ApiPropertyOptional({
     description: 'Tallos por full',

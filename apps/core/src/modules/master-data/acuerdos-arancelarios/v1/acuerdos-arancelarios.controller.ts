@@ -56,6 +56,7 @@ export class AcuerdosArancelariosController {
   @ApiOperation({ summary: 'Obtener todos los acuerdos arancelarios' })
   @ApiQuery({ name: 'skip', required: false, type: Number, description: 'Número de registros a saltar' })
   @ApiQuery({ name: 'take', required: false, type: Number, description: 'Número de registros a obtener' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Término de búsqueda por nombre' })
   @ApiResponse({
     status: 200,
     description: 'Lista de acuerdos arancelarios obtenida exitosamente',
@@ -77,10 +78,11 @@ export class AcuerdosArancelariosController {
   async findAll(
     @Query('skip') skip?: string,
     @Query('take') take?: string,
+    @Query('search') search?: string,
   ) {
     const skipNum = skip ? parseInt(skip, 10) : undefined;
     const takeNum = take ? parseInt(take, 10) : undefined;
-    return this.acuerdosService.findAll(skipNum, takeNum);
+    return this.acuerdosService.findAll(skipNum, takeNum, search);
   }
 
   @Get('search')

@@ -57,6 +57,8 @@ export class ConsignatariosController {
     @ApiOperation({ summary: 'Obtener todos los consignatarios' })
     @ApiQuery({ name: 'skip', required: false, type: Number, description: 'Número de registros a saltar' })
     @ApiQuery({ name: 'take', required: false, type: Number, description: 'Número de registros a obtener' })
+    @ApiQuery({ name: 'sortField', required: false, type: String, description: 'Campo por el cual ordenar' })
+    @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: 'Orden de clasificación' })
     @ApiResponse({
         status: 200,
         description: 'Lista de consignatarios obtenida exitosamente',
@@ -78,10 +80,12 @@ export class ConsignatariosController {
     async findAll(
         @Query('skip') skip?: string,
         @Query('take') take?: string,
+        @Query('sortField') sortField?: string,
+        @Query('sortOrder') sortOrder?: string,
     ) {
         const skipNum = skip ? parseInt(skip, 10) : undefined;
         const takeNum = take ? parseInt(take, 10) : undefined;
-        return this.consignatariosService.findAll(skipNum, takeNum);
+        return this.consignatariosService.findAll(skipNum, takeNum, sortField, sortOrder);
     }
 
     @Get('search')

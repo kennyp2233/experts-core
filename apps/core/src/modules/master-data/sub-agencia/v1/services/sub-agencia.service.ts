@@ -42,11 +42,13 @@ export class SubAgenciaService {
         }
     }
 
-    async findAll(): Promise<SubAgenciaEntity[]> {
+    async findAll(skip?: number, take?: number): Promise<SubAgenciaEntity[]> {
         try {
             const subAgencias = await this.prisma.subAgencia.findMany({
                 where: { estado: true },
                 orderBy: { nombre: 'asc' },
+                skip: skip,
+                take: take,
             });
 
             return subAgencias as SubAgenciaEntity[];

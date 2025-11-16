@@ -9,8 +9,9 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/v1/guards/roles.guard';
 import { Roles } from '../../../auth/v1/decorators/roles.decorator';
@@ -45,6 +46,24 @@ export class TipoEmbalajeController {
 
     @Get()
     @ApiOperation({ summary: 'Get all tipos de embalaje' })
+    @ApiQuery({
+        name: 'skip',
+        required: false,
+        type: Number,
+        description: 'Número de registros a saltar',
+    })
+    @ApiQuery({
+        name: 'take',
+        required: false,
+        type: Number,
+        description: 'Número de registros a obtener',
+    })
+    @ApiQuery({
+        name: 'search',
+        required: false,
+        type: String,
+        description: 'Término de búsqueda',
+    })
     @ApiResponse({
         status: 200,
         description: 'List of all tipos de embalaje',
@@ -52,8 +71,10 @@ export class TipoEmbalajeController {
     })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 403, description: 'Forbidden' })
-    findAll() {
-        return this.tipoEmbalajeService.findAll();
+    findAll(@Query('skip') skip?: string, @Query('take') take?: string, @Query('search') search?: string) {
+        const skipNum = skip ? parseInt(skip, 10) : undefined;
+        const takeNum = take ? parseInt(take, 10) : undefined;
+        return this.tipoEmbalajeService.findAll(skipNum, takeNum, search);
     }
 
     @Get(':id')

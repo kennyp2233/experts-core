@@ -53,10 +53,12 @@ export class BodegueroService {
     }
   }
 
-  async findAll(): Promise<Bodeguero[]> {
+  async findAll(skip?: number, take?: number): Promise<Bodeguero[]> {
     try {
       return await this.prisma.bodeguero.findMany({
         orderBy: { nombre: 'asc' },
+        skip: skip,
+        take: take,
       });
     } catch (error) {
       throw new BadRequestException(
@@ -153,6 +155,24 @@ export class BodegueroService {
       }
       throw new BadRequestException(
         'Error al eliminar el bodeguero: ' + error.message,
+      );
+    }
+  }
+
+  async findByNombre(nombre: string): Promise<Bodeguero[]> {
+    try {
+      return await this.prisma.bodeguero.findMany({
+        where: {
+          nombre: {
+            contains: nombre,
+            mode: 'insensitive',
+          },
+        },
+        orderBy: { nombre: 'asc' },
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        'Error al buscar bodegueros por nombre: ' + error.message,
       );
     }
   }

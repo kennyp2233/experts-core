@@ -45,16 +45,34 @@ export class TipoEmbalajeService {
         }
     }
 
-    async findAll(): Promise<TipoEmbalajeEntity[]> {
+    async findAll(skip?: number, take?: number, search?: string): Promise<{ data: TipoEmbalajeEntity[], total: number, skip: number, take: number }> {
         try {
-            const tiposEmbalaje = await this.prisma.tipoEmbalaje.findMany({
-                include: {
-                    tiposEmbarque: true,
+            const where = search ? {
+                nombre: {
+                    contains: search,
+                    mode: 'insensitive' as const,
                 },
-                orderBy: { nombre: 'asc' },
-            });
+            } : {};
 
-            return tiposEmbalaje as TipoEmbalajeEntity[];
+            const [tiposEmbalaje, total] = await Promise.all([
+                this.prisma.tipoEmbalaje.findMany({
+                    where,
+                    include: {
+                        tiposEmbarque: true,
+                    },
+                    orderBy: { nombre: 'asc' },
+                    skip,
+                    take,
+                }),
+                this.prisma.tipoEmbalaje.count({ where }),
+            ]);
+
+            return {
+                data: tiposEmbalaje as TipoEmbalajeEntity[],
+                total,
+                skip: skip || 0,
+                take: take || total,
+            };
         } catch (error) {
             throw new BadRequestException(
                 'Error al obtener los tipos de embalaje: ' + error.message,

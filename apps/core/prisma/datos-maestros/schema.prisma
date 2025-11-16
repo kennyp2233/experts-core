@@ -11,6 +11,11 @@ datasource productosDb {
 }
 
 // ===== PRODUCTOS MODELS =====
+enum OpcionProducto {
+  simple
+  compuesto
+}
+
 model Producto {
     id                  Int                  @id @default(autoincrement())
     nombre              String
@@ -20,7 +25,7 @@ model Producto {
     medidaId            Int
     precioUnitario      Decimal?
     estado              Boolean              @default(true)
-    opcionId            Int?
+    opcionId            OpcionProducto?
     stemsPorFull        Int?
     sesaId              Int?
     createdAt           DateTime             @default(now())
@@ -88,7 +93,7 @@ model FuncionarioAgrocalidad {
     email     String?
     estado    Boolean? @default(true)
     createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    updatedAt DateTime @default(now()) @updatedAt
 }
 
 // ===== EMBARCADORES MODEL =====

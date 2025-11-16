@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export enum OpcionProducto {
+  SIMPLE = 'simple',
+  COMPUESTO = 'compuesto',
+}
+
 export class ProductoEntity {
   @ApiProperty({
     description: 'ID del producto',
@@ -50,10 +55,11 @@ export class ProductoEntity {
   estado: boolean;
 
   @ApiPropertyOptional({
-    description: 'ID de la opción',
-    example: 1,
+    description: 'Opción del producto',
+    enum: OpcionProducto,
+    example: OpcionProducto.SIMPLE,
   })
-  opcionId?: number;
+  opcionId?: OpcionProducto;
 
   @ApiPropertyOptional({
     description: 'Tallos por full',

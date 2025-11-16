@@ -35,7 +35,7 @@ import { UserRole } from '../../../auth/v1/dto/update-user-role.dto';
 @ApiExtraModels(PaginationResponseDto, DestinoEntity)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller({
-  path: 'master-data/destinos',
+  path: 'master-data/destino',
   version: '1',
 })
 export class DestinoController {
@@ -70,16 +70,33 @@ export class DestinoController {
     type: Number,
     description: 'Número de registros a obtener',
   })
+  @ApiQuery({
+    name: 'sortField',
+    required: false,
+    type: String,
+    description: 'Campo por el cual ordenar',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    description: 'Orden de clasificación (asc o desc)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista paginada de destinos',
     type: PaginationResponseDto<DestinoEntity>,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  async findAll(@Query('skip') skip?: string, @Query('take') take?: string) {
+  async findAll(
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
     const skipNum = skip ? parseInt(skip, 10) : undefined;
     const takeNum = take ? parseInt(take, 10) : undefined;
-    return this.destinoService.findAll(skipNum, takeNum);
+    return this.destinoService.findAll(skipNum, takeNum, sortField, sortOrder);
   }
 
   @Roles(UserRole.ADMIN)
