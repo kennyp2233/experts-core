@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -7,6 +8,7 @@ import { AuthService as AuthServiceV1 } from './v1/auth.service';
 import { JwtStrategy as JwtStrategyV1 } from './v1/strategies/jwt.strategy';
 import { LocalStrategy as LocalStrategyV1 } from './v1/strategies/local.strategy';
 import { RolesGuard } from './v1/guards/roles.guard';
+import { TokenRefreshInterceptor } from './v1/interceptors/token-refresh.interceptor';
 import { PrismaClient } from '.prisma/usuarios-client';
 
 @Module({
@@ -29,6 +31,11 @@ import { PrismaClient } from '.prisma/usuarios-client';
     LocalStrategyV1,
     RolesGuard,
     { provide: 'PrismaClientUsuarios', useClass: PrismaClient },
+    // TODO: Uncomment when Prisma clients are generated and tested
+    // {
+    //   provide: APP_INTERCEPTOR,
+    //   useClass: TokenRefreshInterceptor,
+    // },
   ],
   controllers: [AuthControllerV1],
   exports: [AuthServiceV1],

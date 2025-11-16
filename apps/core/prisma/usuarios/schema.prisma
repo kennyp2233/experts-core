@@ -27,6 +27,42 @@ model User {
     lastName  String
     isActive  Boolean  @default(true)
     role      Role     @default(USER)
+
+    // 2FA
+    twoFactorEnabled Boolean @default(false)
+    twoFactorSecret  String?
+
+    // Relaciones
+    trustedDevices TrustedDevice[]
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+}
+
+model TrustedDevice {
+    id             String   @id @default(cuid())
+    userId         String
+    user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    // Identificación del dispositivo
+    fingerprint    String   // Hash único del dispositivo
+    trustToken     String   @unique // Token para validar
+
+    // Info legible (para que el usuario vea sus dispositivos)
+    deviceName     String   // "iPhone 13"
+    browser        String   // "Chrome"
+    os             String   // "iOS 16"
+    deviceType     String   // "mobile"
+
+    // Seguridad
+    lastUsedAt     DateTime @default(now())
+    lastIpAddress  String?
+    expiresAt      DateTime // Expiración del trust (ej: 30 días)
+
+    createdAt      DateTime @default(now())
+
+    @@index([userId])
+    @@index([fingerprint])
+    @@index([trustToken])
+    @@unique([userId, fingerprint])
 }

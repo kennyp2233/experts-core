@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import { AppService } from './v1/app/app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -13,6 +13,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { createWinstonLogger } from './common/logger/winston.logger';
 import appConfig from './config/app.config';
+import redisConfig from './config/redis.config';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -21,10 +23,11 @@ import appConfig from './config/app.config';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig],
+      load: [appConfig, redisConfig],
       envFilePath: ['.env.local', '.env'],
       cache: true,
     }),
+    RedisModule,
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
@@ -41,6 +44,10 @@ import appConfig from './config/app.config';
   ],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,

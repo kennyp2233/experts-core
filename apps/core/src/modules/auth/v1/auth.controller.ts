@@ -8,9 +8,11 @@ import {
   HttpStatus,
   Get,
   Res,
+  Req,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -25,6 +27,7 @@ import { LoginDto } from './dto/login.dto';
 export class AuthControllerV1 {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 intentos por minuto
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Registrar nuevo usuario' })
@@ -55,18 +58,39 @@ export class AuthControllerV1 {
     status: 409,
     description: 'El usuario o email ya existe',
   })
-  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const user = await this.authService.register(registerDto);
-    const token = await this.authService.generateToken(user);
-    
-    res.cookie('access_token', token, {
+    const accessToken = await this.authService.generateToken(user);
+
+    // Generar refresh token
+    const refreshToken = await this.authService.generateRefreshToken(
+      user.id,
+      req.headers['user-agent'],
+      req.ip,
+    );
+
+    // Setear access token cookie (15 minutos)
+    res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 15 * 60 * 1000, // 15 minutes
       path: '/',
     });
-    
+
+    // Setear refresh token cookie (7 días)
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
     return {
       user: {
         id: user.id,
@@ -79,6 +103,7 @@ export class AuthControllerV1 {
     };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 intentos por minuto
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -106,15 +131,32 @@ export class AuthControllerV1 {
   })
   async login(@Request() req: any, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(req.user);
-    
+
+    // Generar refresh token
+    const refreshToken = await this.authService.generateRefreshToken(
+      req.user.id,
+      req.headers['user-agent'],
+      req.ip,
+    );
+
+    // Setear access token cookie (15 minutos)
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 15 * 60 * 1000, // 15 minutes
       path: '/',
     });
-    
+
+    // Setear refresh token cookie (7 días)
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
     return { user: result.user };
   }
 
@@ -125,13 +167,31 @@ export class AuthControllerV1 {
     status: 200,
     description: 'Sesión cerrada exitosamente',
   })
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    // Revocar refresh token de Redis si existe
+    const refreshToken = req.cookies?.refresh_token;
+    if (refreshToken) {
+      const userId = await this.authService.validateRefreshToken(refreshToken);
+      if (userId) {
+        await this.authService.revokeRefreshToken(userId, refreshToken);
+      }
+    }
+
+    // Limpiar cookies
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       path: '/',
     });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      path: '/',
+    });
+
     return { message: 'Logged out successfully' };
   }
 
