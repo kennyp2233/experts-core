@@ -10,6 +10,7 @@ import {
   Res,
   Req,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
@@ -77,6 +78,12 @@ export class AuthControllerV1 {
   ) {
     const user = req.user;
 
+    // Verificar si el usuario está bloqueado por 2FA
+    const isBlocked = await this.authService.twoFactor.isUserBlockedFor2FA(user.id);
+    if (isBlocked) {
+      throw new HttpException('Cuenta temporalmente bloqueada por intentos excesivos de 2FA. Intenta de nuevo en 5 minutos.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     // Verificar si el usuario tiene 2FA habilitado
     const has2FA = await this.authService.twoFactor.isEnabled(user.id);
 
@@ -109,6 +116,7 @@ export class AuthControllerV1 {
       fingerprint,
       deviceInfo,
       ip: request.ip,
+      failedAttempts: 0,
     });
 
     return {
@@ -142,6 +150,9 @@ export class AuthControllerV1 {
   @ApiOperation({ summary: 'Obtener perfil del usuario' })
   @ApiResponse({ status: 200, description: 'Perfil del usuario' })
   async getProfile(@Request() req: any) {
+    const userId = req.user.sub || req.user.userId;
+    const twoFactorEnabled = await this.authService.twoFactor.isEnabled(userId);
+
     return {
       id: req.user.sub,
       username: req.user.username,
@@ -149,6 +160,7 @@ export class AuthControllerV1 {
       role: req.user.role,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
+      twoFactorEnabled,
     };
   }
 
@@ -195,7 +207,7 @@ export class AuthControllerV1 {
     };
   }
 
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar código 2FA durante login' })
@@ -207,7 +219,7 @@ export class AuthControllerV1 {
     @Req() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const session = await this.authService.twoFactor.getAndRemoveLoginSession(
+    const session = await this.authService.twoFactor.getLoginSession(
       dto.tempToken,
     );
 
@@ -215,10 +227,27 @@ export class AuthControllerV1 {
       throw new UnauthorizedException('Sesión 2FA expirada');
     }
 
-    const { userId, fingerprint, deviceInfo, ip } = session;
+    const { userId, fingerprint, deviceInfo, ip, failedAttempts } = session;
 
-    // Verificar código 2FA
-    await this.authService.twoFactor.verify(userId, dto.token);
+    // Verificar límite de intentos
+    const MAX_ATTEMPTS = 3;
+    if (failedAttempts >= MAX_ATTEMPTS) {
+      await this.authService.twoFactor.removeLoginSession(dto.tempToken);
+      await this.authService.twoFactor.blockUserFor2FA(userId); // Usa duración por defecto
+      throw new HttpException('Demasiados intentos fallidos. Cuenta bloqueada por 5 minutos.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    try {
+      // Verificar código 2FA
+      await this.authService.twoFactor.verify(userId, dto.token);
+    } catch (error) {
+      // Incrementar intentos fallidos
+      await this.authService.twoFactor.incrementFailedAttempts(dto.tempToken);
+      throw error; // Re-throw el error original
+    }
+
+    // Eliminar la sesión temporal ya que la verificación fue exitosa
+    await this.authService.twoFactor.removeLoginSession(dto.tempToken);
 
     // Obtener usuario
     const user = await this.authService.getUserById(userId);

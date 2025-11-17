@@ -57,4 +57,5 @@ export interface TwoFactorLoginSession {
   fingerprint: string;
   deviceInfo: any; // DeviceInfo from utils
   ip: string;
+  failedAttempts: number;
 }

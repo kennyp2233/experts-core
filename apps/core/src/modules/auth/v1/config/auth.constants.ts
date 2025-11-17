@@ -25,6 +25,7 @@ export const AuthConstants = {
   TWO_FACTOR: {
     SECRET_EXPIRY_SECONDS: 600, // 10 minutos
     LOGIN_SESSION_EXPIRY_SECONDS: 300, // 5 minutos
+    BLOCK_DURATION_SECONDS: 300, // 5 minutos de bloqueo por intentos excesivos
     ISSUER: 'ExpertsCore',
   },
 

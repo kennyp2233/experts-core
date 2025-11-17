@@ -201,6 +201,22 @@ export class TwoFactorService {
   }
 
   /**
+   * Recupera una sesión temporal de login 2FA sin eliminarla
+   */
+  async getLoginSession(
+    tempToken: string,
+  ): Promise<TwoFactorLoginSession | null> {
+    const key = AuthConstants.REDIS_KEYS.TWO_FACTOR_LOGIN(tempToken);
+    const data = await this.redis.get(key);
+
+    if (!data) {
+      return null;
+    }
+
+    return JSON.parse(data);
+  }
+
+  /**
    * Recupera y elimina una sesión temporal de login 2FA
    */
   async getAndRemoveLoginSession(
@@ -215,5 +231,53 @@ export class TwoFactorService {
 
     await this.redis.del(key);
     return JSON.parse(data);
+  }
+
+  /**
+   * Elimina una sesión temporal de login 2FA
+   */
+  async removeLoginSession(tempToken: string): Promise<void> {
+    const key = AuthConstants.REDIS_KEYS.TWO_FACTOR_LOGIN(tempToken);
+    await this.redis.del(key);
+  }
+
+  /**
+   * Incrementa los intentos fallidos de una sesión 2FA
+   */
+  async incrementFailedAttempts(tempToken: string): Promise<TwoFactorLoginSession | null> {
+    const key = AuthConstants.REDIS_KEYS.TWO_FACTOR_LOGIN(tempToken);
+    const data = await this.redis.get(key);
+
+    if (!data) {
+      return null;
+    }
+
+    const session: TwoFactorLoginSession = JSON.parse(data);
+    session.failedAttempts += 1;
+
+    await this.redis.setex(
+      key,
+      AuthConstants.TWO_FACTOR.LOGIN_SESSION_EXPIRY_SECONDS,
+      JSON.stringify(session),
+    );
+
+    return session;
+  }
+
+  /**
+   * Bloquea al usuario por intentos excesivos de 2FA
+   */
+  async blockUserFor2FA(userId: string, durationSeconds: number = AuthConstants.TWO_FACTOR.BLOCK_DURATION_SECONDS): Promise<void> {
+    const key = `2fa_block:${userId}`;
+    await this.redis.setex(key, durationSeconds, 'blocked');
+  }
+
+  /**
+   * Verifica si el usuario está bloqueado por 2FA
+   */
+  async isUserBlockedFor2FA(userId: string): Promise<boolean> {
+    const key = `2fa_block:${userId}`;
+    const data = await this.redis.get(key);
+    return data === 'blocked';
   }
 }

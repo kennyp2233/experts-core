@@ -179,8 +179,18 @@ export class AuthService {
       isEnabled: (userId: string) => this.twoFactorService.isEnabled(userId),
       saveLoginSession: (tempToken: string, session: any) =>
         this.twoFactorService.saveLoginSession(tempToken, session),
+      getLoginSession: (tempToken: string) =>
+        this.twoFactorService.getLoginSession(tempToken),
       getAndRemoveLoginSession: (tempToken: string) =>
         this.twoFactorService.getAndRemoveLoginSession(tempToken),
+      removeLoginSession: (tempToken: string) =>
+        this.twoFactorService.removeLoginSession(tempToken),
+      incrementFailedAttempts: (tempToken: string) =>
+        this.twoFactorService.incrementFailedAttempts(tempToken),
+      blockUserFor2FA: (userId: string, durationSeconds?: number) =>
+        this.twoFactorService.blockUserFor2FA(userId, durationSeconds),
+      isUserBlockedFor2FA: (userId: string) =>
+        this.twoFactorService.isUserBlockedFor2FA(userId),
     };
   }
 
