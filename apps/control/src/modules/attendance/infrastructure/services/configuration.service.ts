@@ -80,7 +80,7 @@ export class ConfigurationService {
       return null;
     }
 
-    return this.parseConfigJson(config.configJson);
+    return this.parseConfigJson(config.configJson as string);
   }
 
   /**
@@ -101,7 +101,7 @@ export class ConfigurationService {
       return null;
     }
 
-    return this.parseConfigJson(config.configJson);
+    return this.parseConfigJson(config.configJson as string);
   }
 
   /**
@@ -122,7 +122,7 @@ export class ConfigurationService {
       return null;
     }
 
-    return this.parseConfigJson(config.configJson);
+    return this.parseConfigJson(config.configJson as string);
   }
 
   /**

@@ -26,14 +26,14 @@ import {
   ListBreakPoliciesQueryDto,
   GetEffectiveConfigurationQueryDto,
 } from '../../application/dto/break-policy.dto';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { JwtGuard } from '../../../auth/guards/jwt.guard';
 
 /**
  * Controller para gestionar políticas de breaks (descansos)
  */
 @ApiTags('Break Policies')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtGuard)
 @Controller('attendance/break-policies')
 export class BreakPolicyController {
   constructor(private readonly breakPolicyService: BreakPolicyService) {}

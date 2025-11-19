@@ -285,11 +285,11 @@ export class FeatureFlagService {
   /**
    * Helper: parse JSON array
    */
-  private parseJsonArray(json: string | null): string[] {
+  private parseJsonArray(json: any): string[] {
     if (!json) return [];
 
     try {
-      const parsed = JSON.parse(json);
+      const parsed = JSON.parse(typeof json === 'string' ? json : JSON.stringify(json));
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];

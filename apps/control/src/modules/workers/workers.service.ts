@@ -16,6 +16,7 @@ import {
 } from './dto/worker-response.dto';
 import { plainToClass } from 'class-transformer';
 import { Prisma } from '@prisma/client';
+import { WorkerStatus } from '@prisma/client';
 import { EmployeeIdGenerator, EmployeeIdFormat } from './utils/employee-id-generator.util';
 
 @Injectable()
@@ -38,23 +39,27 @@ export class WorkersService {
     const skip = (page - 1) * limit;
 
     // Construir condiciones de filtro
-    const where: Prisma.WorkerWhereInput = {
-      AND: [
-        // Filtro de búsqueda
-        search ? {
-          OR: [
-            { firstName: { contains: search } },
-            { lastName: { contains: search } },
-            { email: { contains: search } },
-            { employeeId: { contains: search } }
-          ]
-        } : {},
-        // Filtro por status
-        status ? { status } : {},
-        // Filtro por depot
-        depotId ? { depotId } : {}
-      ].filter(condition => Object.keys(condition).length > 0)
-    };
+    const where: Prisma.WorkerWhereInput = {};
+
+    // Filtro de búsqueda
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
+        { email: { contains: search } },
+        { employeeId: { contains: search } }
+      ];
+    }
+
+    // Filtro por status
+    if (status) {
+      where.status = status as WorkerStatus;
+    }
+
+    // Filtro por depot
+    if (depotId) {
+      where.depotId = depotId;
+    }
 
     try {
       // Obtener total de registros
@@ -86,7 +91,7 @@ export class WorkersService {
       const items = workers.map(worker => {
         const transformed = plainToClass(WorkerResponseDto, {
           ...worker,
-          attendancesCount: worker._count.attendances
+          attendancesCount: (worker as any)._count?.attendances || 0
         });
         return transformed;
       });
@@ -138,7 +143,7 @@ export class WorkersService {
 
       return plainToClass(WorkerResponseDto, {
         ...worker,
-        attendancesCount: worker._count.attendances
+        attendancesCount: (worker as any)._count?.attendances || 0
       });
 
     } catch (error) {
@@ -202,7 +207,7 @@ export class WorkersService {
         data: {
           ...createWorkerDto,
           employeeId, // Usar el employeeId generado o proporcionado
-          status: createWorkerDto.status || 'ACTIVE'
+          status: (createWorkerDto.status as WorkerStatus) || WorkerStatus.ACTIVE
         },
         include: {
           depot: {
@@ -275,9 +280,17 @@ export class WorkersService {
         }
       }
 
+      const { depotId, ...updateData } = updateWorkerDto;
+
+      // Cast status if present
+      const data = {
+        ...updateData,
+        ...(updateData.status && { status: updateData.status as WorkerStatus })
+      };
+
       const worker = await this.prisma.worker.update({
         where: { id },
-        data: updateWorkerDto,
+        data,
         include: {
           depot: {
             select: {
@@ -298,7 +311,7 @@ export class WorkersService {
 
       return plainToClass(WorkerResponseDto, {
         ...worker,
-        attendancesCount: worker._count.attendances
+        attendancesCount: (worker as any)._count?.attendances || 0
       });
 
     } catch (error) {
@@ -322,7 +335,7 @@ export class WorkersService {
 
       const worker = await this.prisma.worker.update({
         where: { id },
-        data: { status: updateStatusDto.status },
+        data: { status: updateStatusDto.status as WorkerStatus },
         include: {
           depot: {
             select: {
@@ -343,7 +356,7 @@ export class WorkersService {
 
       return plainToClass(WorkerResponseDto, {
         ...worker,
-        attendancesCount: worker._count.attendances
+        attendancesCount: (worker as any)._count?.attendances || 0
       });
 
     } catch (error) {

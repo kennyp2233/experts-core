@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma.service';
+import { ConfigLevel, $Enums } from '@prisma/client';
 import {
   FraudWeightConfig,
   FraudWeightsMap,
@@ -294,7 +295,7 @@ export class FraudScoringService {
 
     // Si existe, cargar pesos actuales y hacer merge
     let weights: Partial<FraudWeightsMap> = existing
-      ? JSON.parse(existing.weightsJson)
+      ? JSON.parse(existing.weightsJson as string)
       : { ...DEFAULT_FRAUD_WEIGHTS };
 
     if (dto.weights) {
@@ -341,7 +342,7 @@ export class FraudScoringService {
   async getConfigHistory(level: string, entityId?: string) {
     return this.prisma.fraudWeightConfig.findMany({
       where: {
-        level,
+        level: level as ConfigLevel,
         entityId: entityId || null,
       },
       orderBy: { createdAt: 'desc' },

@@ -94,7 +94,7 @@ export class WorkScheduleService {
     }
 
     // Verificar que el día aplique
-    const daysOfWeek = JSON.parse(schedule.daysOfWeek);
+    const daysOfWeek = JSON.parse(schedule.daysOfWeek as string);
     if (!daysOfWeek.includes(dayOfWeek)) {
       return null;
     }
@@ -131,7 +131,7 @@ export class WorkScheduleService {
    * Construir effective schedule desde assignment
    */
   private async buildEffectiveSchedule(
-    assignment: WorkerScheduleAssignment & { schedule: any },
+    assignment: any,
     date: Date,
     dayOfWeek: number,
   ): Promise<EffectiveSchedule | null> {
@@ -139,8 +139,8 @@ export class WorkScheduleService {
 
     // Verificar días aplicables (con override)
     const daysOfWeek = assignment.customDaysOfWeek
-      ? JSON.parse(assignment.customDaysOfWeek)
-      : JSON.parse(schedule.daysOfWeek);
+      ? JSON.parse(assignment.customDaysOfWeek as string)
+      : JSON.parse(schedule.daysOfWeek as string);
 
     if (!daysOfWeek.includes(dayOfWeek)) {
       this.logger.debug(`Day ${dayOfWeek} not in schedule days: ${daysOfWeek.join(',')}`);
@@ -393,7 +393,7 @@ export class WorkScheduleService {
       data: {
         scheduleId: dto.scheduleId,
         date: this.getDateOnly(dto.date),
-        reason: dto.reason,
+        reason: dto.reason as any,
         entryStart: dto.entryStart,
         entryEnd: dto.entryEnd,
         exitStart: dto.exitStart,

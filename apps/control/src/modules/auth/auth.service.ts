@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto, AdminDto } from './dto/auth-response.dto';
 import { plainToClass } from 'class-transformer';
+import { AdminRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -126,7 +127,7 @@ export class AuthService {
       data: {
         ...adminData,
         password: hashedPassword,
-        role: adminData.role || 'SUPERVISOR'
+        role: (adminData.role as AdminRole) || AdminRole.SUPERVISOR
       },
       select: {
         id: true,

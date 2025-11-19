@@ -398,8 +398,8 @@ export class AttendanceProcessingService {
     return {
       depot: {
         id: depot.id,
-        latitude: depot.latitude,
-        longitude: depot.longitude,
+        latitude: depot.latitude.toNumber(),
+        longitude: depot.longitude.toNumber(),
         radius: depot.radius,
         secret: depot.secret,
       },

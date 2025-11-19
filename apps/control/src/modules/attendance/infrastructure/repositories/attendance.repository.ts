@@ -458,7 +458,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     const completeDays = attendances.filter(a => a.isComplete).length;
     const incompleteDays = totalDays - completeDays;
     
-    const totalHours = attendances.reduce((sum, a) => sum + (a.totalHours || 0), 0);
+    const totalHours = attendances.reduce((sum, a) => sum + (a.totalHours?.toNumber() || 0), 0);
     const averageHoursPerDay = totalDays > 0 ? totalHours / totalDays : 0;
 
     const entryTimes = attendances.filter(a => a.entryTime).map(a => a.entryTime!);
@@ -499,7 +499,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     const presentWorkers = attendances.filter(a => a.entryTime).length;
     const activeWorkers = attendances.filter(a => a.entryTime && !a.exitTime).length;
     const completedShifts = attendances.filter(a => a.isComplete).length;
-    const totalHours = attendances.reduce((sum, a) => sum + (a.totalHours || 0), 0);
+    const totalHours = attendances.reduce((sum, a) => sum + (a.totalHours?.toNumber() || 0), 0);
 
     return {
       totalWorkers,
@@ -538,7 +538,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     records.forEach(record => {
       if (record.validationErrors) {
         try {
-          const errors = JSON.parse(record.validationErrors);
+          const errors = JSON.parse(record.validationErrors as string);
           const totalScore = errors.reduce((sum: number, error: any) => sum + (error.severity || 0), 0);
           if (totalScore > 0) {
             fraudScores.push(totalScore);
@@ -642,7 +642,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
       const totalHours = this.calculateTotalHours(attendance.entryTime, attendance.exitTime);
       const isComplete = attendance.entryTime !== null && attendance.exitTime !== null;
 
-      if (attendance.totalHours !== totalHours || attendance.isComplete !== isComplete) {
+      if (attendance.totalHours?.toNumber() !== totalHours || attendance.isComplete !== isComplete) {
         await this.prisma.attendance.update({
           where: { id: attendance.id },
           data: { totalHours, isComplete },

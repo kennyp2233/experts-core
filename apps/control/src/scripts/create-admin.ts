@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AdminRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as readline from 'readline';
 
@@ -33,19 +33,19 @@ async function main() {
     
     const roleChoice = await question('Opción (1-3): ');
     
-    let role: string;
+    let role: AdminRole;
     switch (roleChoice) {
       case '1':
-        role = 'SUPER_ADMIN';
+        role = AdminRole.SUPER_ADMIN;
         break;
       case '2':
-        role = 'SUPERVISOR';
+        role = AdminRole.SUPERVISOR;
         break;
       case '3':
-        role = 'OPERATOR';
+        role = AdminRole.OPERATOR;
         break;
       default:
-        role = 'SUPERVISOR';
+        role = AdminRole.SUPERVISOR;
         console.log('⚠️  Opción inválida, usando SUPERVISOR por defecto');
     }
 
