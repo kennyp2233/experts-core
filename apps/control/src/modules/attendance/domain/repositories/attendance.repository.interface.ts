@@ -37,6 +37,8 @@ export interface UpdateAttendanceData {
   entryTime?: Date;
   exitTime?: Date;
   totalHours?: number;
+  breakMinutes?: number;
+  netHours?: number;
   isComplete?: boolean;
   notes?: string;
 }

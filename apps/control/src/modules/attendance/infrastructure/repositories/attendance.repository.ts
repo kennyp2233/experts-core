@@ -675,6 +675,8 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
       entryTime: attendance.entryTime,
       exitTime: attendance.exitTime,
       totalHours: attendance.totalHours,
+      breakMinutes: attendance.breakMinutes,
+      netHours: attendance.netHours,
       isComplete: attendance.isComplete,
       notes: attendance.notes,
       workerId: attendance.workerId,

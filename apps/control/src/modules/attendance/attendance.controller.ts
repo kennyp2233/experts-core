@@ -14,6 +14,8 @@ import { GetShiftAuditDto } from './application/dto/get-shift-audit.dto';
 import { ShiftAuditResponseDto } from './application/dto/shift-audit-response.dto';
 import { GetWorkerStatsQueryDto } from './application/dto/get-worker-stats-query.dto';
 import { WorkerDetailedStatsResponseDto } from './application/dto/worker-detailed-stats-response.dto';
+import { DashboardResponseDto } from './application/dto/dashboard-response.dto';
+import { GetDashboardUseCase } from './application/use-cases/get-dashboard.use-case';
 import { AttendanceType } from './domain/enums/attendance-type.enum';
 import { WorkerAuthGuard } from '../worker-auth/guards/worker-auth.guard';
 import { JwtGuard } from '../auth/guards/jwt.guard';
@@ -65,6 +67,7 @@ export class AttendanceController {
     private readonly getWorkerShiftHistoryUseCase: GetWorkerShiftHistoryUseCase,
     private readonly getShiftAuditUseCase: GetShiftAuditUseCase,
     private readonly getWorkerDetailedStatsUseCase: GetWorkerDetailedStatsUseCase,
+    private readonly getDashboardUseCase: GetDashboardUseCase,
   ) {}
 
   @Post('entry')
@@ -161,6 +164,31 @@ export class AttendanceController {
       timestamp: new Date().toISOString(),
       version: '1.0.0'
     };
+  }
+
+  @Get('dashboard')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getDashboard(
+    @Query('depotId') depotId?: string,
+    @Request() req?,
+  ): Promise<DashboardResponseDto> {
+    console.log('[AttendanceController] 📊 GET /attendance/dashboard - Obteniendo dashboard de asistencias');
+    console.log('[AttendanceController] DepotId:', depotId);
+
+    try {
+      const result = await this.getDashboardUseCase.execute(depotId);
+      console.log('[AttendanceController] ✅ Dashboard obtenido exitosamente:', {
+        totalWorkers: result.totalWorkers,
+        workersOnShift: result.workersOnShift,
+        workersOffShift: result.workersOffShift,
+        totalNetHoursToday: result.totalNetHoursToday,
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo dashboard:', error);
+      throw error;
+    }
   }
 
   @Get('worker/:workerId/history')

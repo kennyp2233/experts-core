@@ -213,15 +213,17 @@ model Device {
 }
 
 model Attendance {
-    id         String    @id @default(uuid()) @db.Uuid
-    date       DateTime  @db.Date // Solo fecha de la jornada
-    entryTime  DateTime? @db.Timestamptz(3)
-    exitTime   DateTime? @db.Timestamptz(3)
-    totalHours Decimal?  @db.Decimal(5, 2) // Más preciso para horas
-    isComplete Boolean   @default(false)
-    notes      String?   @db.Text
-    createdAt  DateTime  @default(now()) @db.Timestamptz(3)
-    updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+    id           String    @id @default(uuid()) @db.Uuid
+    date         DateTime  @db.Date // Solo fecha de la jornada
+    entryTime    DateTime? @db.Timestamptz(3)
+    exitTime     DateTime? @db.Timestamptz(3)
+    totalHours   Decimal?  @db.Decimal(5, 2) // Horas brutas (exit - entry)
+    breakMinutes Int?      @db.SmallInt // Minutos de break deducidos
+    netHours     Decimal?  @db.Decimal(5, 2) // Horas netas (totalHours - breaks)
+    isComplete   Boolean   @default(false)
+    notes        String?   @db.Text
+    createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+    updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
 
     // Relaciones
     workerId String @db.Uuid

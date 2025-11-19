@@ -8,6 +8,7 @@ import { AttendanceResponseDto } from '../dto/attendance-response.dto';
 import { PrismaService } from '../../../../prisma.service';
 import { PhotoStorageService } from '../../infrastructure/services/photo-storage.service';
 import { ExceptionCodeService } from '../../../exception-codes/application/services/exception-code.service';
+import { BreakPolicyService } from '../../infrastructure/services/break-policy.service';
 
 @Injectable()
 export class AttendanceProcessingService {
@@ -16,6 +17,7 @@ export class AttendanceProcessingService {
     private readonly antiFraudValidator: AntiFraudValidatorDomainService,
     private readonly prisma: PrismaService,
     private readonly photoStorageService: PhotoStorageService,
+    private readonly breakPolicyService: BreakPolicyService,
     @Inject(forwardRef(() => ExceptionCodeService))
     private readonly exceptionCodeService: ExceptionCodeService,
   ) {}
@@ -517,9 +519,49 @@ export class AttendanceProcessingService {
         entryTime: new Date(timestamp),
       });
     } else {
-      return await this.attendanceRepository.updateAttendance(attendanceId, {
+      // First, update the exit time (repository will calculate totalHours)
+      const updatedAttendance = await this.attendanceRepository.updateAttendance(attendanceId, {
         exitTime: new Date(timestamp),
       });
+
+      // If attendance is now complete, calculate net hours
+      if (updatedAttendance.totalHours !== null && updatedAttendance.totalHours > 0) {
+        console.log('[AttendanceProcessingService] 🧮 Calculando horas netas con política de breaks...');
+
+        try {
+          // Calculate breaks using break policy
+          const breakCalculation = await this.breakPolicyService.calculateBreaks(
+            updatedAttendance.totalHours,
+            updatedAttendance.depotId,
+            updatedAttendance.workerId,
+          );
+
+          const breakMinutes = breakCalculation.totalBreakMinutes;
+          const netHours = updatedAttendance.totalHours - breakCalculation.totalBreakHours;
+
+          console.log('[AttendanceProcessingService] ✅ Breaks calculados:', {
+            totalHours: updatedAttendance.totalHours,
+            breakMinutes,
+            netHours,
+            policyUsed: breakCalculation.policyUsed.name,
+          });
+
+          // Update attendance with net hours
+          return await this.attendanceRepository.updateAttendance(attendanceId, {
+            breakMinutes,
+            netHours,
+          });
+        } catch (error) {
+          console.error('[AttendanceProcessingService] ❌ Error calculando breaks, usando valores por defecto:', error);
+          // If break calculation fails, set netHours = totalHours (no breaks)
+          return await this.attendanceRepository.updateAttendance(attendanceId, {
+            breakMinutes: 0,
+            netHours: updatedAttendance.totalHours,
+          });
+        }
+      }
+
+      return updatedAttendance;
     }
   }
 
