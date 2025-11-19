@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { FraudReason } from '../enums/fraud-reason.enum';
 import { GPSCoordinate } from '../value-objects/gps-coordinate.vo';
 import { ValidationResult } from './temporal-validator.domain-service';
+import { IFraudValidator, ValidatorCategory } from '../interfaces/fraud-validator.interface';
+import { AttendanceRecordValidationData, ValidationContext } from './anti-fraud-validator.domain-service';
 
 export interface DepotLocation {
   id: string;
@@ -11,7 +13,9 @@ export interface DepotLocation {
 }
 
 @Injectable()
-export class GeolocationValidatorDomainService {
+export class GeolocationValidatorDomainService implements IFraudValidator {
+  readonly name = 'GeolocationValidator';
+  readonly category = ValidatorCategory.GEOLOCATION;
   // Umbrales más realistas para GPS móvil
   private readonly EXCELLENT_GPS_ACCURACY = 20; // meters - GPS excelente
   private readonly GOOD_GPS_ACCURACY = 50; // meters - GPS bueno
@@ -324,5 +328,42 @@ export class GeolocationValidatorDomainService {
     const coord1 = GPSCoordinate.create(lat1, lng1, 0, new Date());
     const coord2 = GPSCoordinate.create(lat2, lng2, 0, new Date());
     return coord1.distanceTo(coord2);
+  }
+
+  /**
+   * Implementación de IFraudValidator
+   * Ejecuta todas las validaciones geográficas
+   */
+  async validate(
+    data: AttendanceRecordValidationData,
+    context: ValidationContext,
+  ): Promise<ValidationResult[]> {
+    const results: ValidationResult[] = [];
+
+    // Crear coordenada GPS del registro
+    const recordCoordinate = GPSCoordinate.create(
+      data.location.latitude,
+      data.location.longitude,
+      data.location.accuracy,
+      new Date(data.location.timestamp),
+    );
+
+    // Validar realismo de coordenadas
+    results.push(this.validateCoordinateRealism(recordCoordinate));
+
+    // Validar ubicación dentro del geofence
+    results.push(this.validateLocation(recordCoordinate, context.depot));
+
+    // Validar velocidad de viaje
+    if (context.lastRecord && context.lastRecord.gpsCoordinate) {
+      results.push(
+        this.validateTravelSpeed(
+          context.lastRecord.gpsCoordinate,
+          recordCoordinate,
+        ),
+      );
+    }
+
+    return results;
   }
 }

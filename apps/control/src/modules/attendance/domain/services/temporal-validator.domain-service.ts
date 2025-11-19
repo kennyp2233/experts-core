@@ -3,6 +3,9 @@ import { FraudReason } from '../enums/fraud-reason.enum';
 import { WorkScheduleService } from '../../infrastructure/services/work-schedule.service';
 import { ConfigurationService } from '../../infrastructure/services/configuration.service';
 import { VALIDATION_MESSAGES } from '../constants/validation-messages.constants';
+import { IFraudValidator, ValidatorCategory } from '../interfaces/fraud-validator.interface';
+import { AttendanceRecordValidationData, ValidationContext } from './anti-fraud-validator.domain-service';
+import { AttendanceType } from '../enums/attendance-type.enum';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -14,7 +17,9 @@ export interface ValidationResult {
 }
 
 @Injectable()
-export class TemporalValidatorDomainService {
+export class TemporalValidatorDomainService implements IFraudValidator {
+  readonly name = 'TemporalValidator';
+  readonly category = ValidatorCategory.TEMPORAL;
   // Valores por defecto (pueden ser sobrescritos por configuración)
   private QR_TOLERANCE_MINUTES = 6;
   private DEVICE_TIME_TOLERANCE_MINUTES = 5;
@@ -223,5 +228,75 @@ export class TemporalValidatorDomainService {
       severity: 0,
       message: VALIDATION_MESSAGES.TEMPORAL.WORKING_HOURS_VALID(),
     };
+  }
+
+  /**
+   * Implementación de IFraudValidator
+   * Ejecuta todas las validaciones temporales
+   */
+  async validate(
+    data: AttendanceRecordValidationData,
+    context: ValidationContext,
+  ): Promise<ValidationResult[]> {
+    const results: ValidationResult[] = [];
+    const currentTime = new Date();
+
+    // Validar timing del QR solo si se usó QR (no código de excepción)
+    if (data.qrCodeUsed) {
+      const qrTimestamp = this.extractTimestampFromQR(data.qrCodeUsed);
+      if (qrTimestamp) {
+        results.push(this.validateQRTiming(qrTimestamp, currentTime));
+      }
+    } else if (data.exceptionCodeUsed) {
+      // Para códigos de excepción, agregar una validación temporal básica
+      results.push({
+        isValid: true,
+        isSuspicious: false,
+        severity: 0,
+        message: VALIDATION_MESSAGES.GENERAL.EXCEPTION_CODE_LIMITED_VALIDATION(),
+      });
+    }
+
+    // Validar tiempo del dispositivo
+    results.push(this.validateDeviceTime(data.timestamp, currentTime));
+
+    // Validar secuencia de registros
+    if (context.lastRecord) {
+      results.push(
+        this.validateRecordSequence(
+          context.lastRecord.timestamp,
+          data.timestamp,
+        ),
+      );
+    }
+
+    // Validar horarios laborales
+    results.push(
+      await this.validateWorkingHours(
+        data.timestamp,
+        data.workerId,
+        data.type === AttendanceType.ENTRY,
+      ),
+    );
+
+    return results;
+  }
+
+  /**
+   * Extraer timestamp del QR
+   */
+  private extractTimestampFromQR(qrHash: string): Date | null {
+    try {
+      const qrJson = JSON.parse(qrHash);
+
+      if (qrJson.timestamp) {
+        const timestamp = new Date(qrJson.timestamp);
+        return isNaN(timestamp.getTime()) ? null : timestamp;
+      }
+
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 }

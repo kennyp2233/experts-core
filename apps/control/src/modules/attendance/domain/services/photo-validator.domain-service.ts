@@ -2,9 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { FraudReason } from '../enums/fraud-reason.enum';
 import { PhotoMetadata } from '../value-objects/photo-metadata.vo';
 import { ValidationResult } from './temporal-validator.domain-service';
+import { IFraudValidator, ValidatorCategory } from '../interfaces/fraud-validator.interface';
+import { AttendanceRecordValidationData, ValidationContext } from './anti-fraud-validator.domain-service';
+import { VALIDATION_MESSAGES } from '../constants/validation-messages.constants';
 
 @Injectable()
-export class PhotoValidatorDomainService {
+export class PhotoValidatorDomainService implements IFraudValidator {
+  readonly name = 'PhotoValidator';
+  readonly category = ValidatorCategory.PHOTO;
   private readonly PHOTO_TIME_TOLERANCE_MINUTES = 2;
   private readonly MIN_FILE_SIZE = 50 * 1024; // 50KB
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -315,5 +320,80 @@ export class PhotoValidatorDomainService {
       cameraInfo,
       originalPath,
     );
+  }
+
+  /**
+   * Implementación de IFraudValidator
+   * Ejecuta todas las validaciones fotográficas
+   */
+  async validate(
+    data: AttendanceRecordValidationData,
+    context: ValidationContext,
+  ): Promise<ValidationResult[]> {
+    const results: ValidationResult[] = [];
+
+    if (!data.photoMetadata) {
+      results.push({
+        isValid: data.createdOffline || false,
+        isSuspicious: true,
+        reason: FraudReason.PHOTO_MISSING_METADATA,
+        message: VALIDATION_MESSAGES.PHOTO.NO_METADATA(data.createdOffline || false),
+        severity: data.createdOffline ? 5 : 25,
+        details: {
+          isOfflineRecord: data.createdOffline,
+        },
+      });
+      return results;
+    }
+
+    // Crear PhotoMetadata value object con manejo de errores
+    let photoMetadata: PhotoMetadata;
+    try {
+      photoMetadata = PhotoMetadata.create(
+        new Date(data.photoMetadata.timestamp),
+        data.photoMetadata.hasCameraInfo,
+        data.photoMetadata.fileSize,
+        data.photoMetadata.dimensions,
+        data.photoMetadata.cameraInfo,
+        data.photoPath,
+      );
+    } catch (error) {
+      // Si hay error en PhotoMetadata, registrar como validación fallida pero no fallar
+      results.push({
+        isValid: false,
+        isSuspicious: false,
+        reason: FraudReason.PHOTO_MISSING_METADATA,
+        message: VALIDATION_MESSAGES.PHOTO.METADATA_INVALID(error.message),
+        severity: 30, // Alta severidad pero no crítica
+        details: {
+          error: error.message,
+          photoMetadata: data.photoMetadata,
+        },
+      });
+
+      // Crear PhotoMetadata con valores seguros para continuar el procesamiento
+      photoMetadata = PhotoMetadata.create(
+        new Date(data.photoMetadata.timestamp),
+        data.photoMetadata.hasCameraInfo,
+        Math.max(data.photoMetadata.fileSize, 1),
+        data.photoMetadata.dimensions
+          ? {
+              width: Math.max(data.photoMetadata.dimensions.width, 200),
+              height: Math.max(data.photoMetadata.dimensions.height, 200),
+            }
+          : { width: 200, height: 200 },
+        data.photoMetadata.cameraInfo,
+        data.photoPath,
+      );
+    }
+
+    // Validar foto completa
+    const photoValidation = this.validatePhoto(photoMetadata, data.timestamp);
+    results.push(photoValidation);
+
+    // Validar recencia de la foto
+    results.push(this.validatePhotoRecency(photoMetadata));
+
+    return results;
   }
 }

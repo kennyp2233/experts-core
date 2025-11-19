@@ -8,12 +8,10 @@ import { FraudReason } from '../../domain/enums/fraud-reason.enum';
 import { FeatureFlagService, FeatureFlagName } from '../../infrastructure/services/feature-flag.service';
 import { VALIDATION_MESSAGES } from '../../domain/constants/validation-messages.constants';
 
-// Wrapper validators
-import { TemporalValidatorWrapper } from './wrappers/temporal-validator.wrapper';
-import { GeolocationValidatorWrapper } from './wrappers/geolocation-validator.wrapper';
-import { PhotoValidatorWrapper } from './wrappers/photo-validator.wrapper';
-
-// Nuevos validators independientes
+// Domain validators (todos implementan IFraudValidator)
+import { TemporalValidatorDomainService } from '../../domain/services/temporal-validator.domain-service';
+import { GeolocationValidatorDomainService } from '../../domain/services/geolocation-validator.domain-service';
+import { PhotoValidatorDomainService } from '../../domain/services/photo-validator.domain-service';
 import { CryptographicValidatorDomainService } from '../../domain/services/cryptographic-validator.domain-service';
 import { PatternValidatorDomainService } from '../../domain/services/pattern-validator.domain-service';
 
@@ -35,19 +33,18 @@ export class ValidationOrchestratorService {
 
   constructor(
     private readonly featureFlagService: FeatureFlagService,
-    // Wrappers para validators legacy
-    private readonly temporalWrapper: TemporalValidatorWrapper,
-    private readonly geolocationWrapper: GeolocationValidatorWrapper,
-    private readonly photoWrapper: PhotoValidatorWrapper,
-    // Nuevos validators independientes
+    // Validators (todos implementan IFraudValidator)
+    private readonly temporalValidator: TemporalValidatorDomainService,
+    private readonly geolocationValidator: GeolocationValidatorDomainService,
+    private readonly photoValidator: PhotoValidatorDomainService,
     private readonly cryptographicValidator: CryptographicValidatorDomainService,
     private readonly patternValidator: PatternValidatorDomainService,
   ) {
     // Registrar validators
-    this.validators.set(ValidatorCategory.TEMPORAL, temporalWrapper);
+    this.validators.set(ValidatorCategory.TEMPORAL, temporalValidator);
     this.validators.set(ValidatorCategory.CRYPTOGRAPHIC, cryptographicValidator);
-    this.validators.set(ValidatorCategory.GEOLOCATION, geolocationWrapper);
-    this.validators.set(ValidatorCategory.PHOTO, photoWrapper);
+    this.validators.set(ValidatorCategory.GEOLOCATION, geolocationValidator);
+    this.validators.set(ValidatorCategory.PHOTO, photoValidator);
     this.validators.set(ValidatorCategory.PATTERN, patternValidator);
   }
 
