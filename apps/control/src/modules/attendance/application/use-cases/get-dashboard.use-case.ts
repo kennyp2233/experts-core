@@ -23,9 +23,12 @@ export class GetDashboardUseCase {
       endOfToday.setHours(23, 59, 59, 999);
 
       // Obtener todos los trabajadores del depot (o todos si no se especifica depot)
-      const workers = depotId
-        ? await this.workersService.findByDepot(depotId)
-        : await this.workersService.findAll();
+      const query = {}; // Default query parameters
+      const workersResponse = depotId
+        ? await this.workersService.findByDepot(depotId, query)
+        : await this.workersService.findAll(query);
+
+      const workers = workersResponse.data.items;
 
       console.log(`[GetDashboardUseCase] Trabajadores encontrados: ${workers.length}`);
 
