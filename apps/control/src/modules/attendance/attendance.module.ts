@@ -13,11 +13,6 @@ import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worke
 import { AttendanceProcessingService } from './application/services/attendance-processing.service';
 import { ValidationOrchestratorService } from './application/services/validation-orchestrator.service';
 
-// Validator Wrappers
-import { TemporalValidatorWrapper } from './application/services/wrappers/temporal-validator.wrapper';
-import { GeolocationValidatorWrapper } from './application/services/wrappers/geolocation-validator.wrapper';
-import { PhotoValidatorWrapper } from './application/services/wrappers/photo-validator.wrapper';
-
 // Infrastructure Services
 import { PhotoStorageService } from './infrastructure/services/photo-storage.service';
 import { ConfigurationService } from './infrastructure/services/configuration.service';
@@ -65,22 +60,17 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     FraudScoringService,
     PhotoStorageService,
 
-    // Domain Services (Legacy + New)
+    // Domain Services (Validators implementan IFraudValidator)
     TemporalValidatorDomainService,
     GeolocationValidatorDomainService,
     PhotoValidatorDomainService,
     WorkHoursCalculatorDomainService,
-    CryptographicValidatorDomainService, // NEW: Independent validator
-    PatternValidatorDomainService, // NEW: Independent validator
+    CryptographicValidatorDomainService,
+    PatternValidatorDomainService,
     AntiFraudValidatorDomainService,
 
-    // Validator Wrappers (Strategy Pattern)
-    TemporalValidatorWrapper,
-    GeolocationValidatorWrapper,
-    PhotoValidatorWrapper,
-
     // Application Services
-    ValidationOrchestratorService, // NEW: Orchestrator with feature flags
+    ValidationOrchestratorService, // Orchestrator with Strategy Pattern + Feature Flags
     AttendanceProcessingService,
 
     // Use Cases
@@ -104,7 +94,10 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     WorkScheduleService,
     FraudScoringService,
 
-    // Export validators
+    // Export validators (todos implementan IFraudValidator)
+    TemporalValidatorDomainService,
+    GeolocationValidatorDomainService,
+    PhotoValidatorDomainService,
     CryptographicValidatorDomainService,
     PatternValidatorDomainService,
 
