@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { WorkShift } from '../value-objects/work-shift.vo';
 import { AttendanceEntity } from '../entities/attendance.entity';
+import { BreakPolicyService } from '../../infrastructure/services/break-policy.service';
+import { BreakCalculationResult } from '../types/break-policy.types';
 
 export interface WorkHoursCalculation {
   totalHours: number;
@@ -10,6 +12,7 @@ export interface WorkHoursCalculation {
   isOvernightShift: boolean;
   breakDeductions: number;
   netWorkHours: number;
+  breakCalculation?: BreakCalculationResult; // Detalle del cálculo de breaks
 }
 
 export interface WorkPattern {
@@ -26,13 +29,20 @@ export class WorkHoursCalculatorDomainService {
   private readonly REGULAR_HOURS_LIMIT = 8;
   private readonly NIGHT_SHIFT_START = 22; // 10 PM
   private readonly NIGHT_SHIFT_END = 6; // 6 AM
-  private readonly BREAK_DEDUCTION_THRESHOLD = 6; // hours
-  private readonly STANDARD_BREAK_MINUTES = 30;
+
+  constructor(private readonly breakPolicyService: BreakPolicyService) {}
 
   /**
-   * Calcular horas trabajadas con detalles completos
+   * Calcular horas trabajadas con detalles completos (NUEVO: con breaks configurables)
+   * @param workShift - WorkShift value object
+   * @param depotId - ID del depot (para cascading configuration)
+   * @param workerId - ID del trabajador (para cascading configuration)
    */
-  calculateDetailedWorkHours(workShift: WorkShift): WorkHoursCalculation {
+  async calculateDetailedWorkHours(
+    workShift: WorkShift,
+    depotId?: string,
+    workerId?: string,
+  ): Promise<WorkHoursCalculation> {
     if (!workShift.isComplete) {
       return {
         totalHours: 0,
@@ -51,17 +61,22 @@ export class WorkHoursCalculatorDomainService {
 
     // Determinar si es turno nocturno
     const isOvernightShift = this.isOvernightShift(entryTime, exitTime);
-    
+
     // Calcular horas nocturnas
     const nightShiftHours = this.calculateNightShiftHours(entryTime, exitTime);
-    
+
     // Calcular horas regulares y extras
     const regularHours = Math.min(totalHours, this.REGULAR_HOURS_LIMIT);
     const overtimeHours = Math.max(0, totalHours - this.REGULAR_HOURS_LIMIT);
-    
-    // Calcular deducciones por break
-    const breakDeductions = this.calculateBreakDeductions(totalHours);
-    
+
+    // Calcular deducciones por break usando política configurable
+    const breakCalculation = await this.breakPolicyService.calculateBreaks(
+      totalHours,
+      depotId,
+      workerId,
+    );
+    const breakDeductions = breakCalculation.totalBreakHours;
+
     // Calcular horas netas
     const netWorkHours = totalHours - breakDeductions;
 
@@ -73,6 +88,7 @@ export class WorkHoursCalculatorDomainService {
       isOvernightShift,
       breakDeductions,
       netWorkHours,
+      breakCalculation, // Incluir detalle del cálculo
     };
   }
 
@@ -251,11 +267,22 @@ export class WorkHoursCalculatorDomainService {
   }
 
   /**
-   * Calcular deducciones por breaks
+   * Calcular deducciones por breaks (DEPRECATED - solo para backward compatibility)
+   * @deprecated Use BreakPolicyService.calculateBreaks() instead para breaks configurables
+   *
+   * Este método usa valores hardcodeados:
+   * - Si totalHours >= 6: deduce 30 minutos (0.5 horas)
+   * - Caso contrario: no deduce nada
+   *
+   * Mantener solo para compatibilidad con código legacy que no pasa depotId/workerId
    */
   private calculateBreakDeductions(totalHours: number): number {
-    if (totalHours >= this.BREAK_DEDUCTION_THRESHOLD) {
-      return this.STANDARD_BREAK_MINUTES / 60; // Convertir a horas
+    // Valores hardcoded (normativa laboral Ecuador básica)
+    const BREAK_DEDUCTION_THRESHOLD = 6; // hours
+    const STANDARD_BREAK_MINUTES = 30;
+
+    if (totalHours >= BREAK_DEDUCTION_THRESHOLD) {
+      return STANDARD_BREAK_MINUTES / 60; // Convertir a horas
     }
     return 0;
   }

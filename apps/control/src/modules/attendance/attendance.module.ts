@@ -19,6 +19,7 @@ import { ConfigurationService } from './infrastructure/services/configuration.se
 import { FeatureFlagService } from './infrastructure/services/feature-flag.service';
 import { WorkScheduleService } from './infrastructure/services/work-schedule.service';
 import { FraudScoringService } from './infrastructure/services/fraud-scoring.service';
+import { BreakPolicyService } from './infrastructure/services/break-policy.service';
 
 // Domain Services
 import { AntiFraudValidatorDomainService } from './domain/services/anti-fraud-validator.domain-service';
@@ -58,6 +59,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     FeatureFlagService,
     WorkScheduleService,
     FraudScoringService,
+    BreakPolicyService,
     PhotoStorageService,
 
     // Domain Services (Validators implementan IFraudValidator)
@@ -93,6 +95,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     FeatureFlagService,
     WorkScheduleService,
     FraudScoringService,
+    BreakPolicyService,
 
     // Export validators (todos implementan IFraudValidator)
     TemporalValidatorDomainService,
