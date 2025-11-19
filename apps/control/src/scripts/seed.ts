@@ -1,17 +1,29 @@
 import { PrismaClient } from '@prisma/client';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { EmployeeIdGenerator, EmployeeIdFormat } from '../modules/workers/utils/employee-id-generator.util';
 
-const prisma = new PrismaClient();
+@Injectable()
+class PrismaService extends PrismaClient implements OnModuleInit {
+  async onModuleInit() {
+    await this.$connect();
+  }
+}
+
+const prisma = new PrismaService();
 
 async function main() {
   console.log('🌱 Iniciando seeding de la base de datos...');
+
+  // Inicializar Prisma
+  await prisma.onModuleInit();
 
   try {
     // 1. Crear Admin
     console.log('👨‍💼 Creando administrador...');
     const hashedPassword = await bcrypt.hash('180473', 10);
-    
+
     const admin = await prisma.admin.create({
       data: {
         username: 'mauricio',
@@ -28,13 +40,13 @@ async function main() {
     // 2. Crear Depot con secret
     console.log('🏢 Creando depot...');
     const depotSecret = crypto.randomBytes(32).toString('hex');
-    
+
     const depot = await prisma.depot.create({
       data: {
         name: 'Cuarto Frio',
         address: 'Tababela',
-        latitude: -0.1820944, // Lima, Perú como ejemplo
-        longitude: -78.3414831,
+        latitude: -0.182287,
+        longitude: -78.340967,
         radius: 100,
         secret: depotSecret,
         isActive: true,
@@ -45,10 +57,16 @@ async function main() {
 
     // 3. Crear 2 Choferes/Workers
     console.log('👷‍♂️ Creando choferes...');
-    
+
+    const worker1EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
+      format: EmployeeIdFormat.SEQUENTIAL,
+      prefix: 'EMP',
+      digits: 5,
+    });
+
     const worker1 = await prisma.worker.create({
       data: {
-        employeeId: 'CHF001',
+        employeeId: worker1EmployeeId,
         firstName: 'Franklin',
         lastName: 'Simbaña',
         email: 'franklin@expertcontrol.com',
@@ -58,9 +76,15 @@ async function main() {
       },
     });
 
+    const worker2EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
+      format: EmployeeIdFormat.SEQUENTIAL,
+      prefix: 'EMP',
+      digits: 5,
+    });
+
     const worker2 = await prisma.worker.create({
       data: {
-        employeeId: 'CHF002',
+        employeeId: worker2EmployeeId,
         firstName: 'Milton',
         lastName: 'Cabascango',
         email: 'MIlton@expertcontrol.com',
@@ -81,14 +105,14 @@ async function main() {
     console.log(`   Contraseña: admin123`);
     console.log(`   Email: ${admin.email}`);
     console.log(`   Rol: ${admin.role}`);
-    
+
     console.log(`\n🏢 DEPOT:`);
     console.log(`   Nombre: ${depot.name}`);
     console.log(`   Dirección: ${depot.address}`);
     console.log(`   Coordenadas: ${depot.latitude}, ${depot.longitude}`);
     console.log(`   Radio: ${depot.radius}m`);
     console.log(`   Secret: ${depot.secret}`);
-    
+
     console.log(`\n👷‍♂️ WORKERS:`);
     console.log(`   1. ${worker1.firstName} ${worker1.lastName} (${worker1.employeeId})`);
     console.log(`      Email: ${worker1.email}`);
@@ -98,7 +122,7 @@ async function main() {
     console.log(`      Teléfono: ${worker2.phone}`);
 
     console.log('\n✅ Seeding completado exitosamente!');
-    
+
   } catch (error) {
     console.error('❌ Error durante el seeding:', error);
     throw error;
