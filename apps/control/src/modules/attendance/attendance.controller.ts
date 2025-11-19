@@ -16,6 +16,9 @@ import { GetWorkerStatsQueryDto } from './application/dto/get-worker-stats-query
 import { WorkerDetailedStatsResponseDto } from './application/dto/worker-detailed-stats-response.dto';
 import { DashboardResponseDto } from './application/dto/dashboard-response.dto';
 import { GetDashboardUseCase } from './application/use-cases/get-dashboard.use-case';
+import { GetWorkerSummaryQueryDto } from './application/dto/get-worker-summary-query.dto';
+import { WorkerSummaryResponseDto } from './application/dto/worker-summary-response.dto';
+import { GetWorkerSummaryUseCase } from './application/use-cases/get-worker-summary.use-case';
 import { AttendanceType } from './domain/enums/attendance-type.enum';
 import { WorkerAuthGuard } from '../worker-auth/guards/worker-auth.guard';
 import { JwtGuard } from '../auth/guards/jwt.guard';
@@ -68,6 +71,7 @@ export class AttendanceController {
     private readonly getShiftAuditUseCase: GetShiftAuditUseCase,
     private readonly getWorkerDetailedStatsUseCase: GetWorkerDetailedStatsUseCase,
     private readonly getDashboardUseCase: GetDashboardUseCase,
+    private readonly getWorkerSummaryUseCase: GetWorkerSummaryUseCase,
   ) {}
 
   @Post('entry')
@@ -260,6 +264,34 @@ export class AttendanceController {
       return result;
     } catch (error) {
       console.error('[AttendanceController] ❌ Error obteniendo estadísticas:', error);
+      throw error;
+    }
+  }
+
+  @Get('worker/:workerId/summary')
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SUPERVISOR', 'OPERATOR')
+  async getWorkerSummary(
+    @Param('workerId') workerId: string,
+    @Query(new ValidationPipe({ transform: true })) query: GetWorkerSummaryQueryDto,
+    @Request() req
+  ): Promise<WorkerSummaryResponseDto> {
+    console.log('[AttendanceController] 📋 GET /attendance/worker/:workerId/summary - Obteniendo resumen de trabajador');
+    console.log('[AttendanceController] Worker:', { id: workerId });
+    console.log('[AttendanceController] Query:', query);
+
+    try {
+      const result = await this.getWorkerSummaryUseCase.execute(workerId, query);
+      console.log('[AttendanceController] ✅ Resumen obtenido exitosamente:', {
+        totalShifts: result.pagination.totalItems,
+        attendanceRate: result.stats.attendanceRate,
+        totalNetHours: result.stats.totalNetHours,
+        page: result.pagination.currentPage,
+        totalPages: result.pagination.totalPages,
+      });
+      return result;
+    } catch (error) {
+      console.error('[AttendanceController] ❌ Error obteniendo resumen:', error);
       throw error;
     }
   }

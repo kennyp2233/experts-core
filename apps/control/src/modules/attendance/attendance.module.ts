@@ -10,6 +10,7 @@ import { GetWorkerShiftHistoryUseCase } from './application/use-cases/get-worker
 import { GetShiftAuditUseCase } from './application/use-cases/get-shift-audit.use-case';
 import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worker-detailed-stats.use-case';
 import { GetDashboardUseCase } from './application/use-cases/get-dashboard.use-case';
+import { GetWorkerSummaryUseCase } from './application/use-cases/get-worker-summary.use-case';
 
 // Application Services
 import { AttendanceProcessingService } from './application/services/attendance-processing.service';
@@ -85,6 +86,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     GetShiftAuditUseCase,
     GetWorkerDetailedStatsUseCase,
     GetDashboardUseCase,
+    GetWorkerSummaryUseCase,
   ],
   exports: [
     // Export services that other modules might need
@@ -115,6 +117,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     GetShiftAuditUseCase,
     GetWorkerDetailedStatsUseCase,
     GetDashboardUseCase,
+    GetWorkerSummaryUseCase,
   ],
 })
 export class AttendanceModule {
