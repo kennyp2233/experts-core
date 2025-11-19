@@ -503,3 +503,31 @@ model FraudWeightConfig {
     @@index([effectiveFrom, effectiveTo])
     @@map("fraud_weight_configs")
 }
+
+// ===== POLÍTICAS DE BREAKS (DESCANSOS) =====
+
+model BreakPolicy {
+    id      String      @id @default(uuid()) @db.Uuid
+    version Int         @default(1) @db.SmallInt
+
+    // A qué entidad aplica (cascading: GLOBAL → DEPOT → WORKER)
+    level    ConfigLevel // ENUM nativo
+    entityId String?     @db.Uuid // depotId o workerId (null para GLOBAL)
+
+    // Configuración de breaks como JSONB
+    // Formato: { "rules": [{ "minHours": 6, "breakMinutes": 30 }, ...] }
+    breakRulesJson Json // JSONB con reglas de breaks
+
+    // Metadata
+    name        String  @db.VarChar(100)
+    description String? @db.Text
+    isActive    Boolean @default(true)
+
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+    @@unique([level, entityId])
+    @@index([level, isActive])
+    @@index([entityId])
+    @@map("break_policies")
+}
