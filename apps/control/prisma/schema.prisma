@@ -10,404 +10,496 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-// ===== ENUMS como STRINGS (SQLite compatible) =====
+// ===== ENUMS NATIVOS DE POSTGRESQL =====
 
-// AttendanceType: "ENTRY" | "EXIT"
-// RecordStatus: "PENDING" | "ACCEPTED" | "REJECTED" | "SUSPICIOUS" 
-// DeviceStatus: "ACTIVE" | "INACTIVE" | "BLOCKED"
-// WorkerStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED"
-// AdminRole: "SUPER_ADMIN" | "SUPERVISOR" | "OPERATOR"
-// LoginQRStatus: "PENDING" | "USED" | "EXPIRED"
+enum AdminRole {
+    SUPER_ADMIN
+    SUPERVISOR
+    OPERATOR
+}
+
+enum WorkerStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+}
+
+enum DeviceStatus {
+    ACTIVE
+    INACTIVE
+    BLOCKED
+}
+
+enum AttendanceType {
+    ENTRY
+    EXIT
+}
+
+enum RecordStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+    SUSPICIOUS
+}
+
+enum LoginQRStatus {
+    PENDING
+    USED
+    EXPIRED
+}
+
+enum ExceptionCodeStatus {
+    PENDING
+    USED
+    EXPIRED
+}
+
+enum ConfigLevel {
+    GLOBAL
+    DEPOT
+    WORKER
+}
+
+enum ExceptionReason {
+    HOLIDAY
+    SPECIAL_EVENT
+    OVERTIME
+    MAINTENANCE
+    EMERGENCY
+}
 
 // ===== AUTENTICACIÓN =====
 
 model Admin {
-    id        String   @id @default(cuid())
-    username  String   @unique
-    email     String   @unique
-    password  String // Hash de contraseña
-    firstName String
-    lastName  String
-    role      String   @default("SUPERVISOR") // SUPER_ADMIN | SUPERVISOR | OPERATOR
-    isActive  Boolean  @default(true)
-    lastLogin DateTime?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id        String    @id @default(uuid()) @db.Uuid
+    username  String    @unique @db.VarChar(50)
+    email     String    @unique @db.VarChar(255)
+    password  String    @db.VarChar(255) // Hash de contraseña (bcrypt)
+    firstName String    @db.VarChar(100)
+    lastName  String    @db.VarChar(100)
+    role      AdminRole @default(SUPERVISOR)
+    isActive  Boolean   @default(true)
+    lastLogin DateTime? @db.Timestamptz(3)
+    createdAt DateTime  @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime  @updatedAt @db.Timestamptz(3)
 
-    // QRs de login generados por este admin
+    // Relaciones
     generatedLoginQRs WorkerLoginQR[]
-    exceptionCodes    ExceptionCode[] // Códigos de excepción generados por este admin
+    exceptionCodes    ExceptionCode[]
 
+    @@index([email])
+    @@index([username])
+    @@index([isActive])
     @@map("admins")
 }
 
 model WorkerLoginQR {
-    id          String    @id @default(cuid())
-    qrToken     String    @unique // Token único para el QR
-    shortCode   String?   @unique // Código de 6 dígitos alternativo
-    status      String    @default("PENDING") // PENDING | USED | EXPIRED
-    expiresAt   DateTime? // Opcional, si quieres que expiren
-    usedAt      DateTime?
-    deviceInfo  String? // JSON con info del dispositivo que lo usó
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
+    id          String        @id @default(uuid()) @db.Uuid
+    qrToken     String        @unique @db.VarChar(255)
+    shortCode   String?       @unique @db.VarChar(6) // Código de 6 dígitos
+    status      LoginQRStatus @default(PENDING)
+    expiresAt   DateTime?     @db.Timestamptz(3)
+    usedAt      DateTime?     @db.Timestamptz(3)
+    deviceInfo  Json? // JSONB para info del dispositivo
+    createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+    updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
 
     // Relaciones
-    workerId String
-    worker   Worker @relation(fields: [workerId], references: [id])
-    adminId  String
-    admin    Admin  @relation(fields: [adminId], references: [id])
+    workerId String @db.Uuid
+    worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+    adminId  String @db.Uuid
+    admin    Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
+    @@index([workerId])
+    @@index([adminId])
+    @@index([status])
+    @@index([expiresAt])
     @@map("worker_login_qrs")
 }
 
 // ===== ENTIDADES PRINCIPALES =====
 
 model Depot {
-    id              String   @id @default(cuid())
-    name            String
-    address         String?
-    latitude        Float
-    longitude       Float
-    radius          Int      @default(100) // Radio en metros para geofencing
-    secret          String   @unique // Clave criptográfica para códigos QR de asistencia
-    secretUpdatedAt DateTime @default(now())
+    id              String   @id @default(uuid()) @db.Uuid
+    name            String   @db.VarChar(200)
+    address         String?  @db.Text
+    latitude        Decimal  @db.Decimal(10, 8) // Más preciso para GPS
+    longitude       Decimal  @db.Decimal(11, 8) // Más preciso para GPS
+    radius          Int      @default(100) @db.SmallInt // Radio en metros
+    secret          String   @unique @db.VarChar(255) // Clave criptográfica
+    secretUpdatedAt DateTime @default(now()) @db.Timestamptz(3)
     isActive        Boolean  @default(true)
-    createdAt       DateTime @default(now())
-    updatedAt       DateTime @updatedAt
+    createdAt       DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt       DateTime @updatedAt @db.Timestamptz(3)
 
     // Relaciones
     workers       Worker[]
     attendances   Attendance[]
-    qrCodes       AttendanceQRCode[] // Renombrado para distinguir de login QRs
-    workSchedules WorkSchedule[]     // Horarios del depot
+    qrCodes       AttendanceQRCode[]
+    workSchedules WorkSchedule[]
 
+    @@index([isActive])
+    @@index([name])
     @@map("depots")
 }
 
 model Worker {
-    id           String  @id @default(cuid())
-    employeeId   String  @unique // ID empleado externo
-    firstName    String
-    lastName     String
-    email        String? @unique
-    phone        String?
-    profilePhoto String? // URL/path de foto de referencia
-    status       String  @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
+    id           String       @id @default(uuid()) @db.Uuid
+    employeeId   String       @unique @db.VarChar(50) // ID empleado externo
+    firstName    String       @db.VarChar(100)
+    lastName     String       @db.VarChar(100)
+    email        String?      @unique @db.VarChar(255)
+    phone        String?      @db.VarChar(20)
+    profilePhoto String?      @db.Text // URL/path de foto
+    status       WorkerStatus @default(ACTIVE)
 
     // Autenticación
-    isAuthenticated Boolean   @default(false) // Si está logueado actualmente
-    lastLoginAt     DateTime? // Última vez que se autenticó
+    isAuthenticated Boolean   @default(false)
+    lastLoginAt     DateTime? @db.Timestamptz(3)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     // Relación con depot
-    depotId String
-    depot   Depot  @relation(fields: [depotId], references: [id])
+    depotId String @db.Uuid
+    depot   Depot  @relation(fields: [depotId], references: [id], onDelete: Restrict)
 
     // Relaciones
-    devices            Device[]
-    attendances        Attendance[]
-    attendanceRecords  AttendanceRecord[]
-    loginQRs           WorkerLoginQR[]             // QRs generados para este worker
-    exceptionCodes     ExceptionCode[]             // Códigos de excepción generados para este worker
-    scheduleAssignments WorkerScheduleAssignment[] // Horarios asignados
+    devices             Device[]
+    attendances         Attendance[]
+    attendanceRecords   AttendanceRecord[]
+    loginQRs            WorkerLoginQR[]
+    exceptionCodes      ExceptionCode[]
+    scheduleAssignments WorkerScheduleAssignment[]
 
+    @@index([depotId])
+    @@index([employeeId])
+    @@index([email])
+    @@index([status])
+    @@index([isAuthenticated])
     @@map("workers")
 }
 
 model Device {
-    id           String    @id @default(cuid())
-    deviceId     String    @unique // Fingerprint único del dispositivo
-    model        String?
-    platform     String?   // iOS/Android
-    appVersion   String?
-    status       String    @default("ACTIVE") // ACTIVE | INACTIVE | BLOCKED
-    
+    id       String       @id @default(uuid()) @db.Uuid
+    deviceId String       @unique @db.VarChar(255) // Fingerprint único
+    model    String?      @db.VarChar(100)
+    platform String?      @db.VarChar(20) // iOS/Android
+    appVersion String?    @db.VarChar(20)
+    status   DeviceStatus @default(ACTIVE)
+
     // Sesión activa
-    isLoggedIn      Boolean   @default(false) // Si tiene sesión activa
-    sessionToken    String?   @unique // Token de sesión actual
-    sessionExpiry   DateTime? // Cuándo expira la sesión (opcional)
-    lastActivityAt  DateTime? // Última actividad registrada
-    
-    lastUsedAt DateTime?
-    createdAt  DateTime  @default(now())
-    updatedAt  DateTime  @updatedAt
+    isLoggedIn     Boolean   @default(false)
+    sessionToken   String?   @unique @db.VarChar(255)
+    sessionExpiry  DateTime? @db.Timestamptz(3)
+    lastActivityAt DateTime? @db.Timestamptz(3)
+
+    lastUsedAt DateTime? @db.Timestamptz(3)
+    createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+    updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
 
     // Relación con worker
-    workerId String
-    worker   Worker @relation(fields: [workerId], references: [id])
+    workerId String @db.Uuid
+    worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
 
     // Relaciones
     attendanceRecords AttendanceRecord[]
 
+    @@index([workerId])
+    @@index([deviceId])
+    @@index([status])
+    @@index([isLoggedIn])
     @@map("devices")
 }
 
 model Attendance {
-    id         String    @id @default(cuid())
-    date       DateTime  // Fecha de la jornada laboral
-    entryTime  DateTime? // Hora de entrada
-    exitTime   DateTime? // Hora de salida
-    totalHours Float?    // Horas trabajadas calculadas
-    isComplete Boolean   @default(false) // Si tiene entrada Y salida
-    notes      String?   // Observaciones
-    createdAt  DateTime  @default(now())
-    updatedAt  DateTime  @updatedAt
+    id         String    @id @default(uuid()) @db.Uuid
+    date       DateTime  @db.Date // Solo fecha de la jornada
+    entryTime  DateTime? @db.Timestamptz(3)
+    exitTime   DateTime? @db.Timestamptz(3)
+    totalHours Decimal?  @db.Decimal(5, 2) // Más preciso para horas
+    isComplete Boolean   @default(false)
+    notes      String?   @db.Text
+    createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+    updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
 
     // Relaciones
-    workerId String
-    worker   Worker @relation(fields: [workerId], references: [id])
-    depotId  String
-    depot    Depot  @relation(fields: [depotId], references: [id])
+    workerId String @db.Uuid
+    worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+    depotId  String @db.Uuid
+    depot    Depot  @relation(fields: [depotId], references: [id], onDelete: Restrict)
 
-    // Registros individuales de entrada y salida
+    // Registros individuales
     records AttendanceRecord[]
 
-    // NOTA: Removida restricción única para permitir múltiples turnos por día
-    // @@unique([workerId, date])
+    @@index([workerId, date])
+    @@index([depotId, date])
+    @@index([date])
+    @@index([isComplete])
     @@map("attendances")
 }
 
 model AttendanceRecord {
-    id        String   @id @default(cuid())
-    type      String   // ENTRY | EXIT
-    timestamp DateTime // Momento exacto del registro
-    status    String   @default("PENDING") // PENDING | ACCEPTED | REJECTED | SUSPICIOUS
+    id        String         @id @default(uuid()) @db.Uuid
+    type      AttendanceType // ENUM nativo
+    timestamp DateTime       @db.Timestamptz(3)
+    status    RecordStatus   @default(PENDING) // ENUM nativo
 
     // Validaciones anti-fraude
-    qrCodeUsed    String?  // Hash del código QR de asistencia utilizado (opcional para códigos de excepción)
-    exceptionCode String?  // Código de excepción utilizado (opcional)
-    photoPath     String  // Path de la selfie tomada
-    photoMetadata String? // Metadatos de la foto (JSON)
-    latitude      Float?  // GPS - Latitud
-    longitude     Float?  // GPS - Longitud
-    accuracy      Float?  // Precisión del GPS en metros
+    qrCodeUsed    String? @db.Text // Hash del QR (opcional)
+    exceptionCode String? @db.VarChar(10) // Código excepción (opcional)
+    photoPath     String  @db.Text // Path de la selfie
+    photoMetadata Json? // JSONB para metadatos
+    latitude      Decimal? @db.Decimal(10, 8)
+    longitude     Decimal? @db.Decimal(11, 8)
+    accuracy      Decimal? @db.Decimal(8, 2) // Precisión GPS
 
     // Validaciones del servidor
-    validationErrors String?   // Errores de validación (JSON)
-    fraudScore       Int?      // Puntuación de fraude (0-100)
-    processedAt      DateTime? // Cuándo fue procesado por el servidor
+    validationErrors Json? // JSONB para errores estructurados
+    fraudScore       Int? @db.SmallInt // 0-100
+    processedAt      DateTime? @db.Timestamptz(3)
 
     // Datos offline
     createdOffline Boolean   @default(false)
-    syncedAt       DateTime? // Cuándo se sincronizó
+    syncedAt       DateTime? @db.Timestamptz(3)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     // Relaciones
-    workerId     String
-    worker       Worker     @relation(fields: [workerId], references: [id])
-    deviceId     String
-    device       Device     @relation(fields: [deviceId], references: [id])
-    attendanceId String
-    attendance   Attendance @relation(fields: [attendanceId], references: [id])
+    workerId     String     @db.Uuid
+    worker       Worker     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+    deviceId     String     @db.Uuid
+    device       Device     @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+    attendanceId String     @db.Uuid
+    attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
 
+    @@index([workerId, timestamp])
+    @@index([attendanceId])
+    @@index([status])
+    @@index([type])
+    @@index([fraudScore])
     @@map("attendance_records")
 }
 
-// Renombrado para distinguir de los QRs de login
 model AttendanceQRCode {
-    id        String    @id @default(cuid())
-    hash      String    @unique // Hash SHA256 generado para asistencia
-    timestamp DateTime  // Momento de generación
-    expiresAt DateTime  // Cuándo expira (timestamp + 2 minutos)
-    isUsed    Boolean   @default(false)
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
+    id        String   @id @default(uuid()) @db.Uuid
+    hash      String   @unique @db.VarChar(255) // SHA256
+    timestamp DateTime @db.Timestamptz(3)
+    expiresAt DateTime @db.Timestamptz(3)
+    isUsed    Boolean  @default(false)
+    usedAt    DateTime? @db.Timestamptz(3)
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
 
     // Relación con depot
-    depotId String
-    depot   Depot  @relation(fields: [depotId], references: [id])
+    depotId String @db.Uuid
+    depot   Depot  @relation(fields: [depotId], references: [id], onDelete: Cascade)
 
+    @@index([depotId])
+    @@index([expiresAt])
+    @@index([isUsed])
     @@map("attendance_qr_codes")
 }
 
 model ExceptionCode {
-    id        String   @id @default(cuid())
-    code      String   @unique // Código de 6 dígitos
-    status    String   @default("PENDING") // PENDING | USED | EXPIRED
-    expiresAt DateTime // Cuándo expira el código
-    usedAt    DateTime?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id        String                @id @default(uuid()) @db.Uuid
+    code      String                @unique @db.VarChar(10) // Código corto
+    status    ExceptionCodeStatus   @default(PENDING)
+    expiresAt DateTime              @db.Timestamptz(3)
+    usedAt    DateTime?             @db.Timestamptz(3)
+    createdAt DateTime              @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime              @updatedAt @db.Timestamptz(3)
 
     // Relaciones
-    workerId String
-    worker   Worker @relation(fields: [workerId], references: [id])
-    adminId  String
-    admin    Admin  @relation(fields: [adminId], references: [id])
+    workerId String @db.Uuid
+    worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+    adminId  String @db.Uuid
+    admin    Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
+    @@index([workerId])
+    @@index([adminId])
+    @@index([status])
+    @@index([expiresAt])
     @@map("exception_codes")
 }
 
-// ===== NUEVAS TABLAS: CONFIGURACIÓN Y HORARIOS =====
-
-// ConfigLevel: "GLOBAL" | "DEPOT" | "WORKER"
+// ===== CONFIGURACIÓN Y HORARIOS =====
 
 model FraudValidationConfig {
-    id       String  @id @default(cuid())
-    level    String  // "GLOBAL" | "DEPOT" | "WORKER"
-    entityId String? // depotId o workerId (null para global)
+    id       String      @id @default(uuid()) @db.Uuid
+    level    ConfigLevel // ENUM nativo
+    entityId String?     @db.Uuid // depotId o workerId
 
-    // Configuración como JSON
-    configJson String // JSON con toda la configuración de validaciones
+    // Configuración como JSONB
+    configJson Json // JSONB con toda la configuración
 
     // Metadata
-    description String?
-    version     Int     @default(1)
-    isActive    Boolean @default(true)
+    description String?  @db.Text
+    version     Int      @default(1) @db.SmallInt
+    isActive    Boolean  @default(true)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     @@unique([level, entityId])
+    @@index([level])
+    @@index([isActive])
     @@map("fraud_validation_configs")
 }
 
 model FeatureFlag {
-    id   String  @id @default(cuid())
-    name String  @unique // "PHOTO_VALIDATION", "PATTERN_VALIDATION", etc.
+    id   String @id @default(uuid()) @db.Uuid
+    name String @unique @db.VarChar(100)
 
     // Estado global
     enabled Boolean @default(true)
 
-    // Configuración por entidad (JSON)
-    enabledForDepots  String? // JSON: ["depot1", "depot2"]
-    enabledForWorkers String? // JSON: ["worker1", "worker2"]
-    disabledForDepots  String? // JSON: ["depot3"]
-    disabledForWorkers String? // JSON: ["worker3"]
+    // Configuración por entidad (JSONB)
+    enabledForDepots   Json? // JSONB: ["depot1", "depot2"]
+    enabledForWorkers  Json? // JSONB: ["worker1", "worker2"]
+    disabledForDepots  Json? // JSONB: ["depot3"]
+    disabledForWorkers Json? // JSONB: ["worker3"]
 
     // Metadata
-    description String?
-    category    String? // "VALIDATION", "FEATURE", etc.
+    description String? @db.Text
+    category    String? @db.VarChar(50)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+    @@index([name])
+    @@index([enabled])
     @@map("feature_flags")
 }
 
 model WorkSchedule {
-    id          String  @id @default(cuid())
-    name        String  // "Turno Nocturno", "Turno Diurno"
-    description String?
+    id          String  @id @default(uuid()) @db.Uuid
+    name        String  @db.VarChar(100)
+    description String? @db.Text
 
-    // Horarios (formato HH:mm en timezone especificado)
-    entryStart String // "21:00"
-    entryEnd   String // "23:00"
-    exitStart  String // "06:00"
-    exitEnd    String // "08:00"
+    // Horarios (formato HH:mm)
+    entryStart String @db.VarChar(5) // "21:00"
+    entryEnd   String @db.VarChar(5) // "23:00"
+    exitStart  String @db.VarChar(5) // "06:00"
+    exitEnd    String @db.VarChar(5) // "08:00"
 
     // Tolerancias en minutos
-    entryToleranceMinutes Int @default(15)
-    exitToleranceMinutes  Int @default(15)
+    entryToleranceMinutes Int @default(15) @db.SmallInt
+    exitToleranceMinutes  Int @default(15) @db.SmallInt
 
-    // Días aplicables (1=Lun, 2=Mar, ..., 7=Dom)
-    daysOfWeek String // JSON: [1,2,3,4,5]
+    // Días aplicables (JSONB array)
+    daysOfWeek Json // JSONB: [1,2,3,4,5]
 
     // Configuración
-    timezone String  @default("America/Guayaquil")
-    isStrict Boolean @default(false) // true = rechaza fuera horario, false = marca sospechoso
+    timezone String  @default("America/Guayaquil") @db.VarChar(50)
+    isStrict Boolean @default(false)
     isActive Boolean @default(true)
 
     // Relaciones
-    depotId     String?
-    depot       Depot?                     @relation(fields: [depotId], references: [id])
+    depotId     String?                    @db.Uuid
+    depot       Depot?                     @relation(fields: [depotId], references: [id], onDelete: SetNull)
     assignments WorkerScheduleAssignment[]
     exceptions  ScheduleException[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
+    @@index([depotId])
+    @@index([isActive])
     @@map("work_schedules")
 }
 
 model WorkerScheduleAssignment {
-    id         String       @id @default(cuid())
-    workerId   String
-    worker     Worker       @relation(fields: [workerId], references: [id])
-    scheduleId String
-    schedule   WorkSchedule @relation(fields: [scheduleId], references: [id])
+    id         String       @id @default(uuid()) @db.Uuid
+    workerId   String       @db.Uuid
+    worker     Worker       @relation(fields: [workerId], references: [id], onDelete: Cascade)
+    scheduleId String       @db.Uuid
+    schedule   WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
 
-    // Overrides opcionales (deja null para usar config del schedule)
-    customEntryStart         String?
-    customEntryEnd           String?
-    customExitStart          String?
-    customExitEnd            String?
-    customEntryTolerance     Int?
-    customExitTolerance      Int?
-    customDaysOfWeek         String? // JSON override
+    // Overrides opcionales
+    customEntryStart     String? @db.VarChar(5)
+    customEntryEnd       String? @db.VarChar(5)
+    customExitStart      String? @db.VarChar(5)
+    customExitEnd        String? @db.VarChar(5)
+    customEntryTolerance Int? @db.SmallInt
+    customExitTolerance  Int? @db.SmallInt
+    customDaysOfWeek     Json? // JSONB override
 
     // Vigencia
-    effectiveFrom DateTime  @default(now())
-    effectiveTo   DateTime?
+    effectiveFrom DateTime  @db.Timestamptz(3) @default(now())
+    effectiveTo   DateTime? @db.Timestamptz(3)
 
     // Metadata
-    notes String?
+    notes String? @db.Text
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     @@unique([workerId, scheduleId, effectiveFrom])
+    @@index([workerId])
+    @@index([scheduleId])
+    @@index([effectiveFrom, effectiveTo])
     @@map("worker_schedule_assignments")
 }
 
 model ScheduleException {
-    id         String       @id @default(cuid())
-    scheduleId String
-    schedule   WorkSchedule @relation(fields: [scheduleId], references: [id])
+    id         String          @id @default(uuid()) @db.Uuid
+    scheduleId String          @db.Uuid
+    schedule   WorkSchedule    @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
     // Excepción para fecha específica
-    date   DateTime // Fecha específica (año-mes-día)
-    reason String   // "HOLIDAY", "SPECIAL_EVENT", "OVERTIME", "MAINTENANCE"
+    date   DateTime        @db.Date
+    reason ExceptionReason // ENUM nativo
 
-    // Horarios override (null = usar horario normal)
-    entryStart String?
-    entryEnd   String?
-    exitStart  String?
-    exitEnd    String?
+    // Horarios override
+    entryStart String? @db.VarChar(5)
+    entryEnd   String? @db.VarChar(5)
+    exitStart  String? @db.VarChar(5)
+    exitEnd    String? @db.VarChar(5)
 
     // Si false, no hay trabajo ese día
     isWorkingDay Boolean @default(true)
 
     // Metadata
-    description String?
+    description String? @db.Text
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     @@unique([scheduleId, date])
+    @@index([scheduleId])
+    @@index([date])
     @@map("schedule_exceptions")
 }
 
 model FraudWeightConfig {
-    id      String @id @default(cuid())
-    version Int    @default(1)
+    id      String      @id @default(uuid()) @db.Uuid
+    version Int         @default(1) @db.SmallInt
 
     // A qué entidad aplica
-    level    String  // "GLOBAL" | "DEPOT" | "WORKER"
-    entityId String? // depotId o workerId (null para global)
+    level    ConfigLevel // ENUM nativo
+    entityId String?     @db.Uuid
 
-    // Pesos como JSON
-    weightsJson String // JSON: { "QR_EXPIRED": 30, "LOCATION_OUT_OF_RANGE": 35, ... }
+    // Pesos como JSONB
+    weightsJson Json // JSONB: { "QR_EXPIRED": 30, ... }
 
     // Umbrales de decisión
-    lowRiskThreshold    Int @default(20)  // 0-20 = ACCEPTED
-    mediumRiskThreshold Int @default(60)  // 21-60 = SUSPICIOUS
-    highRiskThreshold   Int @default(100) // 61+ = REJECTED
+    lowRiskThreshold    Int @default(20) @db.SmallInt
+    mediumRiskThreshold Int @default(60) @db.SmallInt
+    highRiskThreshold   Int @default(100) @db.SmallInt
 
     // Metadata
-    effectiveFrom DateTime  @default(now())
-    effectiveTo   DateTime?
+    effectiveFrom DateTime  @db.Timestamptz(3) @default(now())
+    effectiveTo   DateTime? @db.Timestamptz(3)
     isActive      Boolean   @default(true)
-    description   String?
+    description   String?   @db.Text
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now()) @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
     @@unique([level, entityId, version])
+    @@index([level])
+    @@index([isActive])
+    @@index([effectiveFrom, effectiveTo])
     @@map("fraud_weight_configs")
 }
