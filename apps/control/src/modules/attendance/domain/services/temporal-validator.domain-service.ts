@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { FraudReason } from '../enums/fraud-reason.enum';
+import { WorkScheduleService } from '../../infrastructure/services/work-schedule.service';
+import { ConfigurationService } from '../../infrastructure/services/configuration.service';
+import { VALIDATION_MESSAGES } from '../constants/validation-messages.constants';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -12,8 +15,14 @@ export interface ValidationResult {
 
 @Injectable()
 export class TemporalValidatorDomainService {
-  private readonly QR_TOLERANCE_MINUTES = 6;
-  private readonly DEVICE_TIME_TOLERANCE_MINUTES = 5;
+  // Valores por defecto (pueden ser sobrescritos por configuración)
+  private QR_TOLERANCE_MINUTES = 6;
+  private DEVICE_TIME_TOLERANCE_MINUTES = 5;
+
+  constructor(
+    private readonly workScheduleService: WorkScheduleService,
+    private readonly configService: ConfigurationService,
+  ) {}
 
   /**
    * Nivel 1: Validación Temporal del QR
@@ -149,9 +158,26 @@ export class TemporalValidatorDomainService {
   }
 
   /**
-   * Validar horarios de trabajo normales
+   * Validar horarios de trabajo usando WorkScheduleService
+   * Ahora soporta horarios configurables por worker
+   *
+   * @param recordTime - Timestamp del registro
+   * @param workerId - ID del worker (requerido para horarios configurables)
+   * @param isEntry - true para entrada, false para salida
    */
-  validateWorkingHours(recordTime: Date, isEntry: boolean): ValidationResult {
+  async validateWorkingHours(
+    recordTime: Date,
+    workerId: string,
+    isEntry: boolean,
+  ): Promise<ValidationResult> {
+    // Delegar a WorkScheduleService
+    return this.workScheduleService.validateWorkingHours(recordTime, workerId, isEntry);
+  }
+
+  /**
+   * @deprecated Método legacy sin workerId - usar validateWorkingHours() con workerId
+   */
+  validateWorkingHoursLegacy(recordTime: Date, isEntry: boolean): ValidationResult {
     // Convertir a hora de Ecuador (UTC-5)
     const ecuadorTime = new Date(recordTime.getTime() - (5 * 60 * 60 * 1000));
     const hour = ecuadorTime.getHours();
@@ -175,7 +201,11 @@ export class TemporalValidatorDomainService {
         isValid: true,
         isSuspicious: true,
         reason: FraudReason.UNUSUAL_WORK_HOURS,
-        message: `${expectedRange.name} time outside normal hours (${ecuadorTime.toLocaleTimeString('es-EC')})`,
+        message: VALIDATION_MESSAGES.TEMPORAL.WORKING_HOURS_OUTSIDE_RANGE(
+          ecuadorTime.toLocaleTimeString('es-EC'),
+          expectedRange.name,
+          `${expectedRange.start}:00-${expectedRange.end}:00`,
+        ),
         severity: isVeryUnusual ? 15 : 8,
         details: {
           recordTime: recordTime.toISOString(),
@@ -191,7 +221,7 @@ export class TemporalValidatorDomainService {
       isValid: true,
       isSuspicious: false,
       severity: 0,
-      message: 'Validación de horario laboral exitosa',
+      message: VALIDATION_MESSAGES.TEMPORAL.WORKING_HOURS_VALID(),
     };
   }
 }

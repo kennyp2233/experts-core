@@ -12,8 +12,12 @@ import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worke
 // Application Services
 import { AttendanceProcessingService } from './application/services/attendance-processing.service';
 
-// Infrastructure Services  
+// Infrastructure Services
 import { PhotoStorageService } from './infrastructure/services/photo-storage.service';
+import { ConfigurationService } from './infrastructure/services/configuration.service';
+import { FeatureFlagService } from './infrastructure/services/feature-flag.service';
+import { WorkScheduleService } from './infrastructure/services/work-schedule.service';
+import { FraudScoringService } from './infrastructure/services/fraud-scoring.service';
 
 // Domain Services
 import { AntiFraudValidatorDomainService } from './domain/services/anti-fraud-validator.domain-service';
@@ -39,26 +43,30 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
   providers: [
     // External dependencies
     PrismaService,
-    
+
     // Repository
     {
       provide: AttendanceRepositoryInterface,
       useClass: AttendanceRepository,
     },
-    
+
+    // Infrastructure Services (NEW: Configuration & Scheduling)
+    ConfigurationService,
+    FeatureFlagService,
+    WorkScheduleService,
+    FraudScoringService,
+    PhotoStorageService,
+
     // Domain Services
     TemporalValidatorDomainService,
     GeolocationValidatorDomainService,
     PhotoValidatorDomainService,
     WorkHoursCalculatorDomainService,
     AntiFraudValidatorDomainService,
-    
+
     // Application Services
     AttendanceProcessingService,
-    
-    // Infrastructure Services
-    PhotoStorageService,
-    
+
     // Use Cases
     RecordEntryUseCase,
     RecordExitUseCase,
@@ -72,6 +80,14 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     AttendanceRepositoryInterface,
     AntiFraudValidatorDomainService,
     AttendanceProcessingService,
+
+    // Export new infrastructure services
+    ConfigurationService,
+    FeatureFlagService,
+    WorkScheduleService,
+    FraudScoringService,
+
+    // Export use cases
     RecordEntryUseCase,
     RecordExitUseCase,
     ValidateAttendanceUseCase,

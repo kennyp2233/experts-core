@@ -166,9 +166,10 @@ export class AntiFraudValidatorDomainService {
       ));
     }
 
-    // Validar horarios laborales
-    results.push(this.temporalValidator.validateWorkingHours(
+    // Validar horarios laborales (ahora con soporte de WorkSchedule configurables)
+    results.push(await this.temporalValidator.validateWorkingHours(
       data.timestamp,
+      data.workerId, // Ahora requiere workerId para horarios configurables
       data.type === AttendanceType.ENTRY,
     ));
 

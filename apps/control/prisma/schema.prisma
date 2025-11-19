@@ -77,9 +77,10 @@ model Depot {
     updatedAt       DateTime @updatedAt
 
     // Relaciones
-    workers     Worker[]
-    attendances Attendance[]
-    qrCodes     AttendanceQRCode[] // Renombrado para distinguir de login QRs
+    workers       Worker[]
+    attendances   Attendance[]
+    qrCodes       AttendanceQRCode[] // Renombrado para distinguir de login QRs
+    workSchedules WorkSchedule[]     // Horarios del depot
 
     @@map("depots")
 }
@@ -93,11 +94,11 @@ model Worker {
     phone        String?
     profilePhoto String? // URL/path de foto de referencia
     status       String  @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
-    
+
     // Autenticación
     isAuthenticated Boolean   @default(false) // Si está logueado actualmente
     lastLoginAt     DateTime? // Última vez que se autenticó
-    
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
@@ -106,11 +107,12 @@ model Worker {
     depot   Depot  @relation(fields: [depotId], references: [id])
 
     // Relaciones
-    devices           Device[]
-    attendances       Attendance[]
-    attendanceRecords AttendanceRecord[]
-    loginQRs          WorkerLoginQR[] // QRs generados para este worker
-    exceptionCodes    ExceptionCode[] // Códigos de excepción generados para este worker
+    devices            Device[]
+    attendances        Attendance[]
+    attendanceRecords  AttendanceRecord[]
+    loginQRs           WorkerLoginQR[]             // QRs generados para este worker
+    exceptionCodes     ExceptionCode[]             // Códigos de excepción generados para este worker
+    scheduleAssignments WorkerScheduleAssignment[] // Horarios asignados
 
     @@map("workers")
 }
@@ -239,4 +241,173 @@ model ExceptionCode {
     admin    Admin  @relation(fields: [adminId], references: [id])
 
     @@map("exception_codes")
+}
+
+// ===== NUEVAS TABLAS: CONFIGURACIÓN Y HORARIOS =====
+
+// ConfigLevel: "GLOBAL" | "DEPOT" | "WORKER"
+
+model FraudValidationConfig {
+    id       String  @id @default(cuid())
+    level    String  // "GLOBAL" | "DEPOT" | "WORKER"
+    entityId String? // depotId o workerId (null para global)
+
+    // Configuración como JSON
+    configJson String // JSON con toda la configuración de validaciones
+
+    // Metadata
+    description String?
+    version     Int     @default(1)
+    isActive    Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([level, entityId])
+    @@map("fraud_validation_configs")
+}
+
+model FeatureFlag {
+    id   String  @id @default(cuid())
+    name String  @unique // "PHOTO_VALIDATION", "PATTERN_VALIDATION", etc.
+
+    // Estado global
+    enabled Boolean @default(true)
+
+    // Configuración por entidad (JSON)
+    enabledForDepots  String? // JSON: ["depot1", "depot2"]
+    enabledForWorkers String? // JSON: ["worker1", "worker2"]
+    disabledForDepots  String? // JSON: ["depot3"]
+    disabledForWorkers String? // JSON: ["worker3"]
+
+    // Metadata
+    description String?
+    category    String? // "VALIDATION", "FEATURE", etc.
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("feature_flags")
+}
+
+model WorkSchedule {
+    id          String  @id @default(cuid())
+    name        String  // "Turno Nocturno", "Turno Diurno"
+    description String?
+
+    // Horarios (formato HH:mm en timezone especificado)
+    entryStart String // "21:00"
+    entryEnd   String // "23:00"
+    exitStart  String // "06:00"
+    exitEnd    String // "08:00"
+
+    // Tolerancias en minutos
+    entryToleranceMinutes Int @default(15)
+    exitToleranceMinutes  Int @default(15)
+
+    // Días aplicables (1=Lun, 2=Mar, ..., 7=Dom)
+    daysOfWeek String // JSON: [1,2,3,4,5]
+
+    // Configuración
+    timezone String  @default("America/Guayaquil")
+    isStrict Boolean @default(false) // true = rechaza fuera horario, false = marca sospechoso
+    isActive Boolean @default(true)
+
+    // Relaciones
+    depotId     String?
+    depot       Depot?                     @relation(fields: [depotId], references: [id])
+    assignments WorkerScheduleAssignment[]
+    exceptions  ScheduleException[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("work_schedules")
+}
+
+model WorkerScheduleAssignment {
+    id         String       @id @default(cuid())
+    workerId   String
+    worker     Worker       @relation(fields: [workerId], references: [id])
+    scheduleId String
+    schedule   WorkSchedule @relation(fields: [scheduleId], references: [id])
+
+    // Overrides opcionales (deja null para usar config del schedule)
+    customEntryStart         String?
+    customEntryEnd           String?
+    customExitStart          String?
+    customExitEnd            String?
+    customEntryTolerance     Int?
+    customExitTolerance      Int?
+    customDaysOfWeek         String? // JSON override
+
+    // Vigencia
+    effectiveFrom DateTime  @default(now())
+    effectiveTo   DateTime?
+
+    // Metadata
+    notes String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([workerId, scheduleId, effectiveFrom])
+    @@map("worker_schedule_assignments")
+}
+
+model ScheduleException {
+    id         String       @id @default(cuid())
+    scheduleId String
+    schedule   WorkSchedule @relation(fields: [scheduleId], references: [id])
+
+    // Excepción para fecha específica
+    date   DateTime // Fecha específica (año-mes-día)
+    reason String   // "HOLIDAY", "SPECIAL_EVENT", "OVERTIME", "MAINTENANCE"
+
+    // Horarios override (null = usar horario normal)
+    entryStart String?
+    entryEnd   String?
+    exitStart  String?
+    exitEnd    String?
+
+    // Si false, no hay trabajo ese día
+    isWorkingDay Boolean @default(true)
+
+    // Metadata
+    description String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([scheduleId, date])
+    @@map("schedule_exceptions")
+}
+
+model FraudWeightConfig {
+    id      String @id @default(cuid())
+    version Int    @default(1)
+
+    // A qué entidad aplica
+    level    String  // "GLOBAL" | "DEPOT" | "WORKER"
+    entityId String? // depotId o workerId (null para global)
+
+    // Pesos como JSON
+    weightsJson String // JSON: { "QR_EXPIRED": 30, "LOCATION_OUT_OF_RANGE": 35, ... }
+
+    // Umbrales de decisión
+    lowRiskThreshold    Int @default(20)  // 0-20 = ACCEPTED
+    mediumRiskThreshold Int @default(60)  // 21-60 = SUSPICIOUS
+    highRiskThreshold   Int @default(100) // 61+ = REJECTED
+
+    // Metadata
+    effectiveFrom DateTime  @default(now())
+    effectiveTo   DateTime?
+    isActive      Boolean   @default(true)
+    description   String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([level, entityId, version])
+    @@map("fraud_weight_configs")
 }
