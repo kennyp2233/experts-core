@@ -7,6 +7,8 @@ export interface AttendanceProps {
   entryTime: Date | null;
   exitTime: Date | null;
   totalHours: number | null;
+  breakMinutes: number | null;
+  netHours: number | null;
   isComplete: boolean;
   notes: string | null;
   workerId: string;
@@ -20,7 +22,7 @@ export class AttendanceEntity {
     this.validateAttendance();
   }
 
-  static create(data: Omit<AttendanceProps, 'id' | 'totalHours' | 'isComplete' | 'createdAt' | 'updatedAt'>): AttendanceEntity {
+  static create(data: Omit<AttendanceProps, 'id' | 'totalHours' | 'breakMinutes' | 'netHours' | 'isComplete' | 'createdAt' | 'updatedAt'>): AttendanceEntity {
     const now = new Date();
     const totalHours = AttendanceEntity.calculateTotalHours(data.entryTime, data.exitTime);
     const isComplete = data.entryTime !== null && data.exitTime !== null;
@@ -29,6 +31,8 @@ export class AttendanceEntity {
       ...data,
       id: '', // Will be set by repository
       totalHours,
+      breakMinutes: null, // Will be calculated when exit is recorded
+      netHours: null, // Will be calculated when exit is recorded
       isComplete,
       createdAt: now,
       updatedAt: now,
@@ -100,6 +104,14 @@ export class AttendanceEntity {
 
   get totalHours(): number | null {
     return this.props.totalHours;
+  }
+
+  get breakMinutes(): number | null {
+    return this.props.breakMinutes;
+  }
+
+  get netHours(): number | null {
+    return this.props.netHours;
   }
 
   get isComplete(): boolean {
@@ -177,6 +189,26 @@ export class AttendanceEntity {
     return new AttendanceEntity({
       ...this.props,
       notes,
+      updatedAt: new Date(),
+    });
+  }
+
+  /**
+   * Set net hours and break minutes (calculated by BreakPolicyService)
+   */
+  setNetHours(breakMinutes: number, netHours: number): AttendanceEntity {
+    if (breakMinutes < 0) {
+      throw new Error('Break minutes cannot be negative');
+    }
+
+    if (netHours < 0) {
+      throw new Error('Net hours cannot be negative');
+    }
+
+    return new AttendanceEntity({
+      ...this.props,
+      breakMinutes,
+      netHours,
       updatedAt: new Date(),
     });
   }
@@ -334,6 +366,8 @@ export class AttendanceEntity {
       entryTime: this.props.entryTime?.toISOString() || null,
       exitTime: this.props.exitTime?.toISOString() || null,
       totalHours: this.props.totalHours,
+      breakMinutes: this.props.breakMinutes,
+      netHours: this.props.netHours,
       isComplete: this.props.isComplete,
       notes: this.props.notes,
       workerId: this.props.workerId,

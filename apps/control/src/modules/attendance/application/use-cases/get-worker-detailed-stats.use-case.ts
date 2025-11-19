@@ -129,18 +129,19 @@ export class GetWorkerDetailedStatsUseCase {
   }
 
   private calculateHoursStats(attendances: any[]) {
-    const completeAttendances = attendances.filter(a => a.isComplete && a.totalHours);
-    const totalHours = completeAttendances.reduce((sum, a) => sum + (a.totalHours || 0), 0);
+    // Usar netHours (horas con breaks deducidos) en lugar de totalHours
+    const completeAttendances = attendances.filter(a => a.isComplete && a.netHours);
+    const totalHours = completeAttendances.reduce((sum, a) => sum + (a.netHours || 0), 0);
     const averageHoursPerDay = completeAttendances.length > 0 ? totalHours / completeAttendances.length : 0;
 
-    // Asumir jornada estándar de 8 horas
+    // Asumir jornada estándar de 8 horas (ya sin breaks porque netHours ya los deduce)
     const standardHours = 8;
     const overtimeHours = completeAttendances
-      .filter(a => (a.totalHours || 0) > standardHours)
-      .reduce((sum, a) => sum + ((a.totalHours || 0) - standardHours), 0);
+      .filter(a => (a.netHours || 0) > standardHours)
+      .reduce((sum, a) => sum + ((a.netHours || 0) - standardHours), 0);
     const undertimeHours = completeAttendances
-      .filter(a => (a.totalHours || 0) < standardHours)
-      .reduce((sum, a) => sum + (standardHours - (a.totalHours || 0)), 0);
+      .filter(a => (a.netHours || 0) < standardHours)
+      .reduce((sum, a) => sum + (standardHours - (a.netHours || 0)), 0);
 
     const efficiency = averageHoursPerDay > 0 ? (averageHoursPerDay / standardHours) * 100 : 0;
 
