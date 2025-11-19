@@ -11,6 +11,12 @@ import { GetWorkerDetailedStatsUseCase } from './application/use-cases/get-worke
 
 // Application Services
 import { AttendanceProcessingService } from './application/services/attendance-processing.service';
+import { ValidationOrchestratorService } from './application/services/validation-orchestrator.service';
+
+// Validator Wrappers
+import { TemporalValidatorWrapper } from './application/services/wrappers/temporal-validator.wrapper';
+import { GeolocationValidatorWrapper } from './application/services/wrappers/geolocation-validator.wrapper';
+import { PhotoValidatorWrapper } from './application/services/wrappers/photo-validator.wrapper';
 
 // Infrastructure Services
 import { PhotoStorageService } from './infrastructure/services/photo-storage.service';
@@ -25,6 +31,8 @@ import { TemporalValidatorDomainService } from './domain/services/temporal-valid
 import { GeolocationValidatorDomainService } from './domain/services/geolocation-validator.domain-service';
 import { PhotoValidatorDomainService } from './domain/services/photo-validator.domain-service';
 import { WorkHoursCalculatorDomainService } from './domain/services/work-hours-calculator.domain-service';
+import { CryptographicValidatorDomainService } from './domain/services/cryptographic-validator.domain-service';
+import { PatternValidatorDomainService } from './domain/services/pattern-validator.domain-service';
 
 // Repository
 import { AttendanceRepositoryInterface } from './domain/repositories/attendance.repository.interface';
@@ -57,14 +65,22 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     FraudScoringService,
     PhotoStorageService,
 
-    // Domain Services
+    // Domain Services (Legacy + New)
     TemporalValidatorDomainService,
     GeolocationValidatorDomainService,
     PhotoValidatorDomainService,
     WorkHoursCalculatorDomainService,
+    CryptographicValidatorDomainService, // NEW: Independent validator
+    PatternValidatorDomainService, // NEW: Independent validator
     AntiFraudValidatorDomainService,
 
+    // Validator Wrappers (Strategy Pattern)
+    TemporalValidatorWrapper,
+    GeolocationValidatorWrapper,
+    PhotoValidatorWrapper,
+
     // Application Services
+    ValidationOrchestratorService, // NEW: Orchestrator with feature flags
     AttendanceProcessingService,
 
     // Use Cases
@@ -79,6 +95,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     // Export services that other modules might need
     AttendanceRepositoryInterface,
     AntiFraudValidatorDomainService,
+    ValidationOrchestratorService, // NEW: Export orchestrator
     AttendanceProcessingService,
 
     // Export new infrastructure services
@@ -86,6 +103,10 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
     FeatureFlagService,
     WorkScheduleService,
     FraudScoringService,
+
+    // Export validators
+    CryptographicValidatorDomainService,
+    PatternValidatorDomainService,
 
     // Export use cases
     RecordEntryUseCase,
