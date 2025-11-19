@@ -8,9 +8,9 @@ import {
 } from 'class-validator';
 
 export class CreateWorkerDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'El ID de empleado es requerido' })
-  employeeId: string;
+  employeeId?: string; // Opcional - se genera automáticamente si no se proporciona
 
   @IsString()
   @IsNotEmpty({ message: 'El nombre es requerido' })

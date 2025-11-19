@@ -70,11 +70,14 @@ export const VALIDATION_MESSAGES = {
     NO_QR_PROVIDED: () =>
       'No se proporcionó código QR ni código de excepción',
 
-    MALFORMED_QR: () =>
+    MISSING_SIGNATURE: () =>
       'Formato de código QR inválido - falta la firma',
 
-    INVALID_SIGNATURE: (qrSignature: string, depotId: string) =>
-      `Firma criptográfica del QR inválida (firma: ${qrSignature.substring(0, 16)}..., depot: ${depotId})`,
+    MALFORMED_QR: () =>
+      'Formato de código QR inválido o mal formado',
+
+    INVALID_SIGNATURE: () =>
+      'La firma criptográfica del código QR es inválida',
 
     SIGNATURE_VALID: () =>
       'Validación criptográfica del QR exitosa',

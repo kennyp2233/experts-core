@@ -16,6 +16,7 @@ import {
 } from './dto/worker-response.dto';
 import { plainToClass } from 'class-transformer';
 import { Prisma } from '@prisma/client';
+import { EmployeeIdGenerator, EmployeeIdFormat } from './utils/employee-id-generator.util';
 
 @Injectable()
 export class WorkersService {
@@ -160,13 +161,30 @@ export class WorkersService {
         throw new NotFoundException(`Depot con ID ${createWorkerDto.depotId} no encontrado`);
       }
 
-      // Verificar unicidad de employeeId
-      const existingWorkerById = await this.prisma.worker.findUnique({
-        where: { employeeId: createWorkerDto.employeeId }
-      });
+      // NUEVO: Generar employeeId automáticamente si no viene en el DTO
+      let employeeId = createWorkerDto.employeeId;
 
-      if (existingWorkerById) {
-        throw new ConflictException(`Ya existe un worker con employeeId: ${createWorkerDto.employeeId}`);
+      if (!employeeId) {
+        this.logger.log('Generando employeeId automáticamente...');
+
+        // Generar con formato SEQUENTIAL (EMP-00001, EMP-00002, ...)
+        // Puedes cambiar el formato según necesites:
+        employeeId = await EmployeeIdGenerator.generateUnique(this.prisma, {
+          format: EmployeeIdFormat.SEQUENTIAL,
+          prefix: 'EMP',
+          digits: 5,
+        });
+
+        this.logger.log(`EmployeeId generado: ${employeeId}`);
+      } else {
+        // Si viene employeeId, verificar unicidad
+        const existingWorkerById = await this.prisma.worker.findUnique({
+          where: { employeeId }
+        });
+
+        if (existingWorkerById) {
+          throw new ConflictException(`Ya existe un worker con employeeId: ${employeeId}`);
+        }
       }
 
       // Verificar unicidad de email si se proporciona
@@ -183,6 +201,7 @@ export class WorkersService {
       const worker = await this.prisma.worker.create({
         data: {
           ...createWorkerDto,
+          employeeId, // Usar el employeeId generado o proporcionado
           status: createWorkerDto.status || 'ACTIVE'
         },
         include: {
