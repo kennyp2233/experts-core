@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AttendanceController } from './attendance.controller';
+import { BreakPolicyController } from './infrastructure/controllers/break-policy.controller';
 
 // Use Cases
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
@@ -43,7 +44,7 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
 
 @Module({
   imports: [ExceptionCodesModule, WorkersModule, AuthModule, WorkerAuthModule],
-  controllers: [AttendanceController],
+  controllers: [AttendanceController, BreakPolicyController],
   providers: [
     // External dependencies
     PrismaService,
