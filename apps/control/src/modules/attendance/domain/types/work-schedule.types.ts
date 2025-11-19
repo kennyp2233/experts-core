@@ -19,15 +19,17 @@ export interface WorkSchedule {
   description?: string;
 
   // Horarios
-  entryWindow: TimeWindow;
-  exitWindow: TimeWindow;
+  entryStart: string;
+  entryEnd: string;
+  exitStart: string;
+  exitEnd: string;
 
   // Tolerancias (en minutos)
   entryToleranceMinutes: number;
   exitToleranceMinutes: number;
 
   // Días aplicables (1=Lun, 2=Mar, ..., 7=Dom, 0=Dom alternativo)
-  daysOfWeek: number[];
+  daysOfWeek: string; // JSON string
 
   // Configuración
   timezone: string;  // IANA timezone: "America/Guayaquil"
@@ -55,7 +57,7 @@ export interface WorkerScheduleAssignment {
   customExitEnd?: string;
   customEntryTolerance?: number;
   customExitTolerance?: number;
-  customDaysOfWeek?: number[];
+  customDaysOfWeek?: string | null; // JSON string
 
   // Vigencia
   effectiveFrom: Date;

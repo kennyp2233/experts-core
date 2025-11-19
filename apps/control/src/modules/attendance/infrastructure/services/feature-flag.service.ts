@@ -200,7 +200,7 @@ export class FeatureFlagService {
       where: { name: featureName },
       data: {
         enabledForWorkers: JSON.stringify(newEnabledWorkers),
-        disabledForWorkers: JSON.stringify(newDisabledWorkers),
+        disabledForWorkers: JSON.stringify(disabledWorkers),
       },
     });
 
