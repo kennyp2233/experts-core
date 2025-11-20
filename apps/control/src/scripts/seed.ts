@@ -1,23 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { EmployeeIdGenerator, EmployeeIdFormat } from '../modules/workers/utils/employee-id-generator.util';
 
-@Injectable()
-class PrismaService extends PrismaClient implements OnModuleInit {
-  async onModuleInit() {
-    await this.$connect();
-  }
-}
-
-const prisma = new PrismaService();
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Iniciando seeding de la base de datos...');
-
-  // Inicializar Prisma
-  await prisma.onModuleInit();
 
   try {
     // 1. Crear Admin
@@ -58,15 +46,9 @@ async function main() {
     // 3. Crear 2 Choferes/Workers
     console.log('👷‍♂️ Creando choferes...');
 
-    const worker1EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
-      format: EmployeeIdFormat.SEQUENTIAL,
-      prefix: 'EMP',
-      digits: 5,
-    });
-
     const worker1 = await prisma.worker.create({
       data: {
-        employeeId: worker1EmployeeId,
+        employeeId: 'EMP-00001',
         firstName: 'Franklin',
         lastName: 'Simbaña',
         email: 'franklin@expertcontrol.com',
@@ -76,33 +58,21 @@ async function main() {
       },
     });
 
-    const worker2EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
-      format: EmployeeIdFormat.SEQUENTIAL,
-      prefix: 'EMP',
-      digits: 5,
-    });
-
     const worker2 = await prisma.worker.create({
       data: {
-        employeeId: worker2EmployeeId,
+        employeeId: 'EMP-00002',
         firstName: 'Milton',
         lastName: 'Cabascango',
-        email: 'MIlton@expertcontrol.com',
+        email: 'milton@expertcontrol.com',
         phone: '',
         status: 'ACTIVE',
         depotId: depot.id,
       },
     });
 
-    const worker3EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
-      format: EmployeeIdFormat.SEQUENTIAL,
-      prefix: 'EMP',
-      digits: 5,
-    });
-
     const worker3 = await prisma.worker.create({
       data: {
-        employeeId: worker3EmployeeId,
+        employeeId: 'EMP-00003',
         firstName: 'Santiago',
         lastName: 'Pinchao',
         email: 'santiago@expertcontrol.com',
@@ -112,15 +82,9 @@ async function main() {
       },
     });
 
-    const worker4EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
-      format: EmployeeIdFormat.SEQUENTIAL,
-      prefix: 'EMP',
-      digits: 5,
-    });
-
     const worker4 = await prisma.worker.create({
       data: {
-        employeeId: worker4EmployeeId,
+        employeeId: 'EMP-00004',
         firstName: 'Kenny',
         lastName: 'Pinchao',
         email: 'kenny@expertcontrol.com',

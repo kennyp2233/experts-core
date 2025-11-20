@@ -5,9 +5,9 @@ services:
     container_name: experts-control-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: experts_control
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-experts_control}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - '5432:5432'
@@ -27,10 +27,20 @@ services:
     container_name: experts-control-app
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '3001:3000'
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/experts_control
-      PORT: 3000
+      - DATABASE_URL
+      - PORT
+      - NODE_ENV
+      - JWT_SECRET
+      - WORKER_JWT_SECRET
+      - JWT_EXPIRES_IN
+      - WORKER_JWT_EXPIRES_IN
+      - DEPOT_QR_SECRET
+      - LOG_LEVEL
+      - CORS_ORIGINS
+      - PHOTO_STORAGE_PATH
+      - MAX_PHOTO_SIZE
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -43,7 +53,11 @@ services:
   seeder:
     build: .
     container_name: experts-control-seeder
-    command: npx ts-node src/scripts/seed.ts
+    entrypoint: []
+    command: node dist/scripts/seed.js
+    environment:
+      - DATABASE_URL
+      - NODE_ENV
     depends_on:
       - control-app
     networks:
