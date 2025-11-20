@@ -94,10 +94,100 @@ async function main() {
       },
     });
 
+    const worker3EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
+      format: EmployeeIdFormat.SEQUENTIAL,
+      prefix: 'EMP',
+      digits: 5,
+    });
+
+    const worker3 = await prisma.worker.create({
+      data: {
+        employeeId: worker3EmployeeId,
+        firstName: 'Santiago',
+        lastName: 'Pinchao',
+        email: 'santiago@expertcontrol.com',
+        phone: '',
+        status: 'ACTIVE',
+        depotId: depot.id,
+      },
+    });
+
+    const worker4EmployeeId = await EmployeeIdGenerator.generateUnique(prisma, {
+      format: EmployeeIdFormat.SEQUENTIAL,
+      prefix: 'EMP',
+      digits: 5,
+    });
+
+    const worker4 = await prisma.worker.create({
+      data: {
+        employeeId: worker4EmployeeId,
+        firstName: 'Kenny',
+        lastName: 'Pinchao',
+        email: 'kenny@expertcontrol.com',
+        phone: '',
+        status: 'ACTIVE',
+        depotId: depot.id,
+      },
+    });
+
     console.log(`✅ Worker 1 creado: ${worker1.firstName} ${worker1.lastName} (${worker1.employeeId})`);
     console.log(`✅ Worker 2 creado: ${worker2.firstName} ${worker2.lastName} (${worker2.employeeId})`);
+    console.log(`✅ Worker 3 creado: ${worker3.firstName} ${worker3.lastName} (${worker3.employeeId})`);
+    console.log(`✅ Worker 4 creado: ${worker4.firstName} ${worker4.lastName} (${worker4.employeeId})`);
 
-    // 4. Mostrar resumen
+    // 4. Crear horario de trabajo por defecto para el depot
+    console.log('🕒 Creando horario de trabajo por defecto...');
+    const defaultSchedule = await prisma.workSchedule.create({
+      data: {
+        name: 'Horario Nocturno Estándar',
+        description: 'Horario estándar para turnos nocturnos',
+        entryStart: '20:00',
+        entryEnd: '23:00',
+        exitStart: '05:00',
+        exitEnd: '08:00',
+        entryToleranceMinutes: 15,
+        exitToleranceMinutes: 15,
+        daysOfWeek: JSON.stringify([1, 2, 3, 4, 5, 6, 7]), // Lunes a Domingo
+        timezone: 'America/Guayaquil',
+        isStrict: false,
+        isActive: true,
+        depotId: depot.id,
+      },
+    });
+    console.log(`✅ Horario por defecto creado: ${defaultSchedule.name}`);
+
+    // 5. Asignar horarios específicos a trabajadores
+    console.log('👷‍♂️ Asignando horarios específicos...');
+
+    // Milton: 20:00 entrada, 05:00 salida
+    await prisma.workerScheduleAssignment.create({
+      data: {
+        workerId: worker2.id, // Milton
+        scheduleId: defaultSchedule.id,
+        customEntryStart: '20:00',
+        customEntryEnd: '20:30', // Ventana ajustada
+        customExitStart: '05:00',
+        customExitEnd: '05:30', // Ventana ajustada
+        effectiveFrom: new Date(),
+      },
+    });
+
+    // Franklin (Simbaña): 22:00 entrada, 07:00 salida
+    await prisma.workerScheduleAssignment.create({
+      data: {
+        workerId: worker1.id, // Franklin
+        scheduleId: defaultSchedule.id,
+        customEntryStart: '22:00',
+        customEntryEnd: '22:30', // Ventana ajustada
+        customExitStart: '07:00',
+        customExitEnd: '07:30', // Ventana ajustada
+        effectiveFrom: new Date(),
+      },
+    });
+
+    console.log('✅ Horarios asignados a trabajadores específicos');
+
+    // 6. Mostrar resumen
     console.log('\n📋 RESUMEN DE DATOS CREADOS:');
     console.log('====================================');
     console.log(`👨‍💼 ADMIN:`);
@@ -120,6 +210,22 @@ async function main() {
     console.log(`   2. ${worker2.firstName} ${worker2.lastName} (${worker2.employeeId})`);
     console.log(`      Email: ${worker2.email}`);
     console.log(`      Teléfono: ${worker2.phone}`);
+    console.log(`   3. ${worker3.firstName} ${worker3.lastName} (${worker3.employeeId})`);
+    console.log(`      Email: ${worker3.email}`);
+    console.log(`      Teléfono: ${worker3.phone}`);
+    console.log(`   4. ${worker4.firstName} ${worker4.lastName} (${worker4.employeeId})`);
+    console.log(`      Email: ${worker4.email}`);
+    console.log(`      Teléfono: ${worker4.phone}`);
+
+    console.log(`\n🕒 HORARIO DE TRABAJO:`);
+    console.log(`   Nombre: ${defaultSchedule.name}`);
+    console.log(`   Entrada: ${defaultSchedule.entryStart} - ${defaultSchedule.entryEnd}`);
+    console.log(`   Salida: ${defaultSchedule.exitStart} - ${defaultSchedule.exitEnd}`);
+    console.log(`   Tolerancia: ${defaultSchedule.entryToleranceMinutes} min`);
+    console.log(`   Días: Todos los días`);
+    console.log(`   Asignaciones específicas:`);
+    console.log(`     - Milton: Entrada 20:00-20:30, Salida 05:00-05:30`);
+    console.log(`     - Franklin: Entrada 22:00-22:30, Salida 07:00-07:30`);
 
     console.log('\n✅ Seeding completado exitosamente!');
 

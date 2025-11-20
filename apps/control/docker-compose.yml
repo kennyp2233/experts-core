@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -23,30 +21,38 @@ services:
     networks:
       - experts-network
 
-  # PgAdmin (Optional - Database UI)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: experts-control-pgadmin
+  # Control App (NestJS)
+  control-app:
+    build: .
+    container_name: experts-control-app
     restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@experts.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - '5050:80'
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/experts_control
+      PORT: 3000
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - ./uploads:/app/uploads
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - experts-network
+
+  # Database Seeder (one-time setup)
+  seeder:
+    build: .
+    container_name: experts-control-seeder
+    command: npx ts-node src/scripts/seed.ts
+    depends_on:
+      - control-app
     networks:
       - experts-network
     profiles:
-      - admin # Solo se levanta si usas: docker-compose --profile admin up
+      - seed  # Ejecutar con: docker-compose --profile seed up
 
 volumes:
   postgres_data:
-    driver: local
-  pgadmin_data:
     driver: local
 
 networks:
