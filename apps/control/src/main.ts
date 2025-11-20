@@ -9,6 +9,30 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
 
+  // Configurar CORS para desarrollo web y apps móviles
+  app.enableCors({
+    origin: [
+      'http://localhost:8081', // Expo web desarrollo
+      'http://localhost:3000', // Frontend desarrollo
+      'http://localhost:4200', // Angular desarrollo
+      'https://www.expertshcargo.com', // Producción
+      'exp://*', // Expo apps
+      '*' // Permitir todos los orígenes para apps móviles
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'User-Agent'
+    ],
+  });
+
+  logger.log('CORS configurado para desarrollo y producción');
+
   // Filtro global de excepciones para debugging
   app.useGlobalFilters(new GlobalExceptionFilter());
 
@@ -37,6 +61,5 @@ async function bootstrap() {
   );
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
-
 }
 bootstrap();
