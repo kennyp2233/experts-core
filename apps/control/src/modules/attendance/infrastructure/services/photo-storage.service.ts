@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class PhotoStorageService {
+  private readonly logger = new Logger(PhotoStorageService.name);
   private readonly uploadPath = process.env.PHOTO_UPLOAD_PATH || './uploads/attendance-photos';
 
   constructor() {
@@ -19,15 +20,15 @@ export class PhotoStorageService {
    * @returns Path relativo de la imagen guardada
    */
   async processAndSavePhoto(base64Image: string, workerId: string): Promise<string> {
-    console.log('[PhotoStorageService] 📸 Procesando y guardando foto');
-    console.log('[PhotoStorageService] WorkerId:', workerId);
-    console.log('[PhotoStorageService] Tamaño imagen base64:', base64Image?.length || 0, 'caracteres');
+    this.logger.log(`📸 Procesando y guardando foto`);
+    this.logger.debug(`WorkerId:`, workerId);
+    this.logger.debug(`Tamaño imagen base64:`, base64Image?.length || 0, 'caracteres');
 
     try {
       // 1. Validar y extraer datos de la imagen Base64
-      console.log('[PhotoStorageService] Paso 1: Parseando imagen base64...');
+      this.logger.log(`Paso 1: Parseando imagen base64...`);
       const { mimeType, imageBuffer, extension } = this.parseBase64Image(base64Image);
-      console.log('[PhotoStorageService] ✅ Imagen parseada:', {
+      this.logger.log(`✅ Imagen parseada:`, {
         mimeType,
         extension,
         bufferSize: imageBuffer.length,
@@ -36,7 +37,7 @@ export class PhotoStorageService {
       
       // 2. Validar tamaño de imagen (max 10MB)
       if (imageBuffer.length > 10 * 1024 * 1024) {
-        console.error('[PhotoStorageService] ❌ Imagen muy grande:', imageBuffer.length, 'bytes');
+        this.logger.error(`❌ Imagen muy grande:`, imageBuffer.length, 'bytes');
         throw new BadRequestException('Image size exceeds 10MB limit');
       }
 
@@ -44,25 +45,25 @@ export class PhotoStorageService {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const randomSuffix = crypto.randomBytes(4).toString('hex');
       const fileName = `${workerId}_${timestamp}_${randomSuffix}.${extension}`;
-      console.log('[PhotoStorageService] Nombre archivo generado:', fileName);
+      this.logger.debug(`Nombre archivo generado:`, fileName);
       
       // 4. Crear carpeta por worker si no existe
       const workerFolder = join(this.uploadPath, workerId);
-      console.log('[PhotoStorageService] Carpeta worker:', workerFolder);
+      this.logger.debug(`Carpeta worker:`, workerFolder);
       await this.ensureDirectory(workerFolder);
       
       // 5. Guardar imagen
       const filePath = join(workerFolder, fileName);
-      console.log('[PhotoStorageService] Guardando en:', filePath);
+      this.logger.debug(`Guardando en:`, filePath);
       await writeFile(filePath, imageBuffer);
       
       // 6. Retornar path relativo (para guardar en BD)
       const relativePath = `attendance-photos/${workerId}/${fileName}`;
-      console.log('[PhotoStorageService] ✅ Imagen guardada exitosamente:', relativePath);
+      this.logger.log(`✅ Imagen guardada exitosamente:`, relativePath);
       return relativePath;
       
     } catch (error) {
-      console.error('[PhotoStorageService] ❌ Error procesando imagen:', error);
+      this.logger.error(`❌ Error procesando imagen:`, error);
       throw new BadRequestException(`Failed to process image: ${error.message}`);
     }
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma.service';
 import { 
   AttendanceRepositoryInterface,
@@ -19,12 +19,14 @@ import { FraudReason } from '../../domain/enums/fraud-reason.enum';
 
 @Injectable()
 export class AttendanceRepository implements AttendanceRepositoryInterface {
+  private readonly logger = new Logger(AttendanceRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // Attendance CRUD
   async createAttendance(data: CreateAttendanceData): Promise<AttendanceEntity> {
-    console.log('[AttendanceRepository] 📅 Creando attendance');
-    console.log('[AttendanceRepository] Datos recibidos:', {
+    this.logger.log(`📅 Creando attendance`);
+    this.logger.debug(`Datos recibidos:`, {
       date: data.date,
       entryTime: data.entryTime,
       exitTime: data.exitTime,
@@ -53,7 +55,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
         },
       });
 
-      console.log('[AttendanceRepository] ✅ Attendance creado exitosamente:', {
+      this.logger.log('✅ Attendance creado exitosamente:', {
         id: attendance.id,
         date: attendance.date,
         entryTime: attendance.entryTime,
@@ -63,7 +65,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
       return this.toDomainAttendance(attendance);
     } catch (error) {
-      console.error('[AttendanceRepository] ❌ Error creando attendance:', error);
+      this.logger.error(`❌ Error creando attendance:`, error);
       throw error;
     }
   }
@@ -131,13 +133,14 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
     if (filter.isComplete !== undefined) where.isComplete = filter.isComplete;
     
     if (filter.dateFrom || filter.dateTo) {
-      where.date = {};
-      if (filter.dateFrom) where.date.gte = filter.dateFrom;
+      const dateField = filter.filterByEntryTime ? 'entryTime' : 'date';
+      where[dateField] = {};
+      if (filter.dateFrom) where[dateField].gte = filter.dateFrom;
       if (filter.dateTo) {
         // Incluir todo el día final agregando 23:59:59.999
         const endOfDay = new Date(filter.dateTo);
         endOfDay.setHours(23, 59, 59, 999);
-        where.date.lte = endOfDay;
+        where[dateField].lte = endOfDay;
       }
     }
 
@@ -222,8 +225,8 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
   // Attendance Record CRUD
   async createAttendanceRecord(data: CreateAttendanceRecordData): Promise<AttendanceRecordEntity> {
-    console.log('[AttendanceRepository] 💾 Creando registro de attendance record');
-    console.log('[AttendanceRepository] Datos recibidos:', {
+    this.logger.log(`💾 Creando registro de attendance record`);
+    this.logger.debug(`Datos recibidos:`, {
       type: data.type,
       timestamp: data.timestamp,
       status: data.status,
@@ -236,32 +239,32 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
     try {
       // Verificar que el worker existe antes de crear el record
-      console.log('[AttendanceRepository] Verificando que el worker existe...');
+      this.logger.debug(`Verificando que el worker existe...`);
       const workerExists = await this.prisma.worker.findUnique({
         where: { id: data.workerId },
         select: { id: true, firstName: true, lastName: true }
       });
       
       if (!workerExists) {
-        console.error('[AttendanceRepository] ❌ Worker no encontrado:', data.workerId);
+        this.logger.error(`❌ Worker no encontrado:`, data.workerId);
         throw new Error(`Worker with ID ${data.workerId} not found`);
       }
       
-      console.log('[AttendanceRepository] ✅ Worker encontrado:', workerExists);
+      this.logger.debug(`✅ Worker encontrado:`, workerExists);
 
       // Verificar que el device existe
-      console.log('[AttendanceRepository] Verificando que el device existe...');
+      this.logger.debug(`Verificando que el device existe...`);
       const deviceExists = await this.prisma.device.findUnique({
         where: { id: data.deviceId },
         select: { id: true, deviceId: true }
       });
       
       if (!deviceExists) {
-        console.error('[AttendanceRepository] ❌ Device no encontrado:', data.deviceId);
+        this.logger.error(`❌ Device no encontrado:`, data.deviceId);
         throw new Error(`Device with ID ${data.deviceId} not found`);
       }
       
-      console.log('[AttendanceRepository] ✅ Device encontrado:', deviceExists);
+      this.logger.debug(`✅ Device encontrado:`, deviceExists);
 
       const record = await this.prisma.attendanceRecord.create({
         data: {
@@ -286,7 +289,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
         },
       });
 
-      console.log('[AttendanceRepository] ✅ Registro creado exitosamente:', {
+      this.logger.log('✅ Registro creado exitosamente:', {
         id: record.id,
         type: record.type,
         status: record.status,
@@ -295,7 +298,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
 
       return this.toDomainAttendanceRecord(record);
     } catch (error) {
-      console.error('[AttendanceRepository] ❌ Error creando registro:', error);
+      this.logger.error(`❌ Error creando registro:`, error);
       throw error;
     }
   }
@@ -669,9 +672,13 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
   }
 
   private toDomainAttendance = (attendance: any): AttendanceEntity => {
+    // Normalize date to start of day for consistency
+    const normalizedDate = new Date(attendance.date);
+    normalizedDate.setHours(0, 0, 0, 0);
+
     return AttendanceEntity.fromPersistence({
       id: attendance.id,
-      date: attendance.date,
+      date: normalizedDate,
       entryTime: attendance.entryTime,
       exitTime: attendance.exitTime,
       totalHours: attendance.totalHours,
@@ -705,7 +712,7 @@ export class AttendanceRepository implements AttendanceRepositoryInterface {
         // Skip validation for historical data (may have incomplete metadata)
         photoMetadata = PhotoMetadata.fromJSON(record.photoMetadata, true);
       } catch (error) {
-        console.warn('Failed to parse photo metadata:', error);
+        this.logger.warn(`Failed to parse photo metadata:`, error);
       }
     }
 

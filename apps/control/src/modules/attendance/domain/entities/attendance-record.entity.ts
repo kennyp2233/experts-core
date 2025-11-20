@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { AttendanceType } from '../enums/attendance-type.enum';
 import { RecordStatus } from '../enums/record-status.enum';
 import { GPSCoordinate } from '../value-objects/gps-coordinate.vo';
@@ -27,6 +28,8 @@ export interface AttendanceRecordProps {
 }
 
 export class AttendanceRecordEntity {
+  private static readonly logger = new Logger(AttendanceRecordEntity.name);
+
   constructor(private readonly props: AttendanceRecordProps) {
     this.validateRecord();
   }
@@ -70,7 +73,7 @@ export class AttendanceRecordEntity {
     // Validate that photo metadata exists if photo is provided
     if (this.props.photoPath && !this.props.photoMetadata) {
       // This might be acceptable for offline records that haven't been processed yet
-      console.warn('Photo provided without metadata - might be offline record');
+      AttendanceRecordEntity.logger.warn('Photo provided without metadata - might be offline record');
     }
   }
 

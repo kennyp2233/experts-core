@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { AntiFraudValidatorDomainService, ValidationContext } from '../../domain/services/anti-fraud-validator.domain-service';
 import { AttendanceType } from '../../domain/enums/attendance-type.enum';
@@ -12,6 +12,8 @@ import { BreakPolicyService } from '../../infrastructure/services/break-policy.s
 
 @Injectable()
 export class AttendanceProcessingService {
+  private readonly logger = new Logger(AttendanceProcessingService.name);
+
   constructor(
     private readonly attendanceRepository: AttendanceRepositoryInterface,
     private readonly antiFraudValidator: AntiFraudValidatorDomainService,
@@ -29,8 +31,8 @@ export class AttendanceProcessingService {
     deviceId: string,
     type: AttendanceType,
   ): Promise<AttendanceResponseDto> {
-    console.log('[AttendanceProcessingService] 🔄 Iniciando procesamiento de attendance record');
-    console.log('[AttendanceProcessingService] Datos de entrada:', {
+    this.logger.log('🔄 Iniciando procesamiento de attendance record');
+    this.logger.debug('Datos de entrada:', {
       workerId,
       depotId,
       deviceId,
@@ -41,16 +43,16 @@ export class AttendanceProcessingService {
     });
 
     // 1. Validar worker
-    console.log('[AttendanceProcessingService] Paso 1: Validando worker...');
+    this.logger.log('Paso 1: Validando worker...');
     this.validateWorker(workerId);
-    console.log('[AttendanceProcessingService] ✅ Worker válido');
+    this.logger.log('✅ Worker válido');
 
     // 2. Validar código de excepción si se proporcionó
-    console.log('[AttendanceProcessingService] Paso 2: Validando código de excepción...');
+    this.logger.log('Paso 2: Validando código de excepción...');
     let exceptionCodeValidation: { isValid: boolean; workerId?: string; error?: string } | null = null;
     
     if (dto.exceptionCode) {
-      console.log('[AttendanceProcessingService] Validando código de excepción:', dto.exceptionCode);
+      this.logger.log('Validando código de excepción:', dto.exceptionCode);
       
       const validationResult = await this.exceptionCodeService.validateExceptionCode({
         code: dto.exceptionCode
@@ -62,12 +64,12 @@ export class AttendanceProcessingService {
         error: validationResult.data.error
       };
       
-      console.log('[AttendanceProcessingService] Resultado validación código de excepción:', exceptionCodeValidation);
+      this.logger.log('Resultado validación código de excepción:', exceptionCodeValidation);
       
       // ❌ Si el código es inválido, lanzar BadRequestException (HTTP 400)
       // El frontend detectará esto automáticamente como error no-reintentable
       if (!exceptionCodeValidation.isValid) {
-        console.log('[AttendanceProcessingService] ❌ Código de excepción inválido - lanzando BadRequestException');
+        this.logger.log('❌ Código de excepción inválido - lanzando BadRequestException');
         const { BadRequestException } = require('@nestjs/common');
         throw new BadRequestException({
           error: 'INVALID_EXCEPTION_CODE',
@@ -75,19 +77,19 @@ export class AttendanceProcessingService {
         });
       }
     }
-    console.log('[AttendanceProcessingService] ✅ Validación de código de excepción completada');
+    this.logger.log('✅ Validación de código de excepción completada');
 
     // 3. Preparar contexto para validación
-    console.log('[AttendanceProcessingService] Paso 3: Construyendo contexto de validación...');
+    this.logger.log('Paso 3: Construyendo contexto de validación...');
     const context = await this.buildValidationContext(workerId, dto, depotId);
-    console.log('[AttendanceProcessingService] ✅ Contexto construido:', {
+    this.logger.log('✅ Contexto construido:', {
       depotId: context.depot.id,
       hasLastRecord: !!context.lastRecord,
       historyCount: context.workerAttendanceHistory?.length || 0
     });
 
     // 3. Ejecutar validaciones anti-fraude
-    console.log('[AttendanceProcessingService] Paso 3: Ejecutando validaciones anti-fraude...');
+    this.logger.log('Paso 3: Ejecutando validaciones anti-fraude...');
     const validationResult = await this.antiFraudValidator.validateRecord(
       this.mapDtoToValidationData(dto, workerId, deviceId, type),
       context,
@@ -107,7 +109,7 @@ export class AttendanceProcessingService {
       }
     }
     
-    console.log('[AttendanceProcessingService] ✅ Validaciones completadas:', {
+    this.logger.log('✅ Validaciones completadas:', {
       status: validationResult.overallStatus,
       fraudScore: validationResult.fraudScore.score,
       needsManualReview: validationResult.needsManualReview,
@@ -115,18 +117,18 @@ export class AttendanceProcessingService {
     });
 
     // 4. Procesar y guardar imagen
-    console.log('[AttendanceProcessingService] Paso 4: Procesando y guardando imagen...');
+    this.logger.log('Paso 4: Procesando y guardando imagen...');
     let finalPhotoPath: string;
     try {
       finalPhotoPath = await this.photoStorageService.processAndSavePhoto(dto.photo, workerId);
-      console.log('[AttendanceProcessingService] ✅ Imagen guardada en:', finalPhotoPath);
+      this.logger.log('✅ Imagen guardada en:', finalPhotoPath);
     } catch (error) {
-      console.error('[AttendanceProcessingService] ❌ Error procesando imagen:', error);
+      this.logger.error('❌ Error procesando imagen:', error);
       throw new Error(`Failed to process photo: ${error.message}`);
     }
 
     // 5. Obtener información real de la imagen si no viene en metadata
-    console.log('[AttendanceProcessingService] Paso 5: Procesando metadata de imagen...');
+    this.logger.log('Paso 5: Procesando metadata de imagen...');
     if (!dto.photoMetadata) {
       const imageInfo = this.photoStorageService.getImageInfo(dto.photo);
       dto.photoMetadata = {
@@ -136,17 +138,17 @@ export class AttendanceProcessingService {
         dimensions: undefined, // Se podría agregar librería para detectar dimensiones
       };
     }
-    console.log('[AttendanceProcessingService] ✅ Metadata procesada');
+    this.logger.log('✅ Metadata procesada');
 
     // 6. Manejar attendance según el tipo
-    console.log('[AttendanceProcessingService] Paso 6: Manejando attendance según tipo...');
+    this.logger.log('Paso 6: Manejando attendance según tipo...');
     const attendance = await this.handleAttendanceByType(
       workerId,
       dto.timestamp,
       depotId,
       type,
     );
-    console.log('[AttendanceProcessingService] ✅ Attendance manejado:', {
+    this.logger.log('✅ Attendance manejado:', {
       attendanceId: attendance.id,
       date: attendance.date,
       entryTime: attendance.entryTime,
@@ -154,7 +156,7 @@ export class AttendanceProcessingService {
     });
 
     // 7. Crear registro de attendance
-    console.log('[AttendanceProcessingService] Paso 7: Creando registro de attendance...');
+    this.logger.log('Paso 7: Creando registro de attendance...');
     const record = await this.createAttendanceRecord(
       dto,
       finalPhotoPath,
@@ -164,40 +166,40 @@ export class AttendanceProcessingService {
       validationResult,
       attendance.id,
     );
-    console.log('[AttendanceProcessingService] ✅ Registro creado:', {
+    this.logger.log('✅ Registro creado:', {
       recordId: record.id,
       status: record.status
     });
 
     // 7.1. Marcar código de excepción como usado (SOLO después del registro exitoso)
     if (dto.exceptionCode && validationResult?.exceptionCode) {
-      console.log('[AttendanceProcessingService] Paso 7.1: Marcando código de excepción como usado...');
+      this.logger.log('Paso 7.1: Marcando código de excepción como usado...');
       try {
         await this.exceptionCodeService.markExceptionCodeAsUsed(
           validationResult.exceptionCode.id,
           record.id
         );
-        console.log('[AttendanceProcessingService] ✅ Código de excepción marcado como usado');
+        this.logger.log('✅ Código de excepción marcado como usado');
       } catch (error) {
         // Log pero no falla el proceso (el registro ya se creó exitosamente)
-        console.error('[AttendanceProcessingService] ⚠️ Error al marcar código como usado:', error);
+        this.logger.error('⚠️ Error al marcar código como usado:', error);
       }
     }
 
     // 8. Actualizar attendance con los tiempos correspondientes
-    console.log('[AttendanceProcessingService] Paso 8: Actualizando tiempos de attendance...');
+    this.logger.log('Paso 8: Actualizando tiempos de attendance...');
     const updatedAttendance = await this.updateAttendanceTime(
       attendance.id,
       dto.timestamp,
       type,
     );
-    console.log('[AttendanceProcessingService] ✅ Tiempos actualizados:', {
+    this.logger.log('✅ Tiempos actualizados:', {
       entryTime: updatedAttendance.entryTime,
       exitTime: updatedAttendance.exitTime
     });
 
     // 9. Construir respuesta
-    console.log('[AttendanceProcessingService] Paso 9: Construyendo respuesta...');
+    this.logger.log('Paso 9: Construyendo respuesta...');
     const response = this.buildResponse(
       record,
       updatedAttendance,
@@ -206,7 +208,7 @@ export class AttendanceProcessingService {
       dto.timestamp,
     );
     
-    console.log('[AttendanceProcessingService] 🎉 Procesamiento completado exitosamente:', {
+    this.logger.log('🎉 Procesamiento completado exitosamente:', {
       recordId: response.recordId,
       attendanceId: response.attendanceId,
       success: response.success,
@@ -240,7 +242,7 @@ export class AttendanceProcessingService {
     const recordDate = new Date(timestamp);
     recordDate.setHours(0, 0, 0, 0);
 
-    console.log('[AttendanceProcessingService] 🔍 Buscando attendance existente para entrada...');
+    this.logger.log('🔍 Buscando attendance existente para entrada...');
     
     // Buscar todos los attendances del día
     const endOfDay = new Date(recordDate);
@@ -252,11 +254,11 @@ export class AttendanceProcessingService {
       dateTo: endOfDay
     });
 
-    console.log('[AttendanceProcessingService] 📊 Attendances encontrados:', existingAttendances?.length || 0);
+    this.logger.log('📊 Attendances encontrados:', existingAttendances?.length || 0);
 
     // Si no hay attendances del día, crear el primero
     if (!existingAttendances || existingAttendances.length === 0) {
-      console.log('[AttendanceProcessingService] ➕ No existe attendance, creando nuevo...');
+      this.logger.log('➕ No existe attendance, creando nuevo...');
       return await this.attendanceRepository.createAttendance({
         date: recordDate,
         workerId,
@@ -270,7 +272,7 @@ export class AttendanceProcessingService {
     );
 
     if (incompleteAttendance) {
-      console.log('[AttendanceProcessingService] ♻️ Reutilizando attendance incompleto...');
+      this.logger.log('♻️ Reutilizando attendance incompleto...');
       return incompleteAttendance;
     }
 
@@ -280,7 +282,7 @@ export class AttendanceProcessingService {
     );
 
     if (openAttendance) {
-      console.log('[AttendanceProcessingService] 🔄 Attendance abierto encontrado - creando nuevo turno...');
+      this.logger.log('🔄 Attendance abierto encontrado - creando nuevo turno...');
       // Crear un nuevo attendance para el nuevo turno
       return await this.attendanceRepository.createAttendance({
         date: recordDate,
@@ -290,7 +292,7 @@ export class AttendanceProcessingService {
     }
 
     // Todos los attendances están completos, crear uno nuevo
-    console.log('[AttendanceProcessingService] 🆕 Todos los turnos completos - creando nuevo turno...');
+    this.logger.log('🆕 Todos los turnos completos - creando nuevo turno...');
     return await this.attendanceRepository.createAttendance({
       date: recordDate,
       workerId,
@@ -302,7 +304,7 @@ export class AttendanceProcessingService {
     const recordDate = new Date(timestamp);
     recordDate.setHours(0, 0, 0, 0);
 
-    console.log('[AttendanceProcessingService] 🔍 Buscando attendance existente para salida...');
+    this.logger.log('🔍 Buscando attendance existente para salida...');
     
     // Buscar todos los attendances del día
     const endOfDay = new Date(recordDate);
@@ -314,11 +316,11 @@ export class AttendanceProcessingService {
       dateTo: endOfDay
     });
 
-    console.log('[AttendanceProcessingService] 📊 Attendances encontrados para salida:', existingAttendances?.length || 0);
+    this.logger.log('📊 Attendances encontrados para salida:', existingAttendances?.length || 0);
 
     if (!existingAttendances || existingAttendances.length === 0) {
       // Caso 1: No hay attendance -> Crear con solo salida
-      console.log('[AttendanceProcessingService] ➕ No existe attendance, creando con solo salida...');
+      this.logger.log('➕ No existe attendance, creando con solo salida...');
       return await this.attendanceRepository.createAttendance({
         date: recordDate,
         exitTime: new Date(timestamp),
@@ -333,7 +335,7 @@ export class AttendanceProcessingService {
     );
 
     if (openAttendance) {
-      console.log('[AttendanceProcessingService] ✅ Turno abierto encontrado - cerrando turno...');
+      this.logger.log('✅ Turno abierto encontrado - cerrando turno...');
       return openAttendance;
     }
 
@@ -343,12 +345,12 @@ export class AttendanceProcessingService {
     );
 
     if (emptyAttendance) {
-      console.log('[AttendanceProcessingService] ♻️ Attendance vacío encontrado - agregando salida...');
+      this.logger.log('♻️ Attendance vacío encontrado - agregando salida...');
       return emptyAttendance;
     }
 
     // Todos los attendances están completos, crear uno nuevo con solo salida
-    console.log('[AttendanceProcessingService] 🆕 Todos los turnos completos - creando nuevo con solo salida...');
+    this.logger.log('🆕 Todos los turnos completos - creando nuevo con solo salida...');
     return await this.attendanceRepository.createAttendance({
       date: recordDate,
       exitTime: new Date(timestamp),
@@ -526,7 +528,7 @@ export class AttendanceProcessingService {
 
       // If attendance is now complete, calculate net hours
       if (updatedAttendance.totalHours !== null && updatedAttendance.totalHours > 0) {
-        console.log('[AttendanceProcessingService] 🧮 Calculando horas netas con política de breaks...');
+        this.logger.log('🧮 Calculando horas netas con política de breaks...');
 
         try {
           // Calculate breaks using break policy
@@ -539,7 +541,7 @@ export class AttendanceProcessingService {
           const breakMinutes = breakCalculation.totalBreakMinutes;
           const netHours = updatedAttendance.totalHours - breakCalculation.totalBreakHours;
 
-          console.log('[AttendanceProcessingService] ✅ Breaks calculados:', {
+          this.logger.log('✅ Breaks calculados:', {
             totalHours: updatedAttendance.totalHours,
             breakMinutes,
             netHours,
@@ -552,7 +554,7 @@ export class AttendanceProcessingService {
             netHours,
           });
         } catch (error) {
-          console.error('[AttendanceProcessingService] ❌ Error calculando breaks, usando valores por defecto:', error);
+          this.logger.error('❌ Error calculando breaks, usando valores por defecto:', error);
           // If break calculation fails, set netHours = totalHours (no breaks)
           return await this.attendanceRepository.updateAttendance(attendanceId, {
             breakMinutes: 0,
@@ -573,7 +575,11 @@ export class AttendanceProcessingService {
     timestamp: string,
   ): AttendanceResponseDto {
     const isComplete = attendance.entryTime && attendance.exitTime;
-    
+
+    // ✅ Determinar el estado actual del turno
+    const isOnShift = attendance.entryTime && !attendance.exitTime; // Turno activo = tiene entrada sin salida
+    const currentShiftId = isOnShift ? attendance.id : null;
+
     // ✅ NUEVA LÓGICA: Siempre success=true porque el registro se guardó y el turno se actualizó
     // recordStatus (ACCEPTED/SUSPICIOUS/REJECTED) es solo informativo para el admin
     // El trabajador SIEMPRE ve "Entrada/Salida registrada exitosamente"
@@ -590,6 +596,12 @@ export class AttendanceProcessingService {
         exitTime: attendance.exitTime?.toISOString() || null,
         isComplete,
         totalHours: attendance.totalHours || undefined,
+      },
+      // ✅ NUEVO: Estado actualizado del turno para evitar consulta adicional
+      workerStatus: {
+        isOnShift,
+        currentShiftId,
+        lastActionType: type,
       },
     };
   }

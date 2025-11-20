@@ -12,6 +12,12 @@ export class AttendanceResponseDto {
     isComplete: boolean;
     totalHours?: number;
   };
+  // ✅ NUEVO: Estado actualizado del turno para evitar consulta adicional
+  workerStatus: {
+    isOnShift: boolean; // true = turno activo (tiene entrada sin salida)
+    currentShiftId: string | null;
+    lastActionType: 'ENTRY' | 'EXIT' | null;
+  };
 }
 
 export class CurrentShiftResponseDto {

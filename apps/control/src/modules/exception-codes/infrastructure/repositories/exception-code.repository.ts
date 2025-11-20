@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma.service';
 import { ExceptionCodeEntity } from '../../domain/entities/exception-code.entity';
 import { ExceptionCodeStatus } from '../../domain/enums/exception-code-status.enum';
@@ -10,13 +10,15 @@ import {
 
 @Injectable()
 export class ExceptionCodeRepository implements ExceptionCodeRepositoryInterface {
+  private readonly logger = new Logger(ExceptionCodeRepository.name);
+
   constructor(
     @Inject(PrismaService)
     private readonly prisma: any, // Usando any por simplicidad, debería ser PrismaClient
   ) {}
 
   async createExceptionCode(params: CreateExceptionCodeParams): Promise<ExceptionCodeEntity> {
-    console.log('[DEBUG] Backend - Creando código de excepción:', {
+    this.logger.debug('Creando código de excepción:', {
       code: params.code,
       workerId: params.workerId,
       adminId: params.adminId,
@@ -44,7 +46,7 @@ export class ExceptionCodeRepository implements ExceptionCodeRepositoryInterface
       }
     });
 
-    console.log('[DEBUG] Backend - Código de excepción creado:', {
+    this.logger.debug('Código de excepción creado:', {
       id: exceptionCode.id,
       code: exceptionCode.code,
       workerId: exceptionCode.workerId,

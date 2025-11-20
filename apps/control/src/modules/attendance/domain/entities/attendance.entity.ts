@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { WorkShift } from '../value-objects/work-shift.vo';
 import { AttendanceRecordEntity } from './attendance-record.entity';
 
@@ -18,6 +19,8 @@ export interface AttendanceProps {
 }
 
 export class AttendanceEntity {
+  private static readonly logger = new Logger(AttendanceEntity.name);
+
   constructor(private readonly props: AttendanceProps) {
     this.validateAttendance();
   }
@@ -58,7 +61,7 @@ export class AttendanceEntity {
     
     if (this.props.date.getTime() !== normalizedDate.getTime()) {
       // Allow this but warn - repository should handle normalization
-      console.warn('Attendance date should be normalized to start of day');
+      AttendanceEntity.logger.warn('Attendance date should be normalized to start of day');
     }
 
     // Validate time logic

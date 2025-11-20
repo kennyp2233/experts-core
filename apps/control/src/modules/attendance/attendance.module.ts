@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { AttendanceController } from './attendance.controller';
 import { BreakPolicyController } from './infrastructure/controllers/break-policy.controller';
 
@@ -121,7 +121,9 @@ import { WorkerAuthModule } from '../worker-auth/worker-auth.module';
   ],
 })
 export class AttendanceModule {
+  private readonly logger = new Logger(AttendanceModule.name);
+
   constructor() {
-    console.log('🚀 AttendanceModule initialized with anti-fraud capabilities');
+    this.logger.log('🚀 AttendanceModule initialized with anti-fraud capabilities');
   }
 }

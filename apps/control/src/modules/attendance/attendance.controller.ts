@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Request, HttpStatus, HttpCode, UseGuards, Param, Query, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Get, Body, Request, HttpStatus, HttpCode, UseGuards, Param, Query, ValidationPipe, Logger } from '@nestjs/common';
 import { RecordEntryUseCase } from './application/use-cases/record-entry.use-case';
 import { RecordExitUseCase } from './application/use-cases/record-exit.use-case';
 import { ValidateAttendanceUseCase } from './application/use-cases/validate-attendance.use-case';
@@ -63,6 +63,8 @@ interface ValidateAttendanceDto {
 
 @Controller('attendance')
 export class AttendanceController {
+  private readonly logger = new Logger(AttendanceController.name);
+
   constructor(
     private readonly recordEntryUseCase: RecordEntryUseCase,
     private readonly recordExitUseCase: RecordExitUseCase,
@@ -81,13 +83,12 @@ export class AttendanceController {
     @Body() dto: RecordAttendanceDto,
     @Request() req
   ): Promise<AttendanceResponseDto> {
-    console.log('[AttendanceController] 📥 POST /attendance/entry - Iniciando registro de entrada');
-    console.log('[AttendanceController] Worker:', {
+    this.logger.debug(`Worker:`, {
       id: req.worker?.id,
       name: req.worker?.name,
       depotId: req.worker?.depot?.id
     });
-    console.log('[AttendanceController] DTO recibido:', {
+    this.logger.debug(`DTO recibido:`, {
       type: dto.type,
       qrCodeUsed: dto.qrCodeUsed?.substring(0, 50) + '...',
       photoSize: dto.photo?.length || 0,
@@ -99,7 +100,7 @@ export class AttendanceController {
 
     try {
       const result = await this.recordEntryUseCase.execute(dto, req.worker.id, req.worker.depot.id, req.device.id);
-      console.log('[AttendanceController] ✅ Registro de entrada exitoso:', {
+      this.logger.log(`✅ Registro de entrada exitoso:`, {
         recordId: result.recordId,
         attendanceId: result.attendanceId,
         success: result.success,
@@ -108,7 +109,7 @@ export class AttendanceController {
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error en registro de entrada:', error);
+      this.logger.error(`❌ Error en registro de entrada:`, error);
       throw error;
     }
   }
@@ -120,13 +121,12 @@ export class AttendanceController {
     @Body() dto: RecordAttendanceDto,
     @Request() req
   ): Promise<AttendanceResponseDto> {
-    console.log('[AttendanceController] 📤 POST /attendance/exit - Iniciando registro de salida');
-    console.log('[AttendanceController] Worker:', {
+    this.logger.debug(`Worker:`, {
       id: req.worker?.id,
       name: req.worker?.name,
       depotId: req.worker?.depot?.id
     });
-    console.log('[AttendanceController] DTO recibido:', {
+    this.logger.debug(`DTO recibido:`, {
       type: dto.type,
       qrCodeUsed: dto.qrCodeUsed?.substring(0, 50) + '...',
       photoSize: dto.photo?.length || 0,
@@ -138,7 +138,7 @@ export class AttendanceController {
 
     try {
       const result = await this.recordExitUseCase.execute(dto, req.worker.id, req.worker.depot.id, req.device.id);
-      console.log('[AttendanceController] ✅ Registro de salida exitoso:', {
+      this.logger.log(`✅ Registro de salida exitoso:`, {
         recordId: result.recordId,
         attendanceId: result.attendanceId,
         success: result.success,
@@ -147,7 +147,7 @@ export class AttendanceController {
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error en registro de salida:', error);
+      this.logger.error(`❌ Error en registro de salida:`, error);
       throw error;
     }
   }
@@ -177,12 +177,11 @@ export class AttendanceController {
     @Query('depotId') depotId?: string,
     @Request() req?,
   ): Promise<DashboardResponseDto> {
-    console.log('[AttendanceController] 📊 GET /attendance/dashboard - Obteniendo dashboard de asistencias');
-    console.log('[AttendanceController] DepotId:', depotId);
+    this.logger.debug(`DepotId:`, depotId);
 
     try {
       const result = await this.getDashboardUseCase.execute(depotId);
-      console.log('[AttendanceController] ✅ Dashboard obtenido exitosamente:', {
+      this.logger.log(`✅ Dashboard obtenido exitosamente:`, {
         totalWorkers: result.totalWorkers,
         workersOnShift: result.workersOnShift,
         workersOffShift: result.workersOffShift,
@@ -190,7 +189,7 @@ export class AttendanceController {
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo dashboard:', error);
+      this.logger.error(`❌ Error obteniendo dashboard:`, error);
       throw error;
     }
   }
@@ -203,19 +202,19 @@ export class AttendanceController {
     @Query(new ValidationPipe({ transform: true })) query: GetWorkerHistoryQueryDto,
     @Request() req
   ): Promise<WorkerShiftHistoryResponseDto> {
-    console.log('[AttendanceController] 📊 GET /attendance/worker/:workerId/history - Obteniendo historial de turnos');
-    console.log('[AttendanceController] Worker:', { id: workerId });
-    console.log('[AttendanceController] Query:', query);
+    this.logger.log(`📊 GET /attendance/worker/${workerId}/history - Obteniendo historial de turnos`);
+    this.logger.debug(`Worker:`, { id: workerId });
+    this.logger.debug(`Query:`, query);
 
     try {
       const result = await this.getWorkerShiftHistoryUseCase.execute(workerId, query);
-      console.log('[AttendanceController] ✅ Historial obtenido exitosamente:', {
+      this.logger.log(`✅ Historial obtenido exitosamente:`, {
         shiftsCount: result.shifts.length,
         dateRange: result.dateRange
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo historial:', error);
+      this.logger.error(`❌ Error obteniendo historial:`, error);
       throw error;
     }
   }
@@ -227,18 +226,17 @@ export class AttendanceController {
     @Param('shiftId') shiftId: string,
     @Request() req
   ): Promise<ShiftAuditResponseDto> {
-    console.log('[AttendanceController] 🔍 GET /attendance/shift/:shiftId/audit - Obteniendo auditoría de turno');
-    console.log('[AttendanceController] Shift:', { id: shiftId });
+    this.logger.debug(`Obteniendo auditoría de turno:`, { shiftId });
 
     try {
       const result = await this.getShiftAuditUseCase.execute({ shiftId });
-      console.log('[AttendanceController] ✅ Auditoría obtenida exitosamente:', {
+      this.logger.log(`✅ Auditoría obtenida exitosamente:`, {
         recordsCount: result.records.length,
         riskScore: result.auditSummary.overallRiskScore
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo auditoría:', error);
+      this.logger.error(`❌ Error obteniendo auditoría:`, error);
       throw error;
     }
   }
@@ -251,19 +249,17 @@ export class AttendanceController {
     @Query(new ValidationPipe({ transform: true })) query: GetWorkerStatsQueryDto,
     @Request() req
   ): Promise<WorkerDetailedStatsResponseDto> {
-    console.log('[AttendanceController] 📈 GET /attendance/worker/:workerId/stats - Obteniendo estadísticas detalladas');
-    console.log('[AttendanceController] Worker:', { id: workerId });
-    console.log('[AttendanceController] Query:', query);
+    this.logger.debug(`Obteniendo estadísticas detalladas:`, { workerId, query });
 
     try {
       const result = await this.getWorkerDetailedStatsUseCase.execute(workerId, query);
-      console.log('[AttendanceController] ✅ Estadísticas obtenidas exitosamente:', {
+      this.logger.log(`✅ Estadísticas obtenidas exitosamente:`, {
         attendanceRate: result.attendance.attendanceRate,
         totalHours: result.hours.totalHours
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo estadísticas:', error);
+      this.logger.error(`❌ Error obteniendo estadísticas:`, error);
       throw error;
     }
   }
@@ -276,13 +272,11 @@ export class AttendanceController {
     @Query(new ValidationPipe({ transform: true })) query: GetWorkerSummaryQueryDto,
     @Request() req
   ): Promise<WorkerSummaryResponseDto> {
-    console.log('[AttendanceController] 📋 GET /attendance/worker/:workerId/summary - Obteniendo resumen de trabajador');
-    console.log('[AttendanceController] Worker:', { id: workerId });
-    console.log('[AttendanceController] Query:', query);
+    this.logger.debug(`Obteniendo resumen de trabajador:`, { workerId, query });
 
     try {
       const result = await this.getWorkerSummaryUseCase.execute(workerId, query);
-      console.log('[AttendanceController] ✅ Resumen obtenido exitosamente:', {
+      this.logger.log(`✅ Resumen obtenido exitosamente:`, {
         totalShifts: result.pagination.totalItems,
         attendanceRate: result.stats.attendanceRate,
         totalNetHours: result.stats.totalNetHours,
@@ -291,7 +285,7 @@ export class AttendanceController {
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo resumen:', error);
+      this.logger.error(`❌ Error obteniendo resumen:`, error);
       throw error;
     }
   }
@@ -303,8 +297,7 @@ export class AttendanceController {
     @Param('workerId') workerId: string,
     @Request() req
   ): Promise<WorkerShiftHistoryResponseDto> {
-    console.log('[AttendanceController] 🕐 GET /attendance/worker/:workerId/recent - Obteniendo turnos recientes');
-    console.log('[AttendanceController] Worker:', { id: workerId });
+    this.logger.debug(`Obteniendo turnos recientes:`, { workerId });
 
     try {
       // Obtener últimos 5 turnos + turno activo si existe
@@ -312,12 +305,12 @@ export class AttendanceController {
         limit: 5,
         offset: 0
       });
-      console.log('[AttendanceController] ✅ Turnos recientes obtenidos exitosamente:', {
+      this.logger.log(`✅ Turnos recientes obtenidos exitosamente:`, {
         shiftsCount: result.shifts.length
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo turnos recientes:', error);
+      this.logger.error(`❌ Error obteniendo turnos recientes:`, error);
       throw error;
     }
   }
@@ -330,8 +323,7 @@ export class AttendanceController {
   @UseGuards(WorkerAuthGuard)
   async getMyShiftStatus(@Request() req): Promise<WorkerShiftHistoryResponseDto> {
     const workerId = req.user.workerId; // El WorkerAuthGuard pone el workerId en req.user
-    console.log('[AttendanceController] 🕐 GET /attendance/my-shift-status - Worker obteniendo su estado');
-    console.log('[AttendanceController] Worker ID:', workerId);
+    this.logger.debug(`Worker obteniendo su estado:`, { workerId });
 
     try {
       // Obtener últimos 5 turnos + turno activo si existe
@@ -339,12 +331,12 @@ export class AttendanceController {
         limit: 5,
         offset: 0
       });
-      console.log('[AttendanceController] ✅ Estado de turno obtenido exitosamente:', {
+      this.logger.log(`✅ Estado de turno obtenido exitosamente:`, {
         shiftsCount: result.shifts.length
       });
       return result;
     } catch (error) {
-      console.error('[AttendanceController] ❌ Error obteniendo estado de turno:', error);
+      this.logger.error(`❌ Error obteniendo estado de turno:`, error);
       throw error;
     }
   }

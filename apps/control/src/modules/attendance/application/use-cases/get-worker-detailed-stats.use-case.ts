@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { WorkersService } from '../../../workers/workers.service';
 import { GetWorkerStatsQueryDto } from '../dto/get-worker-stats-query.dto';
@@ -6,6 +6,8 @@ import { WorkerDetailedStatsResponseDto, StatsSnapshot } from '../dto/worker-det
 
 @Injectable()
 export class GetWorkerDetailedStatsUseCase {
+  private readonly logger = new Logger(GetWorkerDetailedStatsUseCase.name);
+
   constructor(
     private readonly attendanceRepository: AttendanceRepositoryInterface,
     private readonly workersService: WorkersService,
@@ -15,8 +17,8 @@ export class GetWorkerDetailedStatsUseCase {
     workerId: string,
     query: GetWorkerStatsQueryDto,
   ): Promise<WorkerDetailedStatsResponseDto> {
-    console.log('[GetWorkerDetailedStatsUseCase] 🚀 Ejecutando caso de uso - Obtener estadísticas detalladas del worker');
-    console.log('[GetWorkerDetailedStatsUseCase] Parámetros:', { workerId, query });
+    this.logger.log(`🚀 Ejecutando caso de uso - Obtener estadísticas detalladas del worker`);
+    this.logger.debug(`Parámetros:`, { workerId, query });
 
     try {
       // Validar que el worker existe
@@ -28,13 +30,14 @@ export class GetWorkerDetailedStatsUseCase {
       // Determinar rango de fechas
       const { dateFrom, dateTo } = this.calculateDateRange(query);
 
-      console.log('[GetWorkerDetailedStatsUseCase] Rango de fechas:', { dateFrom, dateTo });
+      this.logger.debug(`Rango de fechas:`, { dateFrom, dateTo });
 
       // Obtener asistencias del worker en el rango
       const attendances = await this.attendanceRepository.findAttendances({
         workerId,
         dateFrom,
         dateTo,
+        filterByEntryTime: true,
       });
 
       // Obtener todos los registros para análisis detallado
@@ -44,7 +47,7 @@ export class GetWorkerDetailedStatsUseCase {
         allRecords.push(...records);
       }
 
-      console.log(`[GetWorkerDetailedStatsUseCase] Analizando ${attendances.length} asistencias y ${allRecords.length} registros`);
+      this.logger.debug(`Analizando ${attendances.length} asistencias y ${allRecords.length} registros`);
 
       // Calcular estadísticas de asistencia
       const attendanceStats = this.calculateAttendanceStats(attendances, dateFrom, dateTo);
@@ -81,10 +84,10 @@ export class GetWorkerDetailedStatsUseCase {
         trends: trendsStats,
       };
 
-      console.log('[GetWorkerDetailedStatsUseCase] ✅ Caso de uso completado exitosamente');
+      this.logger.log('✅ Caso de uso completado exitosamente');
       return response;
     } catch (error) {
-      console.error('[GetWorkerDetailedStatsUseCase] ❌ Error en caso de uso:', error);
+      this.logger.error(`❌ Error en caso de uso:`, error);
       throw error;
     }
   }

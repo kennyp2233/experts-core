@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { WorkersService } from '../../../workers/workers.service';
 import { AntiFraudValidatorDomainService } from '../../domain/services/anti-fraud-validator.domain-service';
@@ -7,6 +7,8 @@ import { ShiftAuditResponseDto, AuditRecordDto } from '../dto/shift-audit-respon
 
 @Injectable()
 export class GetShiftAuditUseCase {
+  private readonly logger = new Logger(GetShiftAuditUseCase.name);
+
   constructor(
     private readonly attendanceRepository: AttendanceRepositoryInterface,
     private readonly workersService: WorkersService,
@@ -14,8 +16,8 @@ export class GetShiftAuditUseCase {
   ) {}
 
   async execute(dto: GetShiftAuditDto): Promise<ShiftAuditResponseDto> {
-    console.log('[GetShiftAuditUseCase] 🚀 Ejecutando caso de uso - Obtener auditoría de turno');
-    console.log('[GetShiftAuditUseCase] Parámetros:', { shiftId: dto.shiftId });
+    this.logger.log(`🚀 Ejecutando caso de uso - Obtener auditoría de turno`);
+    this.logger.debug(`Parámetros:`, { shiftId: dto.shiftId });
 
     try {
       // Validar que el turno existe
@@ -30,7 +32,7 @@ export class GetShiftAuditUseCase {
       // Obtener todos los registros del turno
       const records = await this.attendanceRepository.findRecordsByAttendance(dto.shiftId);
 
-      console.log(`[GetShiftAuditUseCase] Encontrados ${records.length} registros para el turno`);
+      this.logger.debug(`Encontrados ${records.length} registros para el turno`);
 
       // Procesar cada registro para obtener datos de auditoría detallados
       const auditRecords: AuditRecordDto[] = await Promise.all(
@@ -57,7 +59,7 @@ export class GetShiftAuditUseCase {
           // Usar el fraud score almacenado si existe, sino el calculado
           const finalFraudScore = storedFraudScore?.score ?? calculatedFraudScore;
 
-          console.log(`[GetShiftAudit] Record ${record.id}: stored=${storedFraudScore?.score}, calculated=${calculatedFraudScore}, final=${finalFraudScore}`);
+          this.logger.debug(`Record ${record.id}: stored=${storedFraudScore?.score}, calculated=${calculatedFraudScore}, final=${finalFraudScore}`);
 
           return {
             id: record.id,
@@ -154,10 +156,10 @@ export class GetShiftAuditUseCase {
         },
       };
 
-      console.log('[GetShiftAuditUseCase] ✅ Caso de uso completado exitosamente');
+      this.logger.log('✅ Caso de uso completado exitosamente');
       return response;
     } catch (error) {
-      console.error('[GetShiftAuditUseCase] ❌ Error en caso de uso:', error);
+      this.logger.error(`❌ Error en caso de uso:`, error);
       throw error;
     }
   }
@@ -231,7 +233,7 @@ export class GetShiftAuditUseCase {
       error.mensaje || error.message || error.error || 'Problema desconocido'
     );
 
-    console.log(`[GetShiftAudit] Validation for ${type}: ${typeErrors.length} errors, fraud score: ${fraudScore}`);
+    this.logger.debug(`Validation for ${type}: ${typeErrors.length} errors, fraud score: ${fraudScore}`);
 
     return { valid, score: fraudScore, issues }; // Retorna fraud score, se convertirá después
   }

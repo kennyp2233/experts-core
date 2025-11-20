@@ -19,6 +19,9 @@ export class ShiftSummaryDto {
   totalHours: number | null;
 
   @Expose()
+  netHours: number | null;
+
+  @Expose()
   status: 'COMPLETE' | 'INCOMPLETE' | 'ACTIVE';
 
   @Expose()
@@ -57,5 +60,7 @@ export class WorkerShiftHistoryResponseDto {
     incompleteShifts: number;
     totalHours: number;
     averageHoursPerShift: number;
+    totalNetHours: number;
+    averageNetHoursPerShift: number;
   };
 }

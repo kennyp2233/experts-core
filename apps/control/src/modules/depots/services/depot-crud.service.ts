@@ -12,6 +12,7 @@ import { QueryDepotsDto } from '../dto/query-depots.dto';
 import { DepotResponseDto, PaginationDto } from '../dto/depot-response.dto';
 import { plainToClass } from 'class-transformer';
 import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { GeographicUtils } from '../utils/geographic.utils';
 import { DepotSecretService } from './depot-secret.service';
 
@@ -40,6 +41,8 @@ export class DepotCrudService {
       sortOrder = 'desc'
     } = query;
 
+    this.logger.debug('DepotCrudService.findAll - Query params:', query);
+
     const skip = (page - 1) * limit;
 
     // Construir condiciones de filtro
@@ -57,9 +60,12 @@ export class DepotCrudService {
       ].filter(condition => Object.keys(condition).length > 0)
     };
 
+    this.logger.debug('DepotCrudService.findAll - Where clause:', JSON.stringify(where, null, 2));
+
     try {
       // Obtener total de registros
       const total = await this.prisma.depot.count({ where });
+      this.logger.debug('DepotCrudService.findAll - Total depots found:', total);
 
       // Obtener depots con paginación
       let depots = await this.prisma.depot.findMany({
@@ -86,6 +92,9 @@ export class DepotCrudService {
         take: limit
       });
 
+      this.logger.debug('DepotCrudService.findAll - Depots retrieved:', depots.length);
+      this.logger.debug('DepotCrudService.findAll - Depot names:', depots.map(d => ({ id: d.id, name: d.name, isActive: d.isActive })));
+
       // Aplicar filtro geográfico si se especifica
       if (nearLat !== undefined && nearLng !== undefined && withinKm !== undefined) {
         if (!GeographicUtils.validateCoordinates(nearLat, nearLng)) {
@@ -104,13 +113,25 @@ export class DepotCrudService {
       const items = depots.map(depot => {
         const activeWorkersCount = depot.workers.filter(w => w.status === 'ACTIVE').length;
         
-        return plainToClass(DepotResponseDto, {
-          ...depot,
+        // Convertir manualmente los valores Decimal antes de plainToClass
+        const depotData = {
+          id: depot.id,
+          name: depot.name,
+          address: depot.address,
+          latitude: depot.latitude instanceof Decimal ? depot.latitude.toNumber() : Number(depot.latitude),
+          longitude: depot.longitude instanceof Decimal ? depot.longitude.toNumber() : Number(depot.longitude),
+          radius: depot.radius,
+          isActive: depot.isActive,
+          secretUpdatedAt: depot.secretUpdatedAt,
+          createdAt: depot.createdAt,
+          updatedAt: depot.updatedAt,
           workersCount: depot._count.workers,
           activeWorkersCount,
           attendancesToday: depot._count.attendances,
           distanceKm: (depot as any).distanceKm || undefined
-        });
+        };
+        
+        return plainToClass(DepotResponseDto, depotData);
       });
 
       const pagination: PaginationDto = {
@@ -119,6 +140,8 @@ export class DepotCrudService {
         total,
         totalPages: Math.ceil(total / limit)
       };
+
+      this.logger.debug('DepotCrudService.findAll - Final result:', { itemsCount: items.length, pagination });
 
       return { items, pagination };
 
@@ -160,12 +183,24 @@ export class DepotCrudService {
 
       const activeWorkersCount = depot.workers.filter(w => w.status === 'ACTIVE').length;
 
-      return plainToClass(DepotResponseDto, {
-        ...depot,
+      // Convertir manualmente los valores Decimal antes de plainToClass
+      const depotData = {
+        id: depot.id,
+        name: depot.name,
+        address: depot.address,
+        latitude: depot.latitude instanceof Decimal ? depot.latitude.toNumber() : Number(depot.latitude),
+        longitude: depot.longitude instanceof Decimal ? depot.longitude.toNumber() : Number(depot.longitude),
+        radius: depot.radius,
+        isActive: depot.isActive,
+        secretUpdatedAt: depot.secretUpdatedAt,
+        createdAt: depot.createdAt,
+        updatedAt: depot.updatedAt,
         workersCount: depot._count.workers,
         activeWorkersCount,
         attendancesToday: depot._count.attendances
-      });
+      };
+
+      return plainToClass(DepotResponseDto, depotData);
 
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -205,12 +240,24 @@ export class DepotCrudService {
 
       this.logger.log(`Depot creado exitosamente: ${depot.name}`);
 
-      return plainToClass(DepotResponseDto, {
-        ...depot,
+      // Convertir manualmente los valores Decimal antes de plainToClass
+      const depotData = {
+        id: depot.id,
+        name: depot.name,
+        address: depot.address,
+        latitude: depot.latitude instanceof Decimal ? depot.latitude.toNumber() : Number(depot.latitude),
+        longitude: depot.longitude instanceof Decimal ? depot.longitude.toNumber() : Number(depot.longitude),
+        radius: depot.radius,
+        isActive: depot.isActive,
+        secretUpdatedAt: depot.secretUpdatedAt,
+        createdAt: depot.createdAt,
+        updatedAt: depot.updatedAt,
         workersCount: 0,
         activeWorkersCount: 0,
         attendancesToday: 0
-      });
+      };
+
+      return plainToClass(DepotResponseDto, depotData);
 
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof ConflictException) {
@@ -276,12 +323,24 @@ export class DepotCrudService {
 
       const activeWorkersCount = depot.workers.filter(w => w.status === 'ACTIVE').length;
 
-      return plainToClass(DepotResponseDto, {
-        ...depot,
+      // Convertir manualmente los valores Decimal antes de plainToClass
+      const depotData = {
+        id: depot.id,
+        name: depot.name,
+        address: depot.address,
+        latitude: depot.latitude instanceof Decimal ? depot.latitude.toNumber() : Number(depot.latitude),
+        longitude: depot.longitude instanceof Decimal ? depot.longitude.toNumber() : Number(depot.longitude),
+        radius: depot.radius,
+        isActive: depot.isActive,
+        secretUpdatedAt: depot.secretUpdatedAt,
+        createdAt: depot.createdAt,
+        updatedAt: depot.updatedAt,
         workersCount: depot._count.workers,
         activeWorkersCount,
         attendancesToday: depot._count.attendances
-      });
+      };
+
+      return plainToClass(DepotResponseDto, depotData);
 
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) {
@@ -362,12 +421,24 @@ export class DepotCrudService {
       radiusKm
     ).slice(0, limit);
 
-    return nearbyDepots.map(depot =>
-      plainToClass(DepotResponseDto, {
-        ...depot,
+    return nearbyDepots.map(depot => {
+      // Convertir manualmente los valores Decimal antes de plainToClass
+      const depotData = {
+        id: depot.id,
+        name: depot.name,
+        address: depot.address,
+        latitude: depot.latitude instanceof Decimal ? depot.latitude.toNumber() : Number(depot.latitude),
+        longitude: depot.longitude instanceof Decimal ? depot.longitude.toNumber() : Number(depot.longitude),
+        radius: depot.radius,
+        isActive: depot.isActive,
+        secretUpdatedAt: depot.secretUpdatedAt,
+        createdAt: depot.createdAt,
+        updatedAt: depot.updatedAt,
         workersCount: depot._count.workers,
         distanceKm: depot.distanceKm
-      })
-    );
+      };
+
+      return plainToClass(DepotResponseDto, depotData);
+    });
   }
 }

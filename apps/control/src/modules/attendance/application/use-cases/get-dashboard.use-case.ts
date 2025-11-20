@@ -1,22 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { WorkersService } from '../../../workers/workers.service';
 import { DashboardResponseDto, WorkerCardDto } from '../dto/dashboard-response.dto';
 
 @Injectable()
 export class GetDashboardUseCase {
+  private readonly logger = new Logger(GetDashboardUseCase.name);
+
   constructor(
     private readonly attendanceRepository: AttendanceRepositoryInterface,
     private readonly workersService: WorkersService,
   ) {}
 
   async execute(depotId?: string): Promise<DashboardResponseDto> {
-    console.log('[GetDashboardUseCase] 🚀 Ejecutando caso de uso - Obtener dashboard de asistencias');
-    console.log('[GetDashboardUseCase] DepotId:', depotId);
+    this.logger.log(`🚀 Ejecutando caso de uso - Obtener dashboard de asistencias`);
+    this.logger.debug(`DepotId:`, depotId);
 
     try {
-      // Obtener fecha de hoy (normalizada)
-      const today = new Date();
+      // Obtener fecha de hoy en zona horaria de Ecuador (UTC-5)
+      const now = new Date();
+      const ecuadorOffset = -5 * 60; // UTC-5 en minutos
+      const ecuadorTime = new Date(now.getTime() + (ecuadorOffset - now.getTimezoneOffset()) * 60000);
+      
+      // Normalizar a inicio del día en Ecuador
+      const today = new Date(ecuadorTime);
       today.setHours(0, 0, 0, 0);
 
       const endOfToday = new Date(today);
@@ -30,16 +37,17 @@ export class GetDashboardUseCase {
 
       const workers = workersResponse.data.items;
 
-      console.log(`[GetDashboardUseCase] Trabajadores encontrados: ${workers.length}`);
+      this.logger.debug(`Trabajadores encontrados: ${workers.length}`);
 
       // Obtener asistencias de hoy para todos los trabajadores
       const todayAttendances = await this.attendanceRepository.findAttendances({
         depotId,
         dateFrom: today,
         dateTo: endOfToday,
+        filterByEntryTime: true,
       });
 
-      console.log(`[GetDashboardUseCase] Asistencias de hoy: ${todayAttendances.length}`);
+      this.logger.debug(`Asistencias de hoy: ${todayAttendances.length}`);
 
       // Crear un mapa de workerId -> attendance de hoy
       const attendanceMap = new Map();
@@ -85,11 +93,11 @@ export class GetDashboardUseCase {
         workersOnShift,
         workersOffShift: workers.length - workersOnShift,
         totalNetHoursToday,
-        date: today.toISOString().split('T')[0],
+        date: today.toISOString().split('T')[0], // Fecha en formato YYYY-MM-DD
         workerCards,
       };
 
-      console.log('[GetDashboardUseCase] ✅ Dashboard generado exitosamente:', {
+      this.logger.log('✅ Dashboard generado exitosamente:', {
         totalWorkers: response.totalWorkers,
         workersOnShift: response.workersOnShift,
         workersOffShift: response.workersOffShift,
@@ -98,7 +106,7 @@ export class GetDashboardUseCase {
 
       return response;
     } catch (error) {
-      console.error('[GetDashboardUseCase] ❌ Error en caso de uso:', error);
+      this.logger.error(`❌ Error en caso de uso:`, error);
       throw error;
     }
   }

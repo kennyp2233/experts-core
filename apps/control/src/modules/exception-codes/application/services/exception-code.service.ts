@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { GenerateExceptionCodeUseCase } from '../use-cases/generate-exception-code.use-case';
 import { ValidateExceptionCodeUseCase } from '../use-cases/validate-exception-code.use-case';
 import { ListExceptionCodesUseCase } from '../use-cases/list-exception-codes.use-case';
@@ -11,6 +11,8 @@ import { ExceptionCodeStatus } from '../../domain/enums/exception-code-status.en
 
 @Injectable()
 export class ExceptionCodeService {
+  private readonly logger = new Logger(ExceptionCodeService.name);
+
   constructor(
     private readonly generateExceptionCodeUseCase: GenerateExceptionCodeUseCase,
     private readonly validateExceptionCodeUseCase: ValidateExceptionCodeUseCase,
@@ -63,7 +65,7 @@ export class ExceptionCodeService {
    * @param attendanceRecordId ID del registro de asistencia (para logging)
    */
   async markExceptionCodeAsUsed(codeId: string, attendanceRecordId?: string): Promise<void> {
-    console.log('[DEBUG] Backend - Marcando código de excepción como usado:', {
+    this.logger.debug('Marcando código de excepción como usado:', {
       codeId,
       attendanceRecordId,
       usedAt: new Date().toISOString()
@@ -75,6 +77,6 @@ export class ExceptionCodeService {
       new Date()
     );
 
-    console.log('[DEBUG] Backend - Código de excepción marcado como usado exitosamente');
+    this.logger.debug('Código de excepción marcado como usado exitosamente');
   }
 }

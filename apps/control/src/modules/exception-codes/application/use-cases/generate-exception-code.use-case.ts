@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, Inject, Logger } from '@nestjs/common';
 import type { ExceptionCodeRepositoryInterface } from '../../domain/repositories/exception-code.repository.interface';
 import { GenerateExceptionCodeDto } from '../dto/generate-exception-code.dto';
 import { ExceptionCodeResponseDto } from '../dto/exception-code.dto';
@@ -6,6 +6,8 @@ import { ExceptionCodeStatus } from '../../domain/enums/exception-code-status.en
 
 @Injectable()
 export class GenerateExceptionCodeUseCase {
+  private readonly logger = new Logger(GenerateExceptionCodeUseCase.name);
+
   constructor(
     @Inject('ExceptionCodeRepositoryInterface')
     private readonly exceptionCodeRepository: ExceptionCodeRepositoryInterface,
@@ -29,11 +31,11 @@ export class GenerateExceptionCodeUseCase {
 
     // 4. Generar código único de 6 dígitos
     const code = await this.generateUniqueCode();
-    console.log('[DEBUG] Backend - Generando código de excepción único:', code);
+    this.logger.debug('Generando código de excepción único:', code);
 
     // 5. Calcular expiración
     const expiresAt = new Date(Date.now() + (dto.expiresInMinutes || 60) * 60 * 1000);
-    console.log('[DEBUG] Backend - Código expira en:', expiresAt);
+    this.logger.debug('Código expira en:', expiresAt);
 
     // 6. Crear registro en BD
     const exceptionCode = await this.exceptionCodeRepository.createExceptionCode({
@@ -44,7 +46,7 @@ export class GenerateExceptionCodeUseCase {
       status: ExceptionCodeStatus.PENDING,
     });
 
-    console.log('[DEBUG] Backend - Código de excepción guardado en BD:', {
+    this.logger.debug('Código de excepción guardado en BD:', {
       id: exceptionCode.id,
       code: exceptionCode.code,
       workerId: exceptionCode.workerId,

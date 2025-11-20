@@ -4,11 +4,14 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(GlobalExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -24,9 +27,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal server error';
 
-    console.error(`[GlobalExceptionFilter] ❌ Error en ${request.method} ${request.url}:`);
-    console.error('[GlobalExceptionFilter] Exception:', exception);
-    console.error('[GlobalExceptionFilter] Stack:', exception instanceof Error ? exception.stack : 'No stack');
+    this.logger.error(
+      `Error en ${request.method} ${request.url}`,
+      exception instanceof Error ? exception.stack : 'No stack available',
+      {
+        status,
+        method: request.method,
+        url: request.url,
+        userAgent: request.headers['user-agent'],
+        ip: request.ip,
+        body: request.body,
+        query: request.query,
+        params: request.params,
+      }
+    );
 
     response.status(status).json({
       statusCode: status,

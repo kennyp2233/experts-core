@@ -123,7 +123,7 @@ export const DEFAULT_BREAK_CONFIGURATION: BreakConfiguration = {
   rules: [
     {
       minHours: 6,
-      breakMinutes: 30,
+      breakMinutes: 60,
       description: 'Break legal obligatorio - Artículo 50 Código de Trabajo Ecuador',
       isLegalRequirement: true,
     },

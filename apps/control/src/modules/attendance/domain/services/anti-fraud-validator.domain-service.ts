@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TemporalValidatorDomainService, ValidationResult } from './temporal-validator.domain-service';
 import { GeolocationValidatorDomainService, DepotLocation } from './geolocation-validator.domain-service';
 import { PhotoValidatorDomainService } from './photo-validator.domain-service';
@@ -67,6 +67,8 @@ export interface ComprehensiveValidationResult {
 
 @Injectable()
 export class AntiFraudValidatorDomainService {
+  private readonly logger = new Logger(AntiFraudValidatorDomainService.name);
+
   constructor(
     private readonly temporalValidator: TemporalValidatorDomainService,
     private readonly geolocationValidator: GeolocationValidatorDomainService,
@@ -649,7 +651,7 @@ export class AntiFraudValidatorDomainService {
       
       return null;
     } catch (error) {
-      console.log('[AntiFraudValidator] Error parseando QR JSON:', error);
+      this.logger.debug(`Error parseando QR JSON:`, error);
       return null;
     }
   }
@@ -663,7 +665,7 @@ export class AntiFraudValidatorDomainService {
       const qrJson = JSON.parse(qrData);
       return qrJson.signature || null;
     } catch (error) {
-      console.log('[AntiFraudValidator] Error parseando QR JSON para extraer signature:', error);
+      this.logger.debug(`Error parseando QR JSON para extraer signature:`, error);
       return null;
     }
   }

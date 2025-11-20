@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { AttendanceRepositoryInterface } from '../../domain/repositories/attendance.repository.interface';
 import { WorkersService } from '../../../workers/workers.service';
 import { GetWorkerSummaryQueryDto } from '../dto/get-worker-summary-query.dto';
@@ -11,6 +11,8 @@ import {
 
 @Injectable()
 export class GetWorkerSummaryUseCase {
+  private readonly logger = new Logger(GetWorkerSummaryUseCase.name);
+
   constructor(
     private readonly attendanceRepository: AttendanceRepositoryInterface,
     private readonly workersService: WorkersService,
@@ -20,8 +22,8 @@ export class GetWorkerSummaryUseCase {
     workerId: string,
     query: GetWorkerSummaryQueryDto,
   ): Promise<WorkerSummaryResponseDto> {
-    console.log('[GetWorkerSummaryUseCase] 🚀 Ejecutando caso de uso - Obtener resumen de trabajador');
-    console.log('[GetWorkerSummaryUseCase] Parámetros:', { workerId, query });
+    this.logger.log(`🚀 Ejecutando caso de uso - Obtener resumen de trabajador`);
+    this.logger.debug(`Parámetros:`, { workerId, query });
 
     try {
       // Validar que el worker existe
@@ -33,16 +35,17 @@ export class GetWorkerSummaryUseCase {
       // Determinar rango de fechas
       const { dateFrom, dateTo } = this.calculateDateRange(query);
 
-      console.log('[GetWorkerSummaryUseCase] Rango de fechas:', { dateFrom, dateTo });
+      this.logger.debug(`Rango de fechas:`, { dateFrom, dateTo });
 
       // Obtener TODOS los attendances del rango (sin paginación) para calcular stats
       const allAttendances = await this.attendanceRepository.findAttendances({
         workerId,
         dateFrom,
         dateTo,
+        filterByEntryTime: true,
       });
 
-      console.log(`[GetWorkerSummaryUseCase] Total de asistencias encontradas: ${allAttendances.length}`);
+      this.logger.debug(`Total de asistencias encontradas: ${allAttendances.length}`);
 
       // Calcular estadísticas del período completo
       const stats = this.calculateStats(allAttendances, dateFrom, dateTo);
@@ -104,7 +107,7 @@ export class GetWorkerSummaryUseCase {
         pagination,
       };
 
-      console.log('[GetWorkerSummaryUseCase] ✅ Caso de uso completado exitosamente:', {
+      this.logger.log('✅ Caso de uso completado exitosamente:', {
         totalShifts: allAttendances.length,
         paginatedShifts: shifts.length,
         attendanceRate: stats.attendanceRate,
@@ -113,7 +116,7 @@ export class GetWorkerSummaryUseCase {
 
       return response;
     } catch (error) {
-      console.error('[GetWorkerSummaryUseCase] ❌ Error en caso de uso:', error);
+      this.logger.error(`❌ Error en caso de uso:`, error);
       throw error;
     }
   }

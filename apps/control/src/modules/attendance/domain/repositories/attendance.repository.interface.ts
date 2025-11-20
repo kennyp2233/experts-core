@@ -57,6 +57,7 @@ export interface AttendanceFilter {
   dateTo?: Date;
   isComplete?: boolean;
   isActive?: boolean;
+  filterByEntryTime?: boolean;
 }
 
 export interface AttendanceRecordFilter {

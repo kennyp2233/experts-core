@@ -1,32 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import * as express from 'express';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
 
   // Filtro global de excepciones para debugging
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  // Interceptor global para debugging de requests
-  app.use((req: any, res: any, next: any) => {
-    const startTime = Date.now();
-    console.log(`[Request] ${req.method} ${req.path} - Start`);
-    console.log(`[Request] Headers:`, {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length'],
-      'authorization': req.headers.authorization ? 'Bearer ***' : 'None'
-    });
-
-    res.on('finish', () => {
-      const duration = Date.now() - startTime;
-      console.log(`[Response] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
-    });
-
-    next();
-  });
+  // Interceptor global para logging HTTP
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
   // Configurar límites para body parser (para manejar fotos base64)
   app.use(express.json({
