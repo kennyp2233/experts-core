@@ -39,7 +39,7 @@ import { UserRole } from '../../../auth/v1/dto/update-user-role.dto';
   version: '1',
 })
 export class ProductosController {
-  constructor(private readonly productosService: ProductosService) {}
+  constructor(private readonly productosService: ProductosService) { }
 
   @Roles(UserRole.ADMIN)
   @Post()
@@ -70,16 +70,26 @@ export class ProductosController {
     type: Number,
     description: 'Número de registros a obtener',
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Término de búsqueda por nombre',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista paginada de productos',
     type: PaginationResponseDto<ProductoEntity>,
   })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  async findAll(@Query('skip') skip?: string, @Query('take') take?: string) {
+  async findAll(
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('search') search?: string,
+  ) {
     const skipNum = skip ? parseInt(skip, 10) : undefined;
     const takeNum = take ? parseInt(take, 10) : undefined;
-    return this.productosService.findAll(skipNum, takeNum);
+    return this.productosService.findAll(skipNum, takeNum, search);
   }
 
   @Roles(UserRole.ADMIN)

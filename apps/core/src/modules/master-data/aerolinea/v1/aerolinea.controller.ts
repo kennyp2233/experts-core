@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/v1/guards/roles.guard';
 import { Roles } from '../../../auth/v1/decorators/roles.decorator';
@@ -7,6 +7,7 @@ import { UserRole } from '../../../auth/v1/dto/update-user-role.dto';
 import { AerolineaService } from './services/aerolinea.service';
 import { CreateAerolineaDto, UpdateAerolineaDto } from './dto/create-aerolinea.dto';
 import { AerolineaEntity } from './entities/aerolinea.entity';
+import { PaginationResponseDto } from './dto/pagination-response.dto';
 
 @ApiTags('master-data/aerolinea')
 @ApiBearerAuth()
@@ -17,7 +18,7 @@ import { AerolineaEntity } from './entities/aerolinea.entity';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AerolineaController {
-  constructor(private readonly aerolineaService: AerolineaService) {}
+  constructor(private readonly aerolineaService: AerolineaService) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear una nueva aerolínea' })
@@ -31,11 +32,42 @@ export class AerolineaController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las aerolíneas activas' })
-  @ApiResponse({ status: 200, description: 'Lista de aerolíneas', type: [AerolineaEntity] })
+  @ApiQuery({
+    name: 'skip',
+    required: false,
+    type: Number,
+    description: 'Número de registros a saltar',
+  })
+  @ApiQuery({
+    name: 'take',
+    required: false,
+    type: Number,
+    description: 'Número de registros a obtener',
+  })
+  @ApiQuery({
+    name: 'sortField',
+    required: false,
+    type: String,
+    description: 'Campo por el cual ordenar',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    type: String,
+    description: 'Orden de clasificación (asc o desc)',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de aerolíneas', type: PaginationResponseDto<AerolineaEntity> })
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'Rol insuficiente' })
-  findAll(): Promise<AerolineaEntity[]> {
-    return this.aerolineaService.findAll();
+  findAll(
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('sortField') sortField?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ): Promise<PaginationResponseDto<AerolineaEntity>> {
+    const skipNum = skip ? parseInt(skip, 10) : undefined;
+    const takeNum = take ? parseInt(take, 10) : undefined;
+    return this.aerolineaService.findAll(skipNum, takeNum, sortField, sortOrder);
   }
 
   @Get('codigo/:codigo')

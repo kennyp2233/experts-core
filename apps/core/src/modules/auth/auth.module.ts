@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -23,6 +24,7 @@ import { TrustedDeviceRepository } from './v1/repositories/trusted-device.reposi
 import { JwtStrategy } from './v1/strategies/jwt.strategy';
 import { LocalStrategy } from './v1/strategies/local.strategy';
 import { RolesGuard } from './v1/guards/roles.guard';
+import { TokenRefreshFilter } from './v1/filters/token-refresh.filter';
 
 @Module({
   imports: [
@@ -59,8 +61,14 @@ import { RolesGuard } from './v1/guards/roles.guard';
 
     // Guards
     RolesGuard,
+
+    // Filters
+    {
+      provide: APP_FILTER,
+      useClass: TokenRefreshFilter,
+    },
   ],
   controllers: [AuthControllerV1, TrustedDevicesController],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

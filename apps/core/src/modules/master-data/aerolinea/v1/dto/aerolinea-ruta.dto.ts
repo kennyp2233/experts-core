@@ -8,8 +8,8 @@ export class CreateAerolineaRutaDto {
     example: 1,
   })
   @IsInt()
-  @IsNotEmpty()
-  aerolineaId: number;
+  @IsOptional()
+  aerolineaId?: number;
 
   @ApiProperty({
     description: 'Tipo de ruta',

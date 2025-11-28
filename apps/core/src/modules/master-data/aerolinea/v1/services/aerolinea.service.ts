@@ -3,6 +3,7 @@ import { PrismaClient } from '.prisma/productos-client';
 import { CreateAerolineaDto, UpdateAerolineaDto } from '../dto/create-aerolinea.dto';
 import { CreateAerolineaRutaDto, UpdateAerolineaRutaDto } from '../dto/aerolinea-ruta.dto';
 import { CreateAerolineaPlantillaDto, UpdateAerolineaPlantillaDto, CreateConceptoCostoDto, UpdateConceptoCostoDto } from '../dto/aerolinea-plantilla.dto';
+import { PaginationResponseDto } from '../dto/pagination-response.dto';
 import { AerolineaEntity } from '../entities/aerolinea.entity';
 import { AerolineaRutaEntity } from '../entities/aerolinea-ruta.entity';
 import { AerolineaPlantillaEntity } from '../entities/aerolinea-plantilla.entity';
@@ -64,34 +65,50 @@ export class AerolineaService {
         }
     }
 
-    async findAll(): Promise<AerolineaEntity[]> {
+    async findAll(
+        skip = 0,
+        take = 10,
+        sortField = 'nombre',
+        sortOrder = 'asc'
+    ): Promise<PaginationResponseDto<AerolineaEntity>> {
         try {
-            const aerolineas = await this.prisma.aerolinea.findMany({
-                where: { estado: true },
-                include: {
-                    aerolineasPlantilla: {
-                        include: {
-                            conceptos: true,
+            const [aerolineas, total] = await Promise.all([
+                this.prisma.aerolinea.findMany({
+                    where: { estado: true },
+                    include: {
+                        aerolineasPlantilla: {
+                            include: {
+                                conceptos: true,
+                            },
+                        },
+                        rutas: {
+                            include: {
+                                origen: true,
+                                destino: true,
+                                viaAerolinea: true,
+                            },
+                        },
+                        viasAerolineas: {
+                            include: {
+                                aerolinea: true,
+                                origen: true,
+                                destino: true,
+                            },
                         },
                     },
-                    rutas: {
-                        include: {
-                            origen: true,
-                            destino: true,
-                            viaAerolinea: true,
-                        },
-                    },
-                    viasAerolineas: {
-                        include: {
-                            aerolinea: true,
-                            origen: true,
-                            destino: true,
-                        },
-                    },
-                },
-                orderBy: { nombre: 'asc' },
-            });
-            return aerolineas as AerolineaEntity[];
+                    orderBy: { [sortField]: sortOrder },
+                    skip,
+                    take,
+                }),
+                this.prisma.aerolinea.count({ where: { estado: true } }),
+            ]);
+
+            return {
+                data: aerolineas as AerolineaEntity[],
+                total,
+                skip,
+                take,
+            };
         } catch (error) {
             throw new BadRequestException(`Error finding aerolineas: ${error.message}`);
         }
@@ -120,6 +137,7 @@ export class AerolineaService {
                             aerolinea: true,
                             origen: true,
                             destino: true,
+                            viaAerolinea: true, // Include self-reference for viaAerolinea details if needed
                         },
                         orderBy: { orden: 'asc' },
                     },
@@ -150,29 +168,25 @@ export class AerolineaService {
             const aerolinea = await this.prisma.aerolinea.update({
                 where: { id },
                 data: aerolineaData,
-                include: {
-                    aerolineasPlantilla: {
-                        include: {
-                            conceptos: true,
-                        },
-                    },
-                    rutas: {
-                        include: {
-                            origen: true,
-                            destino: true,
-                            viaAerolinea: true,
-                        },
-                    },
-                    viasAerolineas: {
-                        include: {
-                            aerolinea: true,
-                            origen: true,
-                            destino: true,
-                        },
-                    },
-                },
             });
-            return aerolinea as AerolineaEntity;
+
+            // Actualizar rutas si están incluidas
+            if (rutas) {
+                // Eliminar rutas existentes
+                await this.prisma.aerolineaRuta.deleteMany({
+                    where: { aerolineaId: id },
+                });
+
+                // Crear nuevas rutas
+                if (rutas.length > 0) {
+                    for (const rutaDto of rutas) {
+                        await this.aerolineaRutaService.createRuta(id, rutaDto);
+                    }
+                }
+            }
+
+            // Retornar la aerolínea actualizada con sus relaciones
+            return await this.findOne(id);
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;

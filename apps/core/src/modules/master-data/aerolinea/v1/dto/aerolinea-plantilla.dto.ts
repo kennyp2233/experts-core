@@ -3,13 +3,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TipoConcepto, TipoMultiplicador } from '.prisma/productos-client';
 
 export class CreateConceptoCostoDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'ID de la plantilla de aerolínea',
     example: 1,
   })
+  @IsOptional()
   @IsInt()
-  @IsNotEmpty()
-  plantillaId: number;
+  plantillaId?: number;
 
   @ApiProperty({
     description: 'Tipo de concepto',
@@ -83,13 +83,13 @@ export class UpdateConceptoCostoDto {
 }
 
 export class CreateAerolineaPlantillaDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'ID de la aerolínea',
     example: 1,
   })
+  @IsOptional()
   @IsInt()
-  @IsNotEmpty()
-  idAerolinea: number;
+  idAerolinea?: number;
 
   @ApiPropertyOptional({
     description: 'Plantilla para guía madre',

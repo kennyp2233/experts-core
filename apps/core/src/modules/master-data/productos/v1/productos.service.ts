@@ -17,7 +17,7 @@ export class ProductosService {
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
     private relacionesService: ProductosRelacionesService,
-  ) {}
+  ) { }
 
   async create(createProductoDto: CreateProductoDto) {
     try {
@@ -89,22 +89,33 @@ export class ProductosService {
     }
   }
 
-  async findAll(skip?: number, take?: number) {
+  async findAll(skip?: number, take?: number, search?: string) {
     try {
+      const where: any = {};
+
+      if (search) {
+        where.nombre = {
+          contains: search,
+          mode: 'insensitive',
+        };
+      }
+
       const [productos, total] = await Promise.all([
         this.prisma.producto.findMany({
           skip,
           take,
+          where,
           include: {
             productosAranceles: true,
             productosCompuestos: true,
             productosMiPros: true,
+            medida: true,
           },
           orderBy: {
             createdAt: 'desc',
           },
         }),
-        this.prisma.producto.count(),
+        this.prisma.producto.count({ where }),
       ]);
 
       return {
