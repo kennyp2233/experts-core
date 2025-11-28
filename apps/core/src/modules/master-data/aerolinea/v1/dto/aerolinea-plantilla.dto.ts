@@ -179,4 +179,11 @@ export class UpdateAerolineaPlantillaDto {
   @IsOptional()
   @IsNumber()
   pca?: number;
+
+  @ApiPropertyOptional({
+    description: 'Lista de conceptos de costo',
+    type: [CreateConceptoCostoDto],
+  })
+  @IsOptional()
+  conceptos?: CreateConceptoCostoDto[];
 }

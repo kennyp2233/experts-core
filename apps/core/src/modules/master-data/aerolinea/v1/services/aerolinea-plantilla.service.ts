@@ -63,9 +63,12 @@ export class AerolineaPlantillaService {
                 throw new NotFoundException(`Plantilla for aerolinea ${aerolineaId} not found`);
             }
 
+            // Destructure conceptos out of the DTO to avoid Prisma errors
+            const { conceptos, ...plantillaData } = updateAerolineaPlantillaDto;
+
             const updatedPlantilla = await this.prisma.aerolineasPlantilla.update({
                 where: { idAerolinea: aerolineaId },
-                data: updateAerolineaPlantillaDto,
+                data: plantillaData,
                 include: {
                     aerolinea: true,
                     conceptos: {

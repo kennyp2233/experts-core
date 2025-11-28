@@ -74,7 +74,7 @@ export class AerolineaService {
         try {
             const [aerolineas, total] = await Promise.all([
                 this.prisma.aerolinea.findMany({
-                    where: { estado: true },
+
                     include: {
                         aerolineasPlantilla: {
                             include: {
@@ -181,6 +181,34 @@ export class AerolineaService {
                 if (rutas.length > 0) {
                     for (const rutaDto of rutas) {
                         await this.aerolineaRutaService.createRuta(id, rutaDto);
+                    }
+                }
+            }
+
+            // Actualizar plantilla si está incluida
+            if (plantilla) {
+                const existingPlantilla = await this.aerolineaPlantillaService.findPlantilla(id);
+
+                if (!existingPlantilla) {
+                    // Si no existe, crearla con conceptos
+                    await this.aerolineaPlantillaService.createPlantillaWithConceptos(id, plantilla);
+                } else {
+                    // Si existe, actualizar campos escalares
+                    await this.aerolineaPlantillaService.updatePlantilla(id, plantilla);
+
+                    // Y actualizar conceptos (reemplazo total para simplificar)
+                    if (plantilla.conceptos) {
+                        // Eliminar conceptos existentes
+                        await this.prisma.conceptoCosto.deleteMany({
+                            where: { plantillaId: existingPlantilla.idAerolinea },
+                        });
+
+                        // Crear nuevos conceptos
+                        if (plantilla.conceptos.length > 0) {
+                            for (const conceptoDto of plantilla.conceptos) {
+                                await this.aerolineaPlantillaService.createConcepto(existingPlantilla.idAerolinea, conceptoDto);
+                            }
+                        }
                     }
                 }
             }
