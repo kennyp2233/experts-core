@@ -1,13 +1,12 @@
 // Prisma schema for Guias Bounded Context
 generator guiasClient {
-    provider = "prisma-client-js"
+    provider   = "prisma-client-js"
     outputMode = "outputDir"
-    output = "../../node_modules/.prisma/guias-client"
+    output     = "../../node_modules/.prisma/guias-client"
 }
 
 datasource guiasDb {
     provider = "postgresql"
-    url      = env("DATABASE_URL")
 }
 
 // ===== GUIAS MODELS =====

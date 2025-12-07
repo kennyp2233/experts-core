@@ -7,6 +7,7 @@ import { AppService } from './v1/app/app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { AppControllerV1 } from './v1/app/app.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -40,6 +41,7 @@ import { RedisModule } from './redis/redis.module';
     AuthModule,
     UsersModule,
     MasterDataModule,
+    DocumentsModule,
     HealthModule,
   ],
   providers: [
@@ -58,4 +60,4 @@ import { RedisModule } from './redis/redis.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -1,12 +1,11 @@
 // Prisma schema for Usuarios Bounded Context
 generator usuariosClient {
     provider = "prisma-client-js"
-    output = "../../node_modules/.prisma/usuarios-client"
+    output   = "../../node_modules/.prisma/usuarios-client"
 }
 
 datasource usuariosDb {
     provider = "postgresql"
-    url      = env("DATABASE_URL_USUARIOS")
 }
 
 // ===== ENUMS =====
@@ -19,14 +18,14 @@ enum Role {
 
 // ===== USUARIOS MODELS =====
 model User {
-    id        String   @id @default(cuid())
-    email     String   @unique
-    username  String   @unique
+    id        String  @id @default(cuid())
+    email     String  @unique
+    username  String  @unique
     password  String
     firstName String
     lastName  String
-    isActive  Boolean  @default(true)
-    role      Role     @default(USER)
+    isActive  Boolean @default(true)
+    role      Role    @default(USER)
 
     // 2FA
     twoFactorEnabled Boolean @default(false)
@@ -40,29 +39,29 @@ model User {
 }
 
 model TrustedDevice {
-    id             String   @id @default(cuid())
-    userId         String
-    user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    id     String @id @default(cuid())
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     // Identificación del dispositivo
-    fingerprint    String   // Hash único del dispositivo
-    trustToken     String   @unique // Token para validar
+    fingerprint String // Hash único del dispositivo
+    trustToken  String @unique // Token para validar
 
     // Info legible (para que el usuario vea sus dispositivos)
-    deviceName     String   // "iPhone 13"
-    browser        String   // "Chrome"
-    os             String   // "iOS 16"
-    deviceType     String   // "mobile"
+    deviceName String // "iPhone 13"
+    browser    String // "Chrome"
+    os         String // "iOS 16"
+    deviceType String // "mobile"
 
     // Seguridad
-    lastUsedAt     DateTime @default(now())
-    lastIpAddress  String?
-    expiresAt      DateTime // Expiración del trust (ej: 30 días)
+    lastUsedAt    DateTime @default(now())
+    lastIpAddress String?
+    expiresAt     DateTime // Expiración del trust (ej: 30 días)
 
-    createdAt      DateTime @default(now())
+    createdAt DateTime @default(now())
 
+    @@unique([userId, fingerprint])
     @@index([userId])
     @@index([fingerprint])
     @@index([trustToken])
-    @@unique([userId, fingerprint])
 }

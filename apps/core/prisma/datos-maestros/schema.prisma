@@ -7,13 +7,12 @@ generator productosClient {
 
 datasource productosDb {
     provider = "postgresql"
-    url      = env("DATABASE_URL_DATOS_MAESTROS")
 }
 
 // ===== PRODUCTOS MODELS =====
 enum OpcionProducto {
-  simple
-  compuesto
+    simple
+    compuesto
 }
 
 model Producto {

@@ -1,0 +1,2 @@
+export const INCREMENTO_SECUENCIAL = 11;
+export const INCREMENTO_ESPECIAL_6 = 4;

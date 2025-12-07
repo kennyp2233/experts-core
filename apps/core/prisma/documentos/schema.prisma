@@ -1,14 +1,202 @@
 // Prisma schema for Documentos Bounded Context
 generator documentosClient {
-    provider = "prisma-client-js"
-    outputMode = "outputDir"
-    output = "../../node_modules/.prisma/documentos-client"
+  provider   = "prisma-client-js"
+  outputMode = "outputDir"
+  output     = "../../node_modules/.prisma/documentos-client"
 }
 
 datasource documentosDb {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
 // ===== DOCUMENTOS MODELS =====
-// Add your document models here
+
+enum TipoStock {
+  NORMAL
+  VIRTUAL
+}
+
+model DocumentoBase {
+  id            Int         @id @default(autoincrement())
+  fecha         DateTime?
+  idAerolinea   Int? // FK to Datos Maestros
+  idAgenciaIata Int? // FK to Datos Maestros
+  tipoStock     TipoStock?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  guiasMadre    GuiaMadre[]
+}
+
+model GuiaMadre {
+  id                    Int                    @id @default(autoincrement())
+  prefijo               Int
+  secuencial            Int
+  idDocumentoBase       Int
+  documentoBase         DocumentoBase          @relation(fields: [idDocumentoBase], references: [id])
+  prestada              Boolean?               @default(false)
+  observaciones         String?
+  fechaPrestamo         DateTime?
+  devolucion            Boolean?               @default(false)
+  fechaDevolucion       DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  documentoCoordinacion DocumentoCoordinacion?
+  guiaHijas             GuiaHija[]
+}
+
+// ===== ENUMS (Mirrored from Datos Maestros for Snapshots) =====
+
+enum TipoConcepto {
+  COSTO_GUIA
+  COMBUSTIBLE
+  SEGURIDAD
+  AUX_CALCULO
+  IVA
+  OTROS
+  AUX1
+  AUX2
+}
+
+enum TipoMultiplicador {
+  GROSS_WEIGHT
+  CHARGEABLE_WEIGHT
+}
+
+enum TipoRuta {
+  ORIGEN
+  DESTINO1
+  VIA1
+  DESTINO2
+  VIA2
+  DESTINO3
+  VIA3
+}
+
+enum EstadoCoordinacion {
+  BORRADOR
+  CORTADO
+}
+
+enum TipoPago {
+  PREPAID
+  COLLECT
+}
+
+// ===== COORDINACION MODELS =====
+
+model DocumentoCoordinacion {
+  id          Int       @id @default(autoincrement())
+  idGuiaMadre Int       @unique
+  guiaMadre   GuiaMadre @relation(fields: [idGuiaMadre], references: [id])
+
+  // Header Snapshot from AerolineasPlantilla
+  tarifaRate                Float?  @default(0)
+  pca                       Float?  @default(0)
+  plantillaGuiaMadre        String?
+  plantillaFormatoAerolinea String?
+  plantillaReservas         String?
+
+  // Operational Data
+  idProducto         Int
+  idAgenciaIata      Int
+  idDestinoAwb       Int
+  idDestinoFinalDocs Int
+  estadoActual       EstadoCoordinacion @default(BORRADOR)
+
+  pago            TipoPago @default(PREPAID)
+  fechaVuelo      DateTime
+  fechaAsignacion DateTime @default(now())
+
+  // Relational Snapshots
+  rutas  DocumentoRuta[]
+  costos DocumentoCosto[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  guiaHijas GuiaHija[]
+}
+
+model DocumentoRuta {
+  id                      Int                   @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+
+  // Snapshot of AerolineaRuta
+  tipoRuta       TipoRuta
+  origenId       Int? // Snapshot FK
+  destinoId      Int? // Snapshot FK
+  viaAerolineaId Int? // Snapshot FK
+  orden          Int?
+}
+
+model DocumentoCosto {
+  id                      Int                   @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+
+  // Snapshot of ConceptoCosto
+  tipo          TipoConcepto
+  abreviatura   String?
+  valor         Float              @default(0)
+  multiplicador TipoMultiplicador?
+}
+
+// 1. Catálogo de Cajas (Indispensable para calcular Fulls en el API)
+model TipoCaja {
+  id         Int    @id @default(autoincrement())
+  nombre     String // Ej: "Tabaco", "Cuarto", "Full"
+  factorFull Float // El valor clave: 0.5, 0.25, 1.00
+
+  // Relación inversa
+  detalles GuiaHijaDetalle[]
+}
+
+// 2. La Cabecera (Logística y Totales Físicos)
+model GuiaHija {
+  id Int @id @default(autoincrement())
+
+  // Relaciones y Rastreabilidad
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id])
+  idGuiaMadre             Int
+  guiaMadre               GuiaMadre             @relation(fields: [idGuiaMadre], references: [id])
+  idFinca                 Int // FK Logical to Datos Maestros
+
+  // Identificadores
+  numeroGuiaHija String // El HAWB (House Air Waybill)
+  anio           Int
+  secuencial     Int
+
+  // --- DATOS REALES (Lo que no se puede calcular) ---
+  pesoBruto   Float @default(0) // Lectura de báscula (CRÍTICO para flete)
+  totalPiezas Int   @default(0) // Cantidad física de cajas (Checksum)
+
+  // Metadatos de sistema
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relación con el contenido
+  detalles GuiaHijaDetalle[]
+}
+
+// 3. El Detalle (Qué hay dentro de las cajas)
+model GuiaHijaDetalle {
+  id Int @id @default(autoincrement())
+
+  // Relación con la Cabecera
+  idGuiaHija Int
+  guiaHija   GuiaHija @relation(fields: [idGuiaHija], references: [id])
+
+  // Relación con el Producto (Movido aquí para permitir guías mixtas)
+  idProducto Int // Variedad de flor (Ej: Freedom, Explorer)
+
+  // Relación con el Tipo de Caja (Para saber el factor full)
+  idTipoCaja Int
+  tipoCaja   TipoCaja @relation(fields: [idTipoCaja], references: [id])
+
+  // --- COMPOSICIÓN DEL EMPAQUE ---
+  cantidadCajas Int // Cuántas cajas de este tipo hay
+  ramosPorCaja  Int // Ej: 10, 12, 15 ramos
+  tallosPorRamo Int // Ej: 25 tallos (o grado)
+  longitud      Int? // Ej: 50, 60, 70 cm (Opcional pero útil)
+}

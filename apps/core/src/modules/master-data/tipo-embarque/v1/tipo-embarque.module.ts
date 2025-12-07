@@ -11,4 +11,4 @@ import { PrismaClient } from '.prisma/productos-client';
   ],
   exports: [TipoEmbarqueService],
 })
-export class TipoEmbarqueModule {}
+export class TipoEmbarqueModule { }
