@@ -1,7 +1,7 @@
 import { OnQueueActive, OnQueueCompleted, OnQueueFailed, Process, Processor } from '@nestjs/bull';
 import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@internal/templates-client';
 import { LegacyDbService } from './legacy-db.service';
 import { XmlGeneratorService } from './xml-generator.service';
 import { XmlValidatorService } from './xml-validator.service';

@@ -6,7 +6,7 @@ import {
     Logger,
     BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateConsignatarioDto, UpdateConsignatarioDto } from '../dto';
 import { ConsignatarioCaeSiceService } from './consignatario-cae-sice.service';
 import { ConsignatarioFacturacionService } from './consignatario-facturacion.service';

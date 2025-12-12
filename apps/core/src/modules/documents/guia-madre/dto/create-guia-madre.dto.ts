@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsInt, Min, IsOptional, IsBoolean, IsDateString, IsString, IsEnum } from 'class-validator';
-import { TipoStock } from '.prisma/documentos-client';
+import { TipoStock } from '@internal/documentos-client';
 
 export class CreateGuiaMadreDto {
     @IsNotEmpty()

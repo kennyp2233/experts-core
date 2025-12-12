@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@internal/templates-client';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
 import { LegacyDbService } from './services/legacy-db.service';
 

@@ -1,4 +1,4 @@
-import { Role } from '.prisma/usuarios-client';
+import { Role } from '@internal/usuarios-client';
 
 /**
  * Respuesta de autenticación exitosa

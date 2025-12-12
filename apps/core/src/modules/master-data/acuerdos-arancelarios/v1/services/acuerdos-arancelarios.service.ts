@@ -6,7 +6,7 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateAcuerdoArancelarioDto, UpdateAcuerdoArancelarioDto } from '../dto';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class AcuerdosArancelariosService {
 
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
-  ) {}
+  ) { }
 
   async create(createAcuerdoDto: CreateAcuerdoArancelarioDto) {
     try {
@@ -56,11 +56,11 @@ export class AcuerdosArancelariosService {
     try {
       const where = search
         ? {
-            nombre: {
-              contains: search,
-              mode: 'insensitive' as const,
-            },
-          }
+          nombre: {
+            contains: search,
+            mode: 'insensitive' as const,
+          },
+        }
         : {};
 
       const [acuerdos, total] = await Promise.all([

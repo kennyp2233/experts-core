@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AerolineasPlantilla } from '.prisma/productos-client';
+import { AerolineasPlantilla } from '@internal/datos-maestros-client';
 
 export class AerolineaPlantillaEntity implements AerolineasPlantilla {
   @ApiProperty({

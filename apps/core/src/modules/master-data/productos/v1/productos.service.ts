@@ -6,7 +6,7 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateProductoDto, UpdateProductoDto } from './dto';
 import { ProductosRelacionesService } from './services';
 

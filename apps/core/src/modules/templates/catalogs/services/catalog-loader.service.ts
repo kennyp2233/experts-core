@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@internal/templates-client';
 import { readExcelFromBuffer } from '../../../../common/utils/excel-reader.util';
 import { normalize } from '../../../../common/utils/normalizer.util';
 import { ExcelProductoRow, ExcelPuertoRow } from '../interfaces/excel-row.interface';

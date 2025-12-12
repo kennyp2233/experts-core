@@ -5,7 +5,7 @@ import {
     InternalServerErrorException,
     BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateConsignatarioFacturacionDto } from '../dto/create-consignatario.dto';
 
 @Injectable()

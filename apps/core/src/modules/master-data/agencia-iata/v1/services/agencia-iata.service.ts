@@ -4,7 +4,7 @@ import {
     NotFoundException,
     BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateAgenciaIataDto, UpdateAgenciaIataDto } from '../dto';
 import { AgenciaIataEntity } from '../entities/agencia-iata.entity';
 
@@ -88,21 +88,21 @@ export class AgenciaIataService {
             // Verificar que la agencia existe
             await this.findOne(id);
 
-      // Si se está actualizando el nombreShipper, validar que no esté duplicado
-      if (updateDto.nombreShipper) {
-        const existingAgencia = await this.prisma.agenciaIata.findFirst({
-          where: {
-            nombreShipper: updateDto.nombreShipper,
-            id: { not: id },
-          },
-        });
+            // Si se está actualizando el nombreShipper, validar que no esté duplicado
+            if (updateDto.nombreShipper) {
+                const existingAgencia = await this.prisma.agenciaIata.findFirst({
+                    where: {
+                        nombreShipper: updateDto.nombreShipper,
+                        id: { not: id },
+                    },
+                });
 
-        if (existingAgencia) {
-          throw new BadRequestException(
-            `Ya existe una agencia IATA con el nombre: ${updateDto.nombreShipper}`,
-          );
-        }
-      }            const agenciaIata = await this.prisma.agenciaIata.update({
+                if (existingAgencia) {
+                    throw new BadRequestException(
+                        `Ya existe una agencia IATA con el nombre: ${updateDto.nombreShipper}`,
+                    );
+                }
+            } const agenciaIata = await this.prisma.agenciaIata.update({
                 where: { id },
                 data: updateDto,
             });

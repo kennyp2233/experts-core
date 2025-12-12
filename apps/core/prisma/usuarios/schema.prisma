@@ -2,7 +2,7 @@
 generator usuariosClient {
     provider   = "prisma-client-js"
     outputMode = "outputDir"
-    output     = "../../node_modules/.prisma/usuarios-client"
+    output     = "../../node_modules/@internal/usuarios-client"
     engineType = "client"
 }
 

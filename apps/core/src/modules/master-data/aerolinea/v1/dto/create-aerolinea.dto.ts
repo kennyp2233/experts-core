@@ -1,7 +1,7 @@
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsEnum, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ModoAerolinea } from '.prisma/productos-client';
+import { ModoAerolinea } from '@internal/datos-maestros-client';
 import { CreateAerolineaRutaDto } from './aerolinea-ruta.dto';
 import { CreateAerolineaPlantillaDto } from './aerolinea-plantilla.dto';
 

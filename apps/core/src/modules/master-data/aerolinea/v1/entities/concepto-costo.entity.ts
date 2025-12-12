@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ConceptoCosto, TipoConcepto, TipoMultiplicador } from '.prisma/productos-client';
+import { ConceptoCosto, TipoConcepto, TipoMultiplicador } from '@internal/datos-maestros-client';
 
 export class ConceptoCostoEntity implements ConceptoCosto {
   @ApiProperty({

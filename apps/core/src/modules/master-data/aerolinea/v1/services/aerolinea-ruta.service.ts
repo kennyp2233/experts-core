@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateAerolineaRutaDto, UpdateAerolineaRutaDto } from '../dto/aerolinea-ruta.dto';
 import { AerolineaRutaEntity } from '../entities/aerolinea-ruta.entity';
 

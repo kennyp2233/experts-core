@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient, Role } from '.prisma/usuarios-client';
+import { PrismaClient, Role } from '@internal/usuarios-client';
 
 /**
  * Repositorio para operaciones de usuario
@@ -9,7 +9,7 @@ import { PrismaClient, Role } from '.prisma/usuarios-client';
 export class UserRepository {
   constructor(
     @Inject('PrismaClientUsuarios') private readonly prisma: PrismaClient,
-  ) {}
+  ) { }
 
   /**
    * Encuentra un usuario por username

@@ -11,7 +11,7 @@ import { TokenService } from './token.service';
 import { TwoFactorService } from './two-factor.service';
 import { TrustedDevicesService } from './trusted-devices.service';
 import { UserInfo, UserForToken } from '../interfaces';
-import { Role } from '.prisma/usuarios-client';
+import { Role } from '@internal/usuarios-client';
 
 /**
  * Servicio principal de autenticación (Orquestador)

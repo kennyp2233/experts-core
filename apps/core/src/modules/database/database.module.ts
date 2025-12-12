@@ -1,8 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PrismaClient as PrismaClientProductos } from '.prisma/productos-client';
-import { PrismaClient as PrismaClientUsuarios } from '.prisma/usuarios-client';
-import { PrismaClient as PrismaClientTemplates } from '.prisma/templates-client';
+import { PrismaClient as PrismaClientProductos } from '@internal/datos-maestros-client';
+import { PrismaClient as PrismaClientUsuarios } from '@internal/usuarios-client';
+import { PrismaClient as PrismaClientTemplates } from '@internal/templates-client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 

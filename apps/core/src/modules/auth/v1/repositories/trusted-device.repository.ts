@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '.prisma/usuarios-client';
+import { PrismaClient } from '@internal/usuarios-client';
 import { DeviceInfo } from '../utils/device-fingerprint.utils';
 
 /**
@@ -10,7 +10,7 @@ import { DeviceInfo } from '../utils/device-fingerprint.utils';
 export class TrustedDeviceRepository {
   constructor(
     @Inject('PrismaClientUsuarios') private readonly prisma: PrismaClient,
-  ) {}
+  ) { }
 
   /**
    * Encuentra un dispositivo por userId y fingerprint

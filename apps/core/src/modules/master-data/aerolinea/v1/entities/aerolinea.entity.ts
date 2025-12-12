@@ -4,7 +4,7 @@ import {
     AerolineaRuta,
     AerolineasPlantilla,
     ModoAerolinea,
-} from '.prisma/productos-client';
+} from '@internal/datos-maestros-client';
 import { AerolineaPlantillaEntity } from './aerolinea-plantilla.entity';
 import { AerolineaRutaEntity } from './aerolinea-ruta.entity';
 

@@ -1,6 +1,6 @@
 import { IsInt, IsNotEmpty, IsOptional, IsString, IsNumber, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TipoConcepto, TipoMultiplicador } from '.prisma/productos-client';
+import { TipoConcepto, TipoMultiplicador } from '@internal/datos-maestros-client';
 
 export class CreateConceptoCostoDto {
   @ApiPropertyOptional({

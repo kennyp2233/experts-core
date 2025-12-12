@@ -4,7 +4,7 @@ import {
     NotFoundException,
     BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateTipoEmbalajeDto, UpdateTipoEmbalajeDto } from '../dto';
 import { TipoEmbalajeEntity } from '../entities/tipo-embalaje.entity';
 

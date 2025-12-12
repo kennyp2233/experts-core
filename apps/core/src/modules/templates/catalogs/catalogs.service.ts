@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@internal/templates-client';
 import { CatalogLoaderService } from './services/catalog-loader.service';
 import { CatalogSearchService } from './services/catalog-search.service';
 import { CatalogValidatorService } from './services/catalog-validator.service';

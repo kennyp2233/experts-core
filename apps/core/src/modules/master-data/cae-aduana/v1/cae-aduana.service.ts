@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateCaeAduanaDto, UpdateCaeAduanaDto } from './dto';
 
 @Injectable()
@@ -14,7 +14,7 @@ export class CaeAduanaService {
 
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
-  ) {}
+  ) { }
 
   async create(createCaeAduanaDto: CreateCaeAduanaDto) {
     try {

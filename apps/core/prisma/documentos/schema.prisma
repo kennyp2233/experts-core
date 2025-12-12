@@ -2,7 +2,7 @@
 generator documentosClient {
   provider   = "prisma-client-js"
   outputMode = "outputDir"
-  output     = "../../node_modules/.prisma/documentos-client"
+  output     = "../../node_modules/@internal/documentos-client"
 }
 
 datasource documentosDb {

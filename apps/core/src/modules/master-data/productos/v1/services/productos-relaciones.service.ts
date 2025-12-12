@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { ProductosArancelesService } from './productos-aranceles.service';
 import { ProductosCompuestosService } from './productos-compuestos.service';
 import { ProductosMiProService } from './productos-mi-pro.service';
@@ -16,7 +16,7 @@ export class ProductosRelacionesService {
     private arancelesService: ProductosArancelesService,
     private compuestosService: ProductosCompuestosService,
     private miProService: ProductosMiProService,
-  ) {}
+  ) { }
 
   async handleArancelesUpdate(
     productId: number,

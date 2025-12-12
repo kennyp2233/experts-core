@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@internal/templates-client';
 
 @Injectable()
 export class CatalogValidatorService {

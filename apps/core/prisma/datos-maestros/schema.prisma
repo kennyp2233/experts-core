@@ -2,7 +2,7 @@
 generator productosClient {
     provider   = "prisma-client-js"
     outputMode = "outputDir"
-    output     = "../../node_modules/.prisma/productos-client"
+    output     = "../../node_modules/@internal/datos-maestros-client"
     engineType = "client"
 }
 

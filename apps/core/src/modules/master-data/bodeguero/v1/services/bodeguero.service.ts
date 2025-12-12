@@ -4,7 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateBodegueroDto, UpdateBodegueroDto } from '../dto';
 import { Bodeguero } from '../entities/bodeguero.entity';
 
@@ -12,7 +12,7 @@ import { Bodeguero } from '../entities/bodeguero.entity';
 export class BodegueroService {
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
-  ) {}
+  ) { }
 
   async create(createDto: CreateBodegueroDto): Promise<Bodeguero> {
     try {

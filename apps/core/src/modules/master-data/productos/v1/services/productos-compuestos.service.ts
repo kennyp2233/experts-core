@@ -4,7 +4,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 
 @Injectable()
 export class ProductosCompuestosService {
@@ -12,7 +12,7 @@ export class ProductosCompuestosService {
 
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
-  ) {}
+  ) { }
 
   async validateIdsExist(productId: number, compuestoIds: number[]) {
     if (compuestoIds.length === 0) return;

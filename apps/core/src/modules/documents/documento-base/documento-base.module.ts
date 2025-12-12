@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { DocumentoBaseService } from './documento-base.service';
-import { PrismaClient } from '.prisma/documentos-client';
+import { PrismaClient } from '@internal/documentos-client';
 
 @Module({
     providers: [

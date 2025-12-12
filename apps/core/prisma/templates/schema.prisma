@@ -2,7 +2,7 @@
 generator templatesClient {
     provider   = "prisma-client-js"
     outputMode = "outputDir"
-    output     = "../../node_modules/.prisma/templates-client"
+    output     = "../../node_modules/@internal/templates-client"
     engineType = "client"
 }
 

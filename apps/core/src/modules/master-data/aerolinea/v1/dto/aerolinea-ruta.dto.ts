@@ -1,6 +1,6 @@
 import { IsInt, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TipoRuta } from '.prisma/productos-client';
+import { TipoRuta } from '@internal/datos-maestros-client';
 
 export class CreateAerolineaRutaDto {
   @ApiProperty({

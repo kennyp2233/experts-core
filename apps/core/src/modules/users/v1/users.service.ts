@@ -5,14 +5,14 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/usuarios-client';
+import { PrismaClient } from '@internal/usuarios-client';
 import { UpdateUserRoleDto } from '../../auth/v1/dto/update-user-role.dto';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@Inject('PrismaClientUsuarios') private prisma: PrismaClient) {}
+  constructor(@Inject('PrismaClientUsuarios') private prisma: PrismaClient) { }
 
   async findAll() {
     try {

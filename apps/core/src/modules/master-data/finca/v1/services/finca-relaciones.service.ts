@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { FincaChoferService } from './finca-chofer.service';
 import { FincaProductoService } from './finca-producto.service';
 
@@ -9,7 +9,7 @@ export class FincaRelacionesService {
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
     private choferService: FincaChoferService,
     private productoService: FincaProductoService,
-  ) {}
+  ) { }
 
   async handleChoferesUpdate(fincaId: number, choferesIds?: number[]) {
     if (!choferesIds) return null;

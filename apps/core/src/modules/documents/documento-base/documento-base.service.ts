@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '.prisma/documentos-client';
+import { PrismaClient } from '@internal/documentos-client';
 
 @Injectable()
 export class DocumentoBaseService {

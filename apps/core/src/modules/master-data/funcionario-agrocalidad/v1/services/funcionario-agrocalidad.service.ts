@@ -6,7 +6,7 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '.prisma/productos-client';
+import { PrismaClient } from '@internal/datos-maestros-client';
 import { CreateFuncionarioAgrocalidadDto, UpdateFuncionarioAgrocalidadDto } from '../dto';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class FuncionarioAgrocalidadService {
 
   constructor(
     @Inject('PrismaClientDatosMaestros') private prisma: PrismaClient,
-  ) {}
+  ) { }
 
   async create(createFuncionarioAgrocalidadDto: CreateFuncionarioAgrocalidadDto) {
     try {
