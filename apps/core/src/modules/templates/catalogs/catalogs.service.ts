@@ -42,8 +42,8 @@ export class CatalogsService {
         return this.search.searchProducto(dto.nombre, dto.fuzzy);
     }
 
-    async searchProductosAutocomplete(query: string) {
-        return this.search.searchProductosAutocomplete(query);
+    async searchProductosAutocomplete(query: string, subtipo?: string) {
+        return this.search.searchProductosAutocomplete(query, 15, subtipo);
     }
 
     async autoMatchProducts(productCodes: string[]) {
@@ -52,6 +52,23 @@ export class CatalogsService {
 
     async getStats() {
         return this.validator.validateIntegrity();
+    }
+
+    /**
+     * Get unique subtipos from catalogo_productos for filtering
+     */
+    async getSubtipos() {
+        const results = await this.prisma.catalogoProducto.findMany({
+            where: { activo: true },
+            select: { nombreSubtipoProducto: true },
+            distinct: ['nombreSubtipoProducto'],
+            orderBy: { nombreSubtipoProducto: 'asc' }
+        });
+
+        // Filter out nulls and return unique list
+        return results
+            .map(r => r.nombreSubtipoProducto)
+            .filter((s): s is string => s !== null && s !== undefined && s.trim() !== '');
     }
 
     async listPuertos(esEcuador: boolean) {
@@ -81,5 +98,3 @@ export class CatalogsService {
         });
     }
 }
-
-

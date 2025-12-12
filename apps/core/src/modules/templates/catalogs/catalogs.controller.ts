@@ -45,8 +45,16 @@ export class CatalogsController {
     }
 
     @Get('productos/autocomplete')
-    async searchProductosAutocomplete(@Query('q') query: string) {
-        return this.service.searchProductosAutocomplete(query);
+    async searchProductosAutocomplete(
+        @Query('q') query: string,
+        @Query('subtipo') subtipo?: string
+    ) {
+        return this.service.searchProductosAutocomplete(query, subtipo);
+    }
+
+    @Get('productos/subtipos')
+    async getSubtipos() {
+        return this.service.getSubtipos();
     }
 
     @Post('productos/auto-match')
@@ -72,5 +80,3 @@ export class CatalogsController {
         return this.service.searchPuertos(query, esEcuador === 'true');
     }
 }
-
-

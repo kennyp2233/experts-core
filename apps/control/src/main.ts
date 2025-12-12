@@ -16,6 +16,7 @@ async function bootstrap() {
       'http://localhost:3000', // Frontend desarrollo
       'http://localhost:4200', // Angular desarrollo
       'https://www.expertshcargo.com', // Producción
+      'https://system.expertshcargo.com', // Producción System
       'exp://*', // Expo apps
       '*' // Permitir todos los orígenes para apps móviles
     ],

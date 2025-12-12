@@ -138,23 +138,29 @@ export class CatalogSearchService {
     }
 
     /**
-     * Search products with limit for autocomplete
+     * Search products with limit for autocomplete, optionally filtered by subtipo
      */
-    async searchProductosAutocomplete(query: string, limit = 15) {
+    async searchProductosAutocomplete(query: string, limit = 15, subtipo?: string) {
         if (!query || query.length < 2) return [];
 
+        const where: any = {
+            activo: true,
+            OR: [
+                { codigoAgrocalidad: { contains: query, mode: 'insensitive' } },
+                { nombreComun: { contains: query, mode: 'insensitive' } }
+            ]
+        };
+
+        // Add subtipo filter if provided
+        if (subtipo) {
+            where.nombreSubtipoProducto = subtipo;
+        }
+
         return this.prisma.catalogoProducto.findMany({
-            where: {
-                activo: true,
-                OR: [
-                    { codigoAgrocalidad: { contains: query, mode: 'insensitive' } },
-                    { nombreComun: { contains: query, mode: 'insensitive' } }
-                ]
-            },
-            select: { codigoAgrocalidad: true, nombreComun: true },
+            where,
+            select: { codigoAgrocalidad: true, nombreComun: true, nombreSubtipoProducto: true },
             orderBy: { nombreComun: 'asc' },
             take: limit
         });
     }
 }
-
