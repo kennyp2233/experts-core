@@ -34,4 +34,4 @@ RUN yarn build
 EXPOSE 3000
 
 # Start command (Run build here to ensure dist exists despite potential volume issues)
-CMD ["sh", "-c", "yarn db:setup && yarn build && yarn start:prod"]
+CMD ["sh", "-c", "yarn build && yarn start:prod"]
