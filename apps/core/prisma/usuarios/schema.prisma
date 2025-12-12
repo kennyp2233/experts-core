@@ -1,7 +1,9 @@
 // Prisma schema for Usuarios Bounded Context
 generator usuariosClient {
-    provider = "prisma-client-js"
-    output   = "../../node_modules/.prisma/usuarios-client"
+    provider   = "prisma-client-js"
+    outputMode = "outputDir"
+    output     = "../../node_modules/.prisma/usuarios-client"
+    engineType = "client"
 }
 
 datasource usuariosDb {

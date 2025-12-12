@@ -3,6 +3,7 @@ generator productosClient {
     provider   = "prisma-client-js"
     outputMode = "outputDir"
     output     = "../../node_modules/.prisma/productos-client"
+    engineType = "client"
 }
 
 datasource productosDb {

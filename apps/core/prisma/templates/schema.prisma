@@ -1,0 +1,127 @@
+// Prisma schema for Templates Bounded Context
+generator templatesClient {
+    provider   = "prisma-client-js"
+    outputMode = "outputDir"
+    output     = "../../node_modules/.prisma/templates-client"
+    engineType = "client"
+}
+
+datasource templatesDb {
+    provider = "postgresql"
+}
+
+// ===== FITO / AGROCALIDAD MODELS =====
+
+// Tabla 1: Catálogo de Productos
+model CatalogoProducto {
+    id                     Int       @id @default(autoincrement())
+    nombreTipoProducto     String?   @map("nombre_tipo_producto") @templatesDb.VarChar(100)
+    nombreSubtipoProducto  String?   @map("nombre_subtipo_producto") @templatesDb.VarChar(100)
+    nombreComun            String?   @map("nombre_comun") @templatesDb.VarChar(200)
+    codigoAgrocalidad      String    @unique @map("codigo_agrocalidad") @templatesDb.VarChar(20)
+    clasificacion          String?   @templatesDb.VarChar(50)
+    nombreComunNormalizado String?   @map("nombre_comun_normalizado") @templatesDb.VarChar(200)
+    activo                 Boolean?  @default(true)
+    fechaCarga             DateTime? @default(now()) @map("fecha_carga") @templatesDb.Timestamp()
+    // @@index([codigoAgrocalidad], map: "idx_codigo") // Covered by unique
+
+    @@index([nombreComun], map: "idx_nombre_comun")
+    @@index([nombreComunNormalizado], map: "idx_nombre_normalizado")
+    @@map("catalogo_productos")
+}
+
+// Tabla 2: Catálogo de Puertos
+model CatalogoPuerto {
+    id                      Int       @id @default(autoincrement())
+    nombrePais              String?   @map("nombre_pais") @templatesDb.VarChar(100)
+    nombrePaisIngles        String?   @map("nombre_pais_ingles") @templatesDb.VarChar(100)
+    nombrePuerto            String?   @map("nombre_puerto") @templatesDb.VarChar(300)
+    codigoPuerto            String    @map("codigo_puerto") @templatesDb.VarChar(20)
+    tipoPuerto              String?   @map("tipo_puerto") @templatesDb.VarChar(20)
+    esEcuador               Boolean?  @map("es_ecuador")
+    nombrePuertoNormalizado String?   @map("nombre_puerto_normalizado") @templatesDb.VarChar(300)
+    activo                  Boolean?  @default(true)
+    fechaCarga              DateTime? @default(now()) @map("fecha_carga") @templatesDb.Timestamp()
+
+    @@index([nombrePais], map: "idx_pais")
+    @@index([codigoPuerto], map: "idx_codigo_puerto")
+    @@index([nombrePuertoNormalizado], map: "idx_nombre_puerto")
+    @@index([esEcuador], map: "idx_es_ecuador")
+    @@map("catalogo_puertos")
+}
+
+// Tabla 3: Caché de Exportadores
+model ExportadorCache {
+    id                  Int       @id @default(autoincrement())
+    nombreEmpresa       String    @map("nombre_empresa") @templatesDb.VarChar(300)
+    ruc                 String    @unique @templatesDb.VarChar(13)
+    razonSocial         String?   @map("razon_social") @templatesDb.VarChar(300)
+    direccion           String?   @templatesDb.Text
+    nombreNormalizado   String?   @map("nombre_normalizado") @templatesDb.VarChar(300)
+    origen              String?   @default("legacy_db") @templatesDb.VarChar(20)
+    activo              Boolean?  @default(true)
+    ultimaActualizacion DateTime? @default(now()) @map("ultima_actualizacion") @templatesDb.Timestamp()
+    // @@index([ruc], map: "idx_ruc") // Covered by unique
+
+    @@index([nombreEmpresa], map: "idx_nombre")
+    @@index([nombreNormalizado], map: "idx_nombre_norm")
+    @@map("exportadores_cache")
+}
+
+model FitoUploads {
+    id          Int       @id @default(autoincrement())
+    filename    String
+    status      String
+    createdAt   DateTime  @default(now()) @map("created_at")
+    processedAt DateTime? @map("processed_at")
+
+    xmlGenerated XmlGenerated[]
+
+    @@map("fito_uploads")
+}
+
+model XmlGenerated {
+    id       Int         @id @default(autoincrement())
+    uploadId Int         @map("upload_id")
+    upload   FitoUploads @relation(fields: [uploadId], references: [id])
+
+    filename   String
+    xmlContent String @map("xml_content")
+    exportador String
+    productos  String // JSON or Text list
+    status     String
+
+    @@map("xml_generated")
+}
+
+// ===== FITO MODULE MODELS =====
+
+model FitoJob {
+    id             String   @id @default(uuid()) @templatesDb.Uuid
+    guiaIds        String   @map("guia_ids") // Stored as simple-array string or JSON if preferred, specific request said simple-array
+    config         Json?    @templatesDb.JsonB
+    status         String   @default("pending") @templatesDb.VarChar(20) // pending, processing, completed, failed
+    processedCount Int      @default(0) @map("processed_count")
+    totalCount     Int      @default(0) @map("total_count")
+    results        Json?    @templatesDb.JsonB
+    error          String?  @templatesDb.Text
+    createdAt      DateTime @default(now()) @map("created_at") @templatesDb.Timestamp()
+    updatedAt      DateTime @updatedAt @map("updated_at") @templatesDb.Timestamp()
+
+    @@map("fito_jobs")
+}
+
+model FitoXml {
+    id           String   @id @default(uuid()) @templatesDb.Uuid
+    docNumero    Int      @map("doc_numero")
+    filename     String   @templatesDb.VarChar(255)
+    xmlContent   String   @map("xml_content") @templatesDb.Text
+    guiaData     Json?    @map("guia_data") @templatesDb.JsonB
+    status       String   @templatesDb.VarChar(20) // success, error
+    errorMessage String?  @map("error_message") @templatesDb.Text
+    createdAt    DateTime @default(now()) @map("created_at") @templatesDb.Timestamp()
+
+    // Index for faster lookups by docNumero
+    @@index([docNumero], map: "idx_fito_xml_doc_numero")
+    @@map("fito_xmls")
+}

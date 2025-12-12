@@ -3,7 +3,6 @@ import { APP_FILTER } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PrismaClient } from '.prisma/usuarios-client';
 
 // Controllers
 import { AuthControllerV1 } from './v1/controllers/auth.controller';
@@ -41,9 +40,6 @@ import { TokenRefreshFilter } from './v1/filters/token-refresh.filter';
     }),
   ],
   providers: [
-    // Prisma Client
-    { provide: 'PrismaClientUsuarios', useClass: PrismaClient },
-
     // Repositories
     UserRepository,
     TrustedDeviceRepository,

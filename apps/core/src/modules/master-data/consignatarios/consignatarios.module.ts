@@ -7,7 +7,6 @@ import { ConsignatarioFitoService } from './v1/services/consignatario-fito.servi
 import { ConsignatarioGuiaHService } from './v1/services/consignatario-guia-h.service';
 import { ConsignatarioGuiaMService } from './v1/services/consignatario-guia-m.service';
 import { ConsignatarioTransmisionService } from './v1/services/consignatario-transmision.service';
-import { PrismaClient } from '.prisma/productos-client';
 
 @Module({
   controllers: [ConsignatariosController],
@@ -19,8 +18,7 @@ import { PrismaClient } from '.prisma/productos-client';
     ConsignatarioGuiaHService,
     ConsignatarioGuiaMService,
     ConsignatarioTransmisionService,
-    { provide: 'PrismaClientDatosMaestros', useClass: PrismaClient },
-  ],
+      ],
   exports: [ConsignatariosService],
 })
 export class ConsignatariosModule {}

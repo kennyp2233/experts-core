@@ -11,7 +11,7 @@ const path = require('path');
 const SCHEMAS = [
   { name: 'usuarios', path: './prisma/usuarios/schema.prisma' },
   { name: 'datos_maestros', path: './prisma/datos-maestros/schema.prisma' },
-  { name: 'guias', path: './prisma/guias/schema.prisma' },
+  { name: 'templates', path: './prisma/templates/schema.prisma' },
   { name: 'documentos', path: './prisma/documentos/schema.prisma' },
   // Agregar más según sea necesario
 ];
@@ -41,12 +41,31 @@ function createSchema(schemaName, schemaPath) {
   require('fs').writeFileSync(sqlFile, createSql);
 
   // 2. Ejecutar el SQL
-  const executeCmd = `npx prisma db execute --schema=${schemaPath} --file=${sqlFile}`;
-  if (!runCommand(executeCmd, `Crear schema '${schemaName}' en Postgres`)) {
+  // NOTA: 'prisma db execute' no soporta --schema, por lo que pasamos el contexto via ENV para que prisma.config.ts lo recoja.
+  const executeCmd = `npx prisma db execute --file=${sqlFile}`;
+
+  // Usamos una versión modificada de runCommand que inyecta el ENV
+  if (!runCommandWithEnv(executeCmd, `Crear schema '${schemaName}' en Postgres`, { PRISMA_SCHEMA_CONTEXT: schemaName })) {
     return false;
   }
 
   return true;
+}
+
+function runCommandWithEnv(command, description, envVars) {
+  console.log(`\n🔧 ${description}...`);
+  try {
+    execSync(command, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+      env: { ...process.env, ...envVars }
+    });
+    console.log(`✅ ${description} - Completado`);
+    return true;
+  } catch (error) {
+    console.error(`❌ ${description} - Error:`, error.message);
+    return false;
+  }
 }
 
 function migrateSchema(schemaName, schemaPath) {
