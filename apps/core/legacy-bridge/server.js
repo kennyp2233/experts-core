@@ -61,7 +61,11 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', connected: !!connection });
 });
 
-app.listen(PORT, () => {
-    console.log(`Legacy Bridge Server running on http://localhost:${PORT}`);
+// CAMBIAR LA ÚLTIMA PARTE DEL ARCHIVO:
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Legacy Bridge Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Local access: http://localhost:${PORT}`);
+    console.log(`Network access: http://192.168.0.100:${PORT}`);
     console.log('Ready to accept queries from Docker container.');
 });
