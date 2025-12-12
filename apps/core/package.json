@@ -7,12 +7,11 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main",
     "db:setup": "node scripts/setup-db-schemas.js",
-    "prisma:generate": "npm run prisma:generate:usuarios && npm run prisma:generate:datos-maestros && npm run prisma:generate:guias && npm run prisma:generate:documentos",
+    "prisma:generate": "npm run prisma:generate:usuarios && npm run prisma:generate:datos-maestros && npm run prisma:generate:documentos",
     "prisma:generate:usuarios": "prisma generate --schema=./prisma/usuarios/schema.prisma",
     "prisma:generate:datos-maestros": "prisma generate --schema=./prisma/datos-maestros/schema.prisma",
-    "prisma:generate:guias": "prisma generate --schema=./prisma/guias/schema.prisma",
     "prisma:generate:documentos": "prisma generate --schema=./prisma/documentos/schema.prisma",
     "prisma:dev": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -22,6 +21,7 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",
@@ -38,6 +38,7 @@
     "@types/multer": "^2.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/uuid": "^9.0.8",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "bull": "^4.16.5",
     "class-transformer": "^0.5.1",
@@ -48,8 +49,6 @@
     "helmet": "^8.1.0",
     "ioredis": "^5.8.2",
     "nest-winston": "^1.10.0",
-    "node-adodb": "^5.0.3",
-    "odbc": "^2.4.9",
     "otplib": "^12.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -66,6 +65,7 @@
     "xml-js": "^1.6.11"
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.0.14",
     "@types/node": "^24.10.1",
     "prisma": "^7.1.0",
     "tsx": "^4.21.0"

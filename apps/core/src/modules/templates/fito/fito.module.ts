@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bull';
 import { CatalogsModule } from '../catalogs/catalogs.module';
 import { FitoController } from './fito.controller';
@@ -10,6 +11,7 @@ import { FitoProcessor } from './services/fito-processor.service';
 
 @Module({
     imports: [
+        HttpModule,
         BullModule.registerQueue({
             name: 'fito-xml',
         }),

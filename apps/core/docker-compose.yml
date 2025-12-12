@@ -1,6 +1,31 @@
 version: '3.8'
 
 services:
+  api:
+    build: .
+    container_name: experts-core-api
+    ports:
+      - "3005:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/experts_core?schema=public
+      - DATABASE_URL_USUARIOS=postgresql://postgres:password@postgres:5432/experts_core?schema=usuarios
+      - DATABASE_URL_DATOS_MAESTROS=postgresql://postgres:password@postgres:5432/experts_core?schema=datos_maestros
+      - DATABASE_URL_TEMPLATES=postgresql://postgres:password@postgres:5432/experts_core?schema=templates
+      - DATABASE_URL_DOCUMENTOS=postgresql://postgres:password@postgres:5432/experts_core?schema=documentos
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ACCESS_BRIDGE_URL=http://host.docker.internal:3006/query
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./src:/app/src  # For dev hot-reload if we overrode command, but sticking to simple start for now
+
   postgres:
     image: postgres:15
     container_name: experts-core-postgres
@@ -9,7 +34,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - experts-core_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -18,7 +43,7 @@ services:
     image: redis:7-alpine
     container_name: experts-core-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -26,5 +51,4 @@ services:
 
 volumes:
   experts-core_postgres_data:
-    external: true
   redis_data:

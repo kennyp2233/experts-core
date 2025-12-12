@@ -1,54 +1,41 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as odbc from 'odbc';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { GuiaCompleta, GuiaData, DetalleGuia, GuiaMadre, MarcaData } from '../interfaces/guia-data.interface';
 
 @Injectable()
-export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
-    private connection: odbc.Connection | null = null;
+export class LegacyDbService {
     private readonly logger = new Logger(LegacyDbService.name);
-    private readonly dbPath: string;
-    private readonly connectionString: string;
+    private readonly bridgeUrl: string;
 
-    constructor(private configService: ConfigService) {
-        this.dbPath = this.configService.get<string>('LEGACY_DB_PATH') || '';
-        const dbPassword = this.configService.get<string>('LEGACY_DB_PASSWORD') || '';
-
-        if (!this.dbPath) {
-            this.logger.warn('LEGACY_DB_PATH not configured. Access DB connection will fail.');
-            this.connectionString = '';
-        } else {
-            this.connectionString = `Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=${this.dbPath};PWD=${dbPassword};`;
-        }
+    constructor(
+        private configService: ConfigService,
+        private httpService: HttpService
+    ) {
+        // Default to host.docker.internal for Docker -> Host communication
+        this.bridgeUrl = this.configService.get<string>('ACCESS_BRIDGE_URL') || 'http://host.docker.internal:3006/query';
+        this.logger.log(`LegacyDbService configured with Bridge URL: ${this.bridgeUrl}`);
     }
 
-    async onModuleInit() {
-        if (this.connectionString) {
-            try {
-                this.logger.log(`Connecting to Access DB...`);
-                this.connection = await odbc.connect(this.connectionString);
-                this.logger.log('Connected to Access database via ODBC');
-            } catch (error) {
-                this.logger.error(`Failed to connect to Access DB: ${JSON.stringify(error)}`);
-            }
+    /**
+     * Executes a SQL query via the Access Bridge
+     */
+    private async queryBridge<T>(sql: string): Promise<T[]> {
+        try {
+            const { data } = await firstValueFrom(
+                this.httpService.post(this.bridgeUrl, { sql })
+            );
+            return data as T[];
+        } catch (error) {
+            this.logger.error(`Bridge Query Failed. URL: ${this.bridgeUrl}. Error: ${error.message}`, error.stack);
+            // Return empty array on failure to avoid crashing the app, or rethrow? 
+            // Original code caught errors and returned empty array or null mostly.
+            // But sometimes threw. Let's try to match behavior per method, but here we explicitly throw 
+            // so the caller handles it or we return empty based on context. 
+            // Actually, best to throw here and handle in methods.
+            throw error;
         }
-    }
-
-    async onModuleDestroy() {
-        if (this.connection) {
-            await this.connection.close();
-            this.logger.log('Closed Access database connection');
-        }
-    }
-
-    private async ensureConnection(): Promise<odbc.Connection> {
-        if (!this.connection) {
-            if (!this.connectionString) {
-                throw new Error('Access DB not configured');
-            }
-            this.connection = await odbc.connect(this.connectionString);
-        }
-        return this.connection;
     }
 
     /**
@@ -56,7 +43,6 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
      */
     async listGuias(limit = 50): Promise<GuiaMadre[]> {
         try {
-            const conn = await this.ensureConnection();
             const sql = `
                 SELECT TOP ${limit}
                     d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
@@ -67,7 +53,8 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
                 LEFT JOIN PIN_auxMarcas AS mar ON d.marCodigo = mar.marCodigo)
                 ORDER BY m.docFecha DESC
             `;
-            return conn.query<GuiaMadre>(sql);
+            const results = await this.queryBridge<GuiaMadre>(sql);
+            return results || [];
         } catch (error) {
             this.logger.error(`Error listing guias: ${error.message}`);
             return [];
@@ -79,9 +66,8 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
      */
     async getMarcaData(marCodigo: number): Promise<MarcaData | null> {
         try {
-            const conn = await this.ensureConnection();
             const sql = `SELECT * FROM PIN_auxMarcas WHERE marCodigo = ${marCodigo}`;
-            const results = await conn.query<MarcaData>(sql);
+            const results = await this.queryBridge<MarcaData>(sql);
             return results[0] || null;
         } catch (error) {
             this.logger.error(`Error fetching marca ${marCodigo}: ${error.message}`);
@@ -94,17 +80,16 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
      */
     async getGuiaByDocNumGuia(docNumGuia: string): Promise<GuiaMadre | null> {
         try {
-            const conn = await this.ensureConnection();
             const sql = `
                 SELECT d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
-                       m.docFecha, m.docDestino,
-                       mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
+                    m.docFecha, m.docDestino,
+                    mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
                 FROM ((PIN_dDocCoor AS d
                 INNER JOIN PIN_MCoordina AS m ON d.bodCodigo = m.bodCodigo AND d.docTipo = m.docTipo AND d.docNumero = m.docNumero)
                 LEFT JOIN PIN_auxMarcas AS mar ON d.marCodigo = mar.marCodigo)
                 WHERE d.docNumGuia = '${docNumGuia}'
             `;
-            const results = await conn.query<GuiaMadre>(sql);
+            const results = await this.queryBridge<GuiaMadre>(sql);
             return results[0] || null;
         } catch (error) {
             this.logger.error(`Error fetching guia by docNumGuia ${docNumGuia}: ${error.message}`);
@@ -114,10 +99,8 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
 
     async getGuiaCompleta(docNumero: number): Promise<GuiaCompleta> {
         try {
-            const conn = await this.ensureConnection();
-
             const guiaSql = `SELECT * FROM PIN_MCoordina WHERE docNumero = ${docNumero}`;
-            const guias = await conn.query<GuiaData>(guiaSql);
+            const guias = await this.queryBridge<GuiaData>(guiaSql);
 
             if (!guias || guias.length === 0) {
                 throw new Error(`Guía ${docNumero} no encontrada en Access.`);
@@ -138,7 +121,7 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
                   AND d.docTipo = '${docTipo}' 
                   AND d.bodCodigo = ${bodCodigo}
             `;
-            const detalles = await conn.query<DetalleGuia>(detallesSql);
+            const detalles = await this.queryBridge<DetalleGuia>(detallesSql);
 
             return {
                 guia,
@@ -159,10 +142,8 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
 
     async getGuiasHijas(docNumero: number): Promise<DetalleGuia[]> {
         try {
-            const conn = await this.ensureConnection();
-
             const madreSql = `SELECT docTipo, bodCodigo FROM PIN_MCoordina WHERE docNumero = ${docNumero}`;
-            const madres = await conn.query<{ docTipo: string; bodCodigo: number }>(madreSql);
+            const madres = await this.queryBridge<{ docTipo: string; bodCodigo: number }>(madreSql);
 
             if (!madres || madres.length === 0) {
                 throw new Error(`Guía Madre ${docNumero} no encontrada`);
@@ -182,11 +163,10 @@ export class LegacyDbService implements OnModuleInit, OnModuleDestroy {
                   AND d.bodCodigo = ${bodCodigo}
             `;
 
-            return conn.query<DetalleGuia>(sql);
+            return this.queryBridge<DetalleGuia>(sql);
         } catch (error) {
             this.logger.error(`Error fetching guias hijas for ${docNumero}: ${error.message}`);
             throw error;
         }
     }
 }
-

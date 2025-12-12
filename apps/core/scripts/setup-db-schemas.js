@@ -117,7 +117,15 @@ async function main() {
   console.log(`  ❌ Fallidos: ${failCount}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-  process.exit(failCount > 0 ? 1 : 0);
+  if (failCount > 0) {
+    console.error('⚠️  Se encontraron errores. Manteniendo el proceso vivo para depuración...');
+    console.error('    Por favor revise los logs arriba para ver el error de migración.');
+    // Keep alive forever (or until manually stopped) to prevent Docker restart loop
+    setInterval(() => { }, 1000);
+    return;
+  }
+
+  process.exit(0);
 }
 
 main().catch((error) => {
