@@ -1,4 +1,4 @@
-const { PrismaClient } = require('.prisma/productos-client');
+const { PrismaClient } = require('@internal/datos-maestros-client');
 
 const prisma = new PrismaClient();
 
