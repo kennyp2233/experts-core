@@ -1,12 +1,3 @@
 @echo off
-echo Starting Legacy Access Bridge...
-cd /d "%~dp0"
-
-if not exist node_modules (
-    echo Installing dependencies...
-    call yarn install
-)
-
-echo Starting server...
-call yarn start
-paste
+cd /d C:\nueva_web\experts-core\apps\core\legacy-bridge
+"C:\node-v18.20.5-win-x86\node.exe" server.js

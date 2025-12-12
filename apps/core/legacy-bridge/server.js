@@ -1,5 +1,5 @@
 const express = require('express');
-const odbc = require('odbc');
+const ADODB = require('node-adodb');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config();
@@ -18,33 +18,18 @@ if (!dbPath) {
     process.exit(1);
 }
 
-const connectionString = `Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=${dbPath};PWD=${dbPassword};`;
+// Conexión con ADODB (usa OLE DB nativo de Windows, sin compilación)
+const connectionString = `Provider=Microsoft.Jet.OLEDB.4.0;Data Source=${dbPath};Jet OLEDB:Database Password=${dbPassword};`;
+const connection = ADODB.open(connectionString);
 
-let connection;
-
-async function connectToDb() {
-    try {
-        console.log(`Connecting to Access DB at: ${dbPath}`);
-        connection = await odbc.connect(connectionString);
-        console.log('Successfully connected to Access Database.');
-    } catch (error) {
-        console.error('Failed to connect to Access Database:', error);
-        process.exit(1);
-    }
-}
-
-connectToDb();
+console.log(`✅ Connected to Access DB at: ${dbPath}`);
 
 app.post('/query', async (req, res) => {
     const { sql } = req.body;
-
     if (!sql) {
         return res.status(400).json({ error: 'SQL query is required' });
     }
-
-    // Basic logging
     console.log(`[QUERY] ${sql}`);
-
     try {
         const result = await connection.query(sql);
         res.json(result);
@@ -58,10 +43,8 @@ app.post('/query', async (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', connected: !!connection });
+    res.json({ status: 'ok' });
 });
-
-// CAMBIAR LA ÚLTIMA PARTE DEL ARCHIVO:
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Legacy Bridge Server running on http://0.0.0.0:${PORT}`);
