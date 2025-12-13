@@ -57,7 +57,8 @@ export class XmlGeneratorService {
                         nombreMarca: { _text: config.nombreMarca },
                         nombreConsignatario: { _text: config.nombreConsignatario },
                         direccionConsignatario: { _text: config.direccionConsignatario },
-                        informacionAdicional: { _text: config.informacionAdicional || '' }
+                        // Only include informacionAdicional if it has a value
+                        ...(config.informacionAdicional ? { informacionAdicional: { _text: config.informacionAdicional } } : {})
                     },
                     datosPago: {
                         formaPago: { _text: 'SALDO' }
