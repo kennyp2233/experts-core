@@ -17,6 +17,7 @@ export interface GuiaMadre {
     marCodigo: number;
     docFecha: string;
     docDestino?: string;
+    docFITODestino?: string;
     consignatarioNombre?: string;
     consignatarioDireccion?: string;
 }

@@ -46,7 +46,7 @@ export class LegacyDbService {
             const sql = `
                 SELECT TOP ${limit}
                     d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
-                    m.docFecha, m.docDestino,
+                    m.docFecha, m.docDestino, m.docFITODestino,
                     mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
                 FROM ((PIN_dDocCoor AS d
                 INNER JOIN PIN_MCoordina AS m ON d.bodCodigo = m.bodCodigo AND d.docTipo = m.docTipo AND d.docNumero = m.docNumero)
@@ -82,7 +82,7 @@ export class LegacyDbService {
         try {
             const sql = `
                 SELECT d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
-                    m.docFecha, m.docDestino,
+                    m.docFecha, m.docDestino, m.docFITODestino,
                     mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
                 FROM ((PIN_dDocCoor AS d
                 INNER JOIN PIN_MCoordina AS m ON d.bodCodigo = m.bodCodigo AND d.docTipo = m.docTipo AND d.docNumero = m.docNumero)
@@ -167,6 +167,20 @@ export class LegacyDbService {
         } catch (error) {
             this.logger.error(`Error fetching guias hijas for ${docNumero}: ${error.message}`);
             throw error;
+        }
+    }
+
+    /**
+     * Get destination info from PIN_auxDestinos by code
+     */
+    async getDestinoByCode(desCodigo: string): Promise<{ desCodigo: string; desNombre: string; desAeropuerto: string; desPais: string } | null> {
+        try {
+            const sql = `SELECT desCodigo, desNombre, desAeropuerto, desPais FROM PIN_auxDestinos WHERE desCodigo = '${desCodigo}'`;
+            const results = await this.queryBridge<{ desCodigo: string; desNombre: string; desAeropuerto: string; desPais: string }>(sql);
+            return results[0] || null;
+        } catch (error) {
+            this.logger.error(`Error fetching destino ${desCodigo}: ${error.message}`);
+            return null;
         }
     }
 }

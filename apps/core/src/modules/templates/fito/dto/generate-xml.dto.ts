@@ -20,17 +20,18 @@ export class FitoXmlConfigDto {
     @IsString()
     codigoPuertoDestino: string;
 
-    @IsOptional()
     @IsString()
-    nombreMarca?: string;
+    nombreMarca: string;
+
+    @IsString()
+    nombreConsignatario: string;
+
+    @IsString()
+    direccionConsignatario: string;
 
     @IsOptional()
     @IsString()
-    nombreConsignatario?: string;
-
-    @IsOptional()
-    @IsString()
-    direccionConsignatario?: string;
+    informacionAdicional?: string;
 }
 
 export class ProductMappingDto {
@@ -50,6 +51,26 @@ export class ProductMappingDto {
     confidence: number;
 }
 
+export class GuiaHijaAgregadaDto {
+    @IsString()
+    plaRUC: string;
+
+    @IsString()
+    plaNombre: string;
+
+    @IsString()
+    proCodigo: string;
+
+    @IsString()
+    codigoAgrocalidad: string;
+
+    @IsNumber()
+    detCajas: number;
+
+    @IsNumber()
+    detNumStems: number;
+}
+
 export class GenerateXmlDto {
     @IsArray()
     @IsInt({ each: true })
@@ -64,4 +85,9 @@ export class GenerateXmlDto {
     @ValidateNested({ each: true })
     @Type(() => ProductMappingDto)
     productMappings: ProductMappingDto[];
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => GuiaHijaAgregadaDto)
+    guiasHijas: GuiaHijaAgregadaDto[];
 }

@@ -60,5 +60,11 @@ export class FitoController {
     async getGuiasHijas(@Param('docNumero') docNumero: string) {
         return this.service.getGuiasHijas(parseInt(docNumero, 10));
     }
+
+    @Get('destino/:codigo')
+    @ApiOperation({ summary: 'Get destination info by code from PIN_auxDestinos' })
+    async getDestinoByCode(@Param('codigo') codigo: string) {
+        return this.service.getDestinoByCode(codigo);
+    }
 }
 

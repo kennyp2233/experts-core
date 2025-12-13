@@ -74,5 +74,9 @@ export class FitoService {
     async getGuiasHijas(docNumero: number) {
         return this.legacyDb.getGuiasHijas(docNumero);
     }
+
+    async getDestinoByCode(desCodigo: string) {
+        return this.legacyDb.getDestinoByCode(desCodigo);
+    }
 }
 

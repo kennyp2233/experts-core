@@ -8,32 +8,38 @@ export class XmlGeneratorService {
     private readonly logger = new Logger(XmlGeneratorService.name);
 
     async generateXML(guiaData: GuiaCompleta, dto: GenerateXmlDto): Promise<string> {
-        const { guia, detalles, consignatario } = guiaData;
-        const { config, productMappings } = dto;
+        const { config, guiasHijas } = dto;
 
-        // Build product mapping lookup
-        const productMap = new Map<string, string>();
-        if (productMappings && productMappings.length > 0) {
-            productMappings.forEach(m => {
-                productMap.set(m.originalCode, m.codigoAgrocalidad);
-            });
+        // Validate required config fields
+        const requiredFields = ['tipoSolicitud', 'codigoIdioma', 'codigoTipoProduccion', 'fechaEmbarque',
+            'codigoPuertoEc', 'codigoPuertoDestino', 'nombreMarca',
+            'nombreConsignatario', 'direccionConsignatario'];
+        const missingFields = requiredFields.filter(f => !config[f]);
+        if (missingFields.length > 0) {
+            throw new Error(`Campos requeridos faltantes en config: ${missingFields.join(', ')}`);
         }
 
-        // Prepare Products
+        // Validate guiasHijas
+        if (!guiasHijas || guiasHijas.length === 0) {
+            throw new Error('No hay guías hijas para procesar. Verifique que existan registros con bultos/cantidad > 0.');
+        }
+
+        // Prepare Products - Use pre-aggregated guiasHijas from frontend
         const productosXml = [];
-        for (const detalle of detalles) {
-            // Use mapping if available, otherwise fallback to original code
-            const codigoUnico = productMap.get(detalle.proCodigo) || detalle.proCodigo;
+        for (const hija of guiasHijas) {
+            if (!hija.plaRUC || hija.plaRUC === 'SIN_RUC') {
+                throw new Error(`Producto ${hija.proCodigo} no tiene RUC de plantación`);
+            }
 
             productosXml.push({
-                codigoUnicoProducto: { _text: codigoUnico },
-                bulto: { _text: (detalle.detCajas || 0).toFixed(2) },
-                cantidad: { _text: (detalle.detNumStems || 0).toFixed(2) },
-                identificadorExportador: { _text: detalle.plaRUC || '9999999999999' }
+                codigoUnicoProducto: { _text: hija.codigoAgrocalidad },
+                bulto: { _text: (hija.detCajas || 0).toFixed(2) },
+                cantidad: { _text: (hija.detNumStems || 0).toFixed(2) },
+                identificadorExportador: { _text: hija.plaRUC }
             });
         }
 
-        // Construct XML Object using config values from frontend
+        // Construct XML Object using ONLY config values from frontend
         const xmlObject = {
             _declaration: { _attributes: { version: '1.0', encoding: 'utf-8' } },
             certificadoFitosanitario: {
@@ -43,21 +49,21 @@ export class XmlGeneratorService {
                 },
                 id: {
                     datosGenerales: {
-                        tipoSolicitud: { _text: config.tipoSolicitud || 'ORNAMENTALES' },
-                        codigoIdioma: { _text: config.codigoIdioma || 'SPA' },
-                        codigoTipoProduccion: { _text: config.codigoTipoProduccion || 'CONV' },
-                        fechaEmbarque: { _text: config.fechaEmbarque || this.formatDate(guia.docFecha) },
-                        codigoPuertoEc: { _text: config.codigoPuertoEc || 'AEECUIO' },
-                        nombreMarca: { _text: config.nombreMarca || 'LAS DEL EXPORTADOR' },
-                        nombreConsignatario: { _text: config.nombreConsignatario || consignatario.nombre },
-                        direccionConsignatario: { _text: config.direccionConsignatario || consignatario.direccion },
-                        informacionAdicional: { _text: consignatario.fito || guia.docNota || '' }
+                        tipoSolicitud: { _text: config.tipoSolicitud },
+                        codigoIdioma: { _text: config.codigoIdioma },
+                        codigoTipoProduccion: { _text: config.codigoTipoProduccion },
+                        fechaEmbarque: { _text: config.fechaEmbarque },
+                        codigoPuertoEc: { _text: config.codigoPuertoEc },
+                        nombreMarca: { _text: config.nombreMarca },
+                        nombreConsignatario: { _text: config.nombreConsignatario },
+                        direccionConsignatario: { _text: config.direccionConsignatario },
+                        informacionAdicional: { _text: config.informacionAdicional || '' }
                     },
                     datosPago: {
                         formaPago: { _text: 'SALDO' }
                     },
                     paisPuertosDestino: {
-                        codigoPaisPuertoDestino: { _text: config.codigoPuertoDestino || 'USMIA' }
+                        codigoPaisPuertoDestino: { _text: config.codigoPuertoDestino }
                     },
                     exportadoresProductos: {
                         producto: productosXml
