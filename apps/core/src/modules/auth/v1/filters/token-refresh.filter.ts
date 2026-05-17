@@ -10,6 +10,14 @@ import { TokenService } from '../services/token.service';
 import { UserRepository } from '../repositories/user.repository';
 import { AuthConstants } from '../config/auth.constants';
 
+/**
+ * Header that signals to the frontend that the access cookie was just refreshed
+ * and the original request should be retried. Body message is kept for back-compat
+ * with older front builds; new clients should use the header.
+ */
+export const TOKEN_REFRESHED_HEADER = 'X-Token-Refreshed';
+const LEGACY_REFRESH_BODY_MESSAGE = 'Token refresh succeeded, retry request';
+
 @Catch(UnauthorizedException)
 export class TokenRefreshFilter implements ExceptionFilter {
     private readonly logger = new Logger(TokenRefreshFilter.name);
@@ -25,24 +33,26 @@ export class TokenRefreshFilter implements ExceptionFilter {
         const request = ctx.getRequest<Request>();
         const message = exception.message;
 
-        // Check if error is due to expired JWT or missing token (cookie expired)
         if (
             message.includes('jwt expired') ||
             message.includes('Token expirado') ||
             message.includes('No auth token') ||
             message === 'Unauthorized'
         ) {
-            this.logger.debug(`Auth error caught by filter: "${message}", attempting auto-refresh...`);
+            this.logger.debug(`Auth error caught: "${message}", attempting refresh...`);
             try {
                 await this.handleTokenRefresh(request, response);
                 return;
             } catch (error) {
-                this.logger.error('Token refresh failed in filter', error);
-                // Fall through to default error response
+                // Expected outcome when the user simply isn't logged in (no refresh cookie,
+                // or refresh token expired). Keep at debug to avoid noisy ERROR logs.
+                this.logger.debug(
+                    `Refresh skipped: ${error instanceof Error ? error.message : String(error)}`,
+                );
+                // Fall through to 401 below
             }
         }
 
-        // Default 401 response
         response.status(401).json({
             statusCode: 401,
             timestamp: new Date().toISOString(),
@@ -52,31 +62,23 @@ export class TokenRefreshFilter implements ExceptionFilter {
     }
 
     private async handleTokenRefresh(request: Request, response: Response) {
-        // Extract refresh token from cookie
         const refreshToken = request.cookies?.refresh_token;
-
         if (!refreshToken) {
             throw new UnauthorizedException('No refresh token found');
         }
 
-        // Validate refresh token
         const userId = await this.tokenService.validateRefreshToken(refreshToken);
-
         if (!userId) {
             throw new UnauthorizedException('Invalid refresh token');
         }
 
-        // Get user
         const user = await this.userRepository.findPublicInfo(userId);
-
         if (!user) {
             throw new UnauthorizedException('User not found');
         }
 
-        // Generate NEW access token
         const newAccessToken = this.tokenService.generateAccessToken(user);
 
-        // Set new cookie
         const env = process.env.NODE_ENV || 'development';
         response.cookie(AuthConstants.COOKIES.ACCESS_TOKEN_NAME, newAccessToken, {
             httpOnly: AuthConstants.COOKIES.OPTIONS.httpOnly,
@@ -86,12 +88,15 @@ export class TokenRefreshFilter implements ExceptionFilter {
             path: AuthConstants.COOKIES.OPTIONS.path,
         });
 
-        this.logger.log(`Access token refreshed successfully for user: ${user.username}`);
+        this.logger.log(`Access token refreshed for user: ${user.username}`);
 
-        // Return success response to trigger frontend retry
+        // Signal refresh via a typed response header (preferred) AND keep the body
+        // message for back-compat with the previous front interceptor.
+        response.setHeader(TOKEN_REFRESHED_HEADER, 'true');
         response.status(401).json({
             statusCode: 401,
-            message: 'Token refresh succeeded, retry request',
+            message: LEGACY_REFRESH_BODY_MESSAGE,
+            refreshed: true,
         });
     }
 }
