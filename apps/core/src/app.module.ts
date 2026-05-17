@@ -10,6 +10,7 @@ import { UsersModule } from './modules/users/users.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { EbfPortalModule } from './modules/integrations/ebf-portal/ebf-portal.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { AppControllerV1 } from './v1/app/app.controller';
@@ -47,6 +48,7 @@ import { RedisModule } from './redis/redis.module';
     MasterDataModule,
     DocumentsModule,
     TemplatesModule,
+    EbfPortalModule,
     HealthModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
