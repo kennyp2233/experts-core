@@ -19,7 +19,7 @@ const ebfPortalFactory = () => {
     },
     timezone: 'America/Guayaquil',
     requestTimeoutMs: parseInt(
-      process.env.EBF_PORTAL_TIMEOUT_MS || '20000',
+      process.env.EBF_PORTAL_TIMEOUT_MS || '60000',
       10,
     ),
   };
