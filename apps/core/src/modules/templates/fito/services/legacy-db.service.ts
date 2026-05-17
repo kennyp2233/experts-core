@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -8,6 +8,7 @@ import { GuiaCompleta, GuiaData, DetalleGuia, GuiaMadre, MarcaData } from '../in
 export class LegacyDbService {
     private readonly logger = new Logger(LegacyDbService.name);
     private readonly bridgeUrl: string;
+    private readonly bridgeToken: string;
 
     constructor(
         private configService: ConfigService,
@@ -15,16 +16,49 @@ export class LegacyDbService {
     ) {
         // Default to host.docker.internal for Docker -> Host communication
         this.bridgeUrl = this.configService.get<string>('ACCESS_BRIDGE_URL') || 'http://host.docker.internal:3006/query';
+        this.bridgeToken = this.configService.get<string>('LEGACY_BRIDGE_TOKEN') ?? '';
+        if (!this.bridgeToken) {
+            this.logger.warn('LEGACY_BRIDGE_TOKEN not set — bridge calls will fail with 401.');
+        }
         this.logger.log(`LegacyDbService configured with Bridge URL: ${this.bridgeUrl}`);
+    }
+
+    private static readonly WRITE_KEYWORDS = [
+        'UPDATE', 'INSERT', 'DELETE', 'ALTER', 'DROP',
+        'CREATE', 'TRUNCATE', 'REPLACE', 'MERGE', 'EXEC', 'EXECUTE',
+    ];
+
+    private detectWriteOperation(sql: string): string | null {
+        let cleaned = sql.trim();
+        while (true) {
+            if (cleaned.startsWith('/*')) {
+                const end = cleaned.indexOf('*/');
+                if (end === -1) break;
+                cleaned = cleaned.slice(end + 2).trim();
+            } else if (cleaned.startsWith('--')) {
+                const eol = cleaned.indexOf('\n');
+                cleaned = eol === -1 ? '' : cleaned.slice(eol + 1).trim();
+            } else {
+                break;
+            }
+        }
+        const firstWord = cleaned.split(/\s+/)[0]?.toUpperCase() ?? '';
+        return LegacyDbService.WRITE_KEYWORDS.includes(firstWord) ? firstWord : null;
     }
 
     /**
      * Executes a SQL query via the Access Bridge
      */
     private async queryBridge<T>(sql: string): Promise<T[]> {
+        const writeOp = this.detectWriteOperation(sql);
+        if (writeOp) {
+            throw new ForbiddenException(
+                `queryBridge() rejected ${writeOp}. Use executeWrite() for mutations.`,
+            );
+        }
         try {
             const { data } = await firstValueFrom(
-                this.httpService.post(this.bridgeUrl, { sql })
+                this.httpService.post(this.bridgeUrl, { sql }, { headers: { 'X-Bridge-Token': this.bridgeToken } })
             );
             return data as T[];
         } catch (error) {
@@ -181,6 +215,48 @@ export class LegacyDbService {
         } catch (error) {
             this.logger.error(`Error fetching destino ${desCodigo}: ${error.message}`);
             return null;
+        }
+    }
+
+    // Capa 2 guard. Capa 1 (bridge-side) pendiente — un cliente HTTP directo al port 3006 sigue pudiendo escribir.
+    async executeWrite(
+        sql: string,
+        options: { allowWrite: true; reason: string },
+    ): Promise<unknown> {
+        if (options?.allowWrite !== true) {
+            throw new ForbiddenException(
+                'executeWrite() requires { allowWrite: true } to mutate Access.',
+            );
+        }
+        if (typeof options?.reason !== 'string' || options.reason.trim().length < 5) {
+            throw new BadRequestException(
+                'executeWrite() requires a "reason" string (min 5 chars) for audit.',
+            );
+        }
+        const writeOp = this.detectWriteOperation(sql);
+        if (!writeOp) {
+            throw new BadRequestException(
+                'executeWrite() called with non-mutating SQL. Use queryBridge() / read methods for SELECT.',
+            );
+        }
+        this.logger.warn(
+            `[LEGACY-WRITE] op=${writeOp} reason="${options.reason}" sql=${sql}`,
+        );
+        try {
+            const { data } = await firstValueFrom(
+                this.httpService.post(
+                    this.bridgeUrl,
+                    { sql, allowWrite: true, reason: options.reason },
+                    { headers: { 'X-Bridge-Token': this.bridgeToken } },
+                ),
+            );
+            return data;
+        } catch (error) {
+            this.logger.error(
+                `Legacy write failed. op=${writeOp} reason="${options.reason}" error=${(error as Error).message}`,
+                (error as Error).stack,
+            );
+            throw error;
         }
     }
 }
