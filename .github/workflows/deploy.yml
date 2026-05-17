@@ -20,14 +20,17 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: latest
 
-      - name: Write SSH key + known_hosts
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 100.87.139.83 >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Run deploy script on server
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes kennyp2233@100.87.139.83 \
+          ssh -o BatchMode=yes kennyp2233@100.87.139.83 \
             'powershell -ExecutionPolicy Bypass -File C:\deploy\deploy-experts-core.ps1'
