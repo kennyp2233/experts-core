@@ -1,0 +1,3897 @@
+
+
+<div id="id-awb-top-filter-container" hx-swap-oob="true">
+  <form id="id-filter-table-form"
+        hx-get="/customer/awb/9773/details/"
+        hx-trigger="change"
+        hx-target="#tables-container"
+        hx-swap="innerHTML"
+        hx-indicator="#bar-indicator">
+    <input type="hidden" name="csrfmiddlewaretoken" value="KgWQh70vpDmD03cVQiPs9KvBcSSm13Qv6qzRw8QKY3k8yoQQ63NrxDtaQCNQpMQD">
+    
+
+<form  method="GET" > <div  
+    class="row" > <div  
+    class="row" > <div  
+    class="col-12 col-md-12 col-lg-1 d-flex align-items-center" > <span class='fw-medium align-middle'>Filter by:</span>
+</div>
+<div  
+    class="col-12 col-md-6 col-xl-3" > <div id="div_id_consignatario_marcacion" class="mb-3 mb-md-0"> <label
+                for="id_consignatario_marcacion" class="form-label">
+                Customer
+            </label> <select name="consignatario_marcacion" class="select form-select" id="id_consignatario_marcacion"> <option value="" selected>---------</option> <option value="715">IRIDA LONG</option>
+
+</select> </div> </div>
+<div  
+    class="col-12 col-md-6 col-xl-3" > <div id="div_id_truck" class="mb-3 mb-md-0"> <label
+                for="id_truck" class="form-label">
+                Truck
+            </label> <select name="truck" class="select form-select" id="id_truck"> <option value="" selected>---------</option> <option value="29">TRUCK TSVETOPT</option>
+
+</select> </div> </div>
+<div  
+    class="col-12 col-md-6 col-xl-3" > <div id="div_id_shipper" class="mb-3 mb-md-0"> <label
+                for="id_shipper" class="form-label">
+                Shipper
+            </label> <select name="shipper" class="select form-select" id="id_shipper"> <option value="" selected>---------</option> <option value="1419">ADARAROSES S.A</option> <option value="158">AGROTERRANORTE SA</option> <option value="1035">ASOPROAGRIPEDRO</option> <option value="653">BENIT FLOR</option> <option value="905">BLESS FLOWER</option> <option value="1829">CHAMBA YAGUANA MANUEL BENIGNO</option> <option value="1750">CHANGOLUISA CHINGO MYRIAN PATRICIA</option> <option value="1575">CUASCOTA COLLAGUAZO MARIA JUANA</option> <option value="574">EDANA FLORALBA</option> <option value="1615">ENRIQUEZ MORENO PABLO JAVIER</option> <option value="794">EXPROROSES</option> <option value="1384">FL. ALTAS CUMBRES</option> <option value="1822">FLORICOLA ROOS</option> <option value="667">FLORIECOLOGIC</option> <option value="479">FLORSANI CIA LTDA</option> <option value="1217">GUZMAN ROSA</option> <option value="1470">GWFLOWERS S.A.S.</option> <option value="113">INROSES</option> <option value="1106">JOYMARY FLOR</option> <option value="1510">KAMYLAS FLOWERS CL</option> <option value="1160">KHADROSES</option> <option value="2006">LARTISAN-ROSES S.A.S.</option> <option value="1452">LATINAFARMS</option> <option value="1074">LEON ROSES</option> <option value="1316">LOLITA FLOWERS</option> <option value="1882">MATIZ ROSES</option> <option value="131">MERIZALDE</option> <option value="139">MYSTIC  FLOWERS</option> <option value="1141">PINANGO CACUANGO NELSON FERNANDO</option> <option value="164">ROSAPRIMA</option> <option value="1960">TALLANA GUALAVISI ELIECER FERMIN</option>
+
+</select> </div> </div>
+<div  
+    class="col-12 col-md-6 col-xl-2" > <div id="div_id_only_daily_coo" class="mb-3 mb-md-0"> <label
+                for="id_only_daily_coo" class="form-label">
+                Only Daily COO
+            </label> <select name="only_daily_coo" class="select form-select" id="id_only_daily_coo"> <option value="False" selected>No</option> <option value="True">Yes</option>
+
+</select> </div> </div>
+
+</div>
+
+</div> </form>
+
+  </form>
+</div>
+<div id="tables-container">
+
+
+
+
+<!-- Botón de Export -->
+<div class="row mb-2">
+  <div class="col text-end pe-5">
+    <button type="button"
+            class="btn btn-success btn-md"
+            hx-get="/customer/awb/9773/details/?_export=xlsx"
+            hx-indicator="#bar-indicator"
+            title="Download as Excel">
+      <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+    </button>
+  </div>
+</div>
+<!-- Tabla de Resumen -->
+
+
+<!-- Tablas por Consignee -->
+
+  
+    <div class="card mb-3">
+      
+      <div class="card-body pb-1">
+
+
+
+  <div class="table-container table-responsive">
+    
+      <table class="table table-hover table-sm">
+        
+          
+            <thead >
+              <tr>
+                
+                  <th style="width: 150px;max-width: 150px; min-width: 150px;" class="d-lg-table-cell d-none">
+                    
+                      
+                    
+                  </th>
+                
+                  <th style="width: 250px;max-width: 250px; min-width: 250px;" class="d-lg-table-cell d-none">
+                    
+                      
+                    
+                  </th>
+                
+                  <th style="width: 120px;max-width: 120px; min-width: 120px;" class="d-lg-table-cell d-none">
+                    
+                      
+                    
+                  </th>
+                
+                  <th style="width: 120px;max-width: 120px; min-width: 120px;" class="d-md-table-cell d-none">
+                    
+                      
+                    
+                  </th>
+                
+                  <th >
+                    
+                      
+                    
+                  </th>
+                
+                  <th class="align-middle bg-blue-subtle text-center">
+                    
+                      BXS COO
+                    
+                  </th>
+                
+                  <th class="align-middle bg-blue-subtle text-center">
+                    
+                      PCS COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      FB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      HB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      QB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      EB COO
+                    
+                  </th>
+                
+                  <th class="align-middle bg-orange-subtle text-center">
+                    
+                      BXS WH
+                    
+                  </th>
+                
+                  <th class="align-middle bg-orange-subtle text-center">
+                    
+                      PCS WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      FB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      HB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      QB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      EB WH
+                    
+                  </th>
+                
+              </tr>
+            </thead>
+          
+        
+        
+          <tbody >
+            
+              
+                <tr class="even">
+                  
+                    <td style="width: 150px;max-width: 150px; min-width: 150px;" class="d-lg-table-cell d-none">
+                      
+                                  
+                      
+                    </td>
+                  
+                    <td style="width: 250px;max-width: 250px; min-width: 250px;" class="d-lg-table-cell d-none">
+                      
+                                  
+                      
+                    </td>
+                  
+                    <td style="width: 120px;max-width: 120px; min-width: 120px;" class="d-lg-table-cell d-none">
+                      
+                                  
+                      
+                    </td>
+                  
+                    <td style="width: 120px;max-width: 120px; min-width: 120px;" class="d-md-table-cell d-none">
+                      
+                        
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold pe-3">
+                      
+                        TOTAL:
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        20.000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        44
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        36
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        8
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        5.000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        13
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        7
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        6
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+          </tbody>
+        
+        
+          
+        
+      </table>
+    
+    
+      
+    
+  </div>
+
+</div>
+    </div>
+  
+    <div class="card mb-3">
+      
+        <div class="card-header">
+          <div class="row">
+            <div class="col-6 col-sm-2 col-lg-2">
+              <p class="fw-normal mb-0">Consignee:</p>
+            </div>
+            <div class="col-6 col-sm-4 col-lg-4">
+              <span class="fw-semibold">IRIDA LONG</span>
+            </div>
+            <div class="col-6 col-sm-2 col-lg-2">
+              <p class="fw-normal mb-0">Truck:</p>
+            </div>
+            <div class="col-6 col-sm-4 col-lg-4">
+              <span class="fw-semibold">TRUCK TSVETOPT</span>
+            </div>
+          </div>
+          <div class="row mt-md-2">
+            <div class="col-6 col-sm-2 col-lg-2">
+              <p class="fw-normal mb-0">HAWB Consignee:</p>
+            </div>
+            <div class="col-6 col-sm-4 col-lg-4">
+              <span class="fw-semibold">EBF200051249</span>
+            </div>
+            <div class="col-6 col-sm-2 col-lg-2">
+              <p class="fw-normal mb-0">HAWB Truck:</p>
+            </div>
+            <div class="col-6 col-sm-4 col-lg-4">
+              <span class="fw-semibold">EBF300010841</span>
+            </div>
+          </div>
+        </div>
+      
+      <div class="card-body pb-1">
+
+
+
+  <div class="table-container table-responsive">
+    
+      <table class="table table-hover table-sm small">
+        
+          
+            <thead >
+              <tr>
+                
+                  <th class="align-middle text-nowrap" style="width: 150px;max-width: 150px; min-width: 150px;">
+                    
+                      Alias
+                    
+                  </th>
+                
+                  <th class="align-middle text-nowrap" style="width: 250px;max-width: 250px; min-width: 250px;">
+                    
+                      Shipper
+                    
+                  </th>
+                
+                  <th class="align-middle text-nowrap" style="width: 120px;">
+                    
+                      Product
+                    
+                  </th>
+                
+                  <th class="align-middle text-nowrap">
+                    
+                      Date
+                    
+                  </th>
+                
+                  <th class="align-middle text-nowrap">
+                    
+                      HAWB
+                    
+                  </th>
+                
+                  <th class="align-middle bg-blue-subtle text-center">
+                    
+                      BXS COO
+                    
+                  </th>
+                
+                  <th class="align-middle bg-blue-subtle text-center">
+                    
+                      PCS COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      FB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      HB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      QB COO
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      EB COO
+                    
+                  </th>
+                
+                  <th class="align-middle bg-orange-subtle text-center">
+                    
+                      BXS WH
+                    
+                  </th>
+                
+                  <th class="align-middle bg-orange-subtle text-center">
+                    
+                      PCS WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      FB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      HB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      QB WH
+                    
+                  </th>
+                
+                  <th class="align-middle text-end text-nowrap">
+                    
+                      EB WH
+                    
+                  </th>
+                
+              </tr>
+            </thead>
+          
+        
+        
+          <tbody >
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        ADARAROSES S.A
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        ADARAROSES S.A
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311882
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        AGROTERRANORTE SA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        AGROTERRANORTE SA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        20/05/2026 11:36
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100309885
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        ASOPROAGRIPEDRO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        ASOCIACION DE PRODUCCION AGRICOLA PRODUCTORES PEDRO MONCAYO ASOPROAGRIPEDRO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:14
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311291
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        BENIT FLOR
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        BENITES PANCHI ADOLFO SANTIAGO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311602
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        BLESS FLOWER
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        LANCHIMBA TUTILLO MANUEL CLEMENTE
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311783
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        5
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        5
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        CHAMBA YAGUANA MANUEL BENIGNO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        CHAMBA YAGUANA MANUEL BENIGNO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312048
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        CHANGOLUISA CHINGO MYRIAN PATRICIA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        CHANGOLUISA CHINGO MYRIAN PATRICIA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        CLAVEL
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:20
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311301
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        CUASCOTA COLLAGUAZO MARIA JUANA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        CUASCOTA COLLAGUAZO MARIA JUANA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:20
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311304
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        EDANA FLORALBA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        BUITRON MANTILLA PAUL ENRIQUE
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311595
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        ENRIQUEZ MORENO PABLO JAVIER
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        ENRIQUEZ MORENO PABLO JAVIER
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:14
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311290
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        EXPROROSES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        EXPORT ROSES DEL ECUADOR EXPROROSES SA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:53
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312228
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        FL. ALTAS CUMBRES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FLORICOLA ALTASCUMBRES C.L.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311789
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        FLORICOLA ROOS
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FLORICOLA ROOS CIA.LTDA.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311600
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        FLORIECOLOGIC
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FLORIECOLOGIC S A
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 12:29
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312236
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,750
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        FLORSANI CIA LTDA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FLORICOLA SAN ISIDRO LABRADOR FLORSANI CIA. LTDA.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        GYPSOPHILA
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311605
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        GUZMAN ROSA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        GUZMAN ULCUANGO ROSA CELIA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ALSTROEMERIA
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:21
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311306
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        GWFLOWERS S.A.S.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        GWFLOWERS S.A.S.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:18
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311294
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        INROSES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        INROSES S.A.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311785
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        JOYMARY FLOR
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FARINANGO QUIMBIAMBA JOAQUIN
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311786
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        KAMYLAS FLOWERS CL
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        KAMYLAS FLOWERS CL
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 12:24
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312249
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        KHADROSES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        COBACANGO COBACANGO ANA MARISOL
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:19
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311295
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        LARTISAN-ROSES S.A.S.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        LARTISAN-ROSES S.A.S.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311788
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        LATINAFARMS
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        FLORICOLA LATINAFARMS CIA.LTDA.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:19
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311296
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        LEON ROSES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        HERRERA POZO CARLOS BOLIVAR
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:56
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312232
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        LOLITA FLOWERS
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        CUASCOTA COLLAGUAZO MARIA DOLORES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312115
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        3
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        MATIZ ROSES
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        ANDES BLOSSOMFARMS S.A.S.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311593
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        MERIZALDE
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        MERIZALDE &amp; RAMIREZ CARNATIONS S.A.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:19
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311298
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        MYSTIC  FLOWERS
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        MYSTICFLOWERS S.A.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:19
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311299
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        PINANGO CACUANGO NELSON FERNANDO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        PINANGO CACUANGO NELSON FERNANDO
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 11:42
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312114
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        ROSAPRIMA
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        ROSAPRIMA CIA. LTDA.
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        22/05/2026 12:24
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100312250
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        2
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 150px;max-width: 150px; min-width: 150px;">
+                      
+                        TALLANA GUALAVISI ELIECER FERMIN
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 250px;max-width: 250px; min-width: 250px;">
+                      
+                        TALLANA GUALAVISI ELIECER FERMIN
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-truncate" style="width: 120px;">
+                      
+                        ROSAS
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        21/05/2026 12:21
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap">
+                      
+                        EBF100311305
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-blue-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        0,500
+                      
+                    </td>
+                  
+                    <td class="align-middle bg-orange-subtle fw-semibold text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        1
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluedark text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+          </tbody>
+        
+        
+          
+            <tfoot >
+              <tr>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td class="align-middle bg-blue fw-bold text-end">20,000
+                  </td>
+                
+                  <td class="align-middle bg-blue fw-bold text-end">44
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">0
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">36
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">8
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">0
+                  </td>
+                
+                  <td class="align-middle bg-orange fw-bold text-end">5,000
+                  </td>
+                
+                  <td class="align-middle bg-orange fw-bold text-end">13
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">0
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">7
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">6
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluedark text-end">0
+                  </td>
+                
+              </tr>
+            </tfoot>
+          
+        
+      </table>
+    
+    
+      
+    
+  </div>
+
+</div>
+    </div>
+  
+
+</div>

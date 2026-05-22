@@ -1,0 +1,855 @@
+<!-- Base template with top and side navigation -->
+
+
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      
+  AWBs
+
+      | EBF Cargo
+    </title>
+    <link rel="shortcut icon"
+          href="/static/images/favicons/ebf-favicon.2cbf34bf0830.webp"
+          type="image/png" />
+    <!-- Custom BS CSS -->
+    <link rel="stylesheet"
+          href="/static/fonts/bootstrap-icons-1.11.3/font/bootstrap-icons.min.99c98a747647.css" />
+    <link rel="stylesheet" href="/static/css/project.min.1828a295f9f9.css" />
+    <!-- Specific CSS -->
+    
+  
+
+    <!-- Load Jquery before the HTML. Needed for bootstrap_datepicker_plus. -->
+    <script src="/static/js/jquery.min.2c872dbe60f4.js"></script>
+  </head>
+  <body data-bs-theme="dark">
+    <div>
+      <!-- Navbar -->
+      <nav class="navbar navbar-expand-xl navbar-absolute fixed-top navbar-dark bg-ebfbluedark p-1">
+        <div class="container-fluid">
+          <div class="navbar-wrapper">
+            <a class="navbar-brand py-0 ms-3 " href="#">
+              <img src="/static/images/ebf_logo_full.32a539f2770c.png"
+                   alt="EBF Logo"
+                   height="45px" />
+            </a>
+          </div>
+          <button id="navbar-toggle"
+                  class="navbar-toggler"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#navbarDropdown"
+                  aria-controls="navbarDropdown"
+                  aria-expanded="false"
+                  aria-label="Toggle navigation">
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarDropdown">
+            
+  <!-- EXTERNAL USERS - Content of the Top Nav Bar, regardless of color -->
+
+  <ul class="navbar-nav ms-2 ms-md-5 mb-2 mb-lg-0">
+  <li class="nav-item me-2">
+    <a class="nav-link active"
+       href="/customer/awb/list/"><i class="bi bi-airplane-fill me-2"></i>AWBs</a>
+  </li>
+</ul>
+
+
+<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+  <li class="nav-item dropdown show">
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="circle-half" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z" />
+    </symbol>
+    <symbol id="moon-stars-fill" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z" />
+    <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z" />
+    </symbol>
+    <symbol id="sun-fill" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
+    </symbol>
+  </svg>
+  <a class="nav-link dropdown-toggle"
+     href="#"
+     id="bd-theme"
+     role="button"
+     data-bs-toggle="dropdown"
+     aria-expanded="false">
+    <svg width="16"
+         height="16"
+         fill="currentColor"
+         class="bi my-1 theme-icon-active"
+         viewBox="0 0 16 16">
+      <use href="#circle-half"></use>
+    </svg>
+    <span class="d-lg-none ms-2" id="bd-theme-text">Cambiar Tema</span>
+  </a>
+  <ul class="dropdown-menu dropdown-menu-end"
+      aria-labelledby="bd-theme-text">
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center"
+              data-bs-theme-value="light"
+              aria-pressed="false">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#sun-fill"></use>
+        </svg>
+        Light
+      </button>
+    </li>
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center"
+              data-bs-theme-value="dark"
+              aria-pressed="false">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#moon-stars-fill"></use>
+        </svg>
+        Dark
+      </button>
+    </li>
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center active"
+              data-bs-theme-value="auto"
+              aria-pressed="true">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#circle-half"></use>
+        </svg>
+        Auto
+      </button>
+    </li>
+  </ul>
+</li>
+
+  <li class="nav-item py-0 col-12 col-lg-auto">
+    <div class="vr d-none d-lg-flex h-100 mx-lg-1 text-white"></div>
+    <hr class="d-lg-none text-white" />
+  </li>
+  <li class="nav-item dropdown show">
+    <!-- Hack to make dropdown work, but should be without show -->
+    <a class="nav-link dropdown-toggle"
+       href="#"
+       id="navbarDropdownMenuLink"
+       role="button"
+       data-bs-toggle="dropdown"
+       aria-expanded="false">
+      <i class="bi bi-person-circle me-2"></i>EXPERTS H.
+    </a>
+    
+  <ul class="dropdown-menu dropdown-menu-end"
+    aria-labelledby="navbarDropdownMenuLink">
+  <li>
+    <button type="button"
+            class="dropdown-item"
+            hx-get="/users/external/cliente/570/"
+            hx-target="#htmxProfileDialog">
+      <i class="bi bi-person-circle me-2"></i>My Profile
+    </button>
+  </li>
+  <li class="mx-auto col-12 col-lg-10">
+    <hr class=" my-1" />
+  </li>
+  <li>
+    <button type="button"
+            class="dropdown-item"
+            hx-get="/users/logout/en"
+            hx-target="#htmxProfileDialog">
+      <i class="bi bi-box-arrow-right me-2"></i>Log Out
+    </button>
+  </li>
+</ul>
+
+
+  </li>
+</ul>
+
+
+          </div>
+        </div>
+      </nav>
+      <!-- End Navbar -->
+      <div class="position-fixed top-0 end-0 p-3"
+     style="margin-top: 100px;
+            z-index: 7000">
+  <div id="toast-error"
+       class="toast align-items-center text-white fw-semibold bg-danger border-0"
+       style="--bs-bg-opacity: .95"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true">
+    <div class="d-flex">
+      <div id="toast-error-body" class="toast-body"></div>
+      <button type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              data-bs-dismiss="toast"
+              aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+      <div class="position-fixed top-0 end-0 p-3"
+     style="margin-top: 50px;
+            z-index: 7000">
+  <div id="toast"
+       class="toast align-items-center text-white fw-semibold bg-success border-0"
+       style="--bs-bg-opacity: .9"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true">
+    <div class="d-flex">
+      <div id="toast-body" class="toast-body"></div>
+      <button type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              data-bs-dismiss="toast"
+              aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+      <!-- ALERTAS DE MENSAJES ACTIVOS -->
+      
+      <div class="px-3">
+        
+  
+  
+  <div class="content" hx-headers='{"X-CSRFToken": "napfVFBujzFuUCVITtBAkYAryZUn1tBLJk2gaGrJSZDZsXzD9ezzIRy0cJPRpcBT"}'>
+    <div class="row mb-3">
+      <h1>AWBs</h1>
+    </div>
+    
+    
+    
+      
+    
+    <div class="row mx-4 mb-4 border rounded-3 shadow p-2"
+         id="filter-form-box">
+      <form id="id-filter-table-form"
+            hx-trigger="submit, updateTable from:body"
+            hx-get="/customer/awb/list/"
+            hx-target="#table-container"
+            hx-swap="outerHTML"
+            hx-indicator="#bar-indicator"
+            autocomplete="off"
+            class="form-inline">
+        <div class="row justify-content-end">
+
+<form  method="GET" > <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css" media="all" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/eonasdan-bootstrap-datetimepicker@4.17.49/build/css/bootstrap-datetimepicker.min.css" media="all" rel="stylesheet">
+<link href="/static/bootstrap_datepicker_plus/css/datepicker-widget.5172f3e73ba1.css" media="all" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment-with-locales.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/eonasdan-bootstrap-datetimepicker@4.17.49/build/js/bootstrap-datetimepicker.min.js"></script>
+<script src="/static/bootstrap_datepicker_plus/js/datepicker-widget.8dd217a237e2.js"></script> <div  
+    class="row" > <div  
+    class="col-12 col-md-12 col-lg-10" > <div  
+    class="row justify-content-end" > <div  
+    class="col-12 col-md-6 col-lg-2" > <div id="div_id_etd_start" class="mb-3"> <label
+                for="id_etd_start" class="form-label requiredField">
+                ETD from<span class="asteriskField">*</span> </label> <div class="input-group dbdp"> <input type="text" name="etd_start" autocomplete="off" class="datepickerinput form-control" required id="id_etd_start" data-dbdp-config="{&quot;variant&quot;:&quot;date&quot;,&quot;backend_date_format&quot;:&quot;YYYY-MM-DD&quot;,&quot;options&quot;:{&quot;showClose&quot;:true,&quot;showClear&quot;:true,&quot;showTodayButton&quot;:true,&quot;allowInputToggle&quot;:true,&quot;locale&quot;:&quot;en&quot;,&quot;format&quot;:&quot;DD/MM/YYYY&quot;}}"> <div class="input-group-addon input-group-append input-group-text"> <i class="bi-calendar"></i> </div>
+</div> </div> </div>
+<div  
+    class="col-12 col-md-6 col-lg-2" > <div id="div_id_etd_end" class="mb-3"> <label
+                for="id_etd_end" class="form-label requiredField">
+                ETD to<span class="asteriskField">*</span> </label> <div class="input-group dbdp"> <input type="text" name="etd_end" autocomplete="off" class="datepickerinput form-control" required id="id_etd_end" data-dbdp-config="{&quot;variant&quot;:&quot;date&quot;,&quot;backend_date_format&quot;:&quot;YYYY-MM-DD&quot;,&quot;options&quot;:{&quot;showClose&quot;:true,&quot;showClear&quot;:true,&quot;showTodayButton&quot;:true,&quot;allowInputToggle&quot;:true,&quot;locale&quot;:&quot;en&quot;,&quot;format&quot;:&quot;DD/MM/YYYY&quot;},&quot;range_from&quot;:&quot;etd_start&quot;}"> <div class="input-group-addon input-group-append input-group-text"> <i class="bi-calendar"></i> </div>
+</div> </div> </div>
+<div  
+    class="col-12 col-md-6 col-lg-2" > <div id="div_id_aerolinea" class="mb-3"> <label
+                for="id_aerolinea" class="form-label">
+                Airline contains
+            </label> <input type="text" name="aerolinea" class="textinput form-control" id="id_aerolinea"> </div> </div>
+<div  
+    class="col-12 col-md-6 col-lg-2" > <div id="div_id_consignatarios" class="mb-3"> <label
+                for="id_consignatarios" class="form-label">
+                Consignee 
+            </label> <select name="consignatarios" class="select form-select" id="id_consignatarios"> <option value="" selected>---------</option> <option value="119">BRKAM</option> <option value="715">IRIDA LONG</option> <option value="714">KAM</option> <option value="491">RDUHA</option>
+
+</select> </div> </div>
+<div  
+    class="col-12 col-md-6 col-lg-2" > <div id="div_id_awb" class="mb-3"> <label
+                for="id_awb" class="form-label">
+                AWB contains
+            </label> <input type="text" name="awb" class="textinput form-control" id="id_awb"> </div> </div>
+
+</div>
+
+</div>
+<div  
+    class="col-lg-2 my-auto text-center" > <div  class="row form-row px-2" > <input type="submit"
+    name="submit"
+    value="Filter"
+    
+        class="btn btn-primary col-6 col-md-6"
+        id="submit-id-submit"
+    
+    
+    />
+<a
+                  id="id-reset-filter-btn"
+                  class='btn col-6 col-md-6 text-muted text-decoration-underline'
+                  type='reset'
+                  href='/customer/awb/list/'>
+                  Delete Filters
+                </a>
+</div>
+
+</div>
+
+</div> </form>
+</div>
+      </form>
+    </div>
+    <div id="bar-indicator" class="progress">
+      <div class="indeterminate"></div>
+    </div>
+    <div class="container-fluid px-4 py-3">
+
+
+
+  <div id="table-container"
+       class="table-container table-responsive-lg">
+    
+      <table id="table"
+             class="table table-hover table-sm small">
+        
+          
+            <thead >
+              <tr>
+                
+                  <th class="orderable"  hx-get="?sort=consignee" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    Consignee
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="?sort=etd" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    ETD
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="?sort=eta" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    ETA
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="?sort=aerolinea" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    Airline
+                  </th>
+                
+                  <th class="align-middle orderable"  hx-get="?sort=destino_awb" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    D. AWB
+                  </th>
+                
+                  <th class="align-middle orderable"  hx-get="?sort=destino_final" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    D. Final
+                  </th>
+                
+                  <th class=" align-middle orderable"  hx-get="?sort=awb_number" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    AWB
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=bxs_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    BXS-COO
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=pcs_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    PCS-COO
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=bxs_cierre" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    BXS-WH
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=pcs_cierre" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    PCS-WH
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=total_gross_weight" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    Gross Weight
+                  </th>
+                
+                  <th class=" orderable text-end text-nowrap"  hx-get="?sort=total_charge_weight" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    Charge. Weight
+                  </th>
+                
+                  <th style="text-align: center; white-space:nowrap;" class="orderable"  hx-get="?sort=status" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    State
+                  </th>
+                
+              </tr>
+            </thead>
+          
+        
+        
+          <tbody id="body-target" >
+            
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle text-truncate" style="max-width: 500px">
+                      
+                        KAM
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="etd">
+                      
+                        26-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="eta">
+                      
+                        26-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="airline">
+                      
+                        (QR) QATAR AIRWAYS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. awb">
+                      
+                        AMS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. final">
+                      
+                        KZTSE
+                      
+                    </td>
+                  
+                    <td class=" align-middle">
+                      
+                        <a class="btn btn-sm btn-outline-ebfbluelight fw-semibold" href="/customer/awb/9850/info/">157-4665 4532</a>
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        4,000
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        11
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        0,000
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        0
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        176
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        192
+                      
+                    </td>
+                  
+                    <td style="text-align: center; white-space:nowrap;" class="align-middle">
+                      
+                        <i class="bi bi-circle text-secondary me-2"></i>In progress
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle text-truncate" style="max-width: 500px">
+                      
+                        RDUHA
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="etd">
+                      
+                        26-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="eta">
+                      
+                        26-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="airline">
+                      
+                        (QR) QATAR AIRWAYS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. awb">
+                      
+                        AMS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. final">
+                      
+                        KZTSE
+                      
+                    </td>
+                  
+                    <td class=" align-middle">
+                      
+                        <a class="btn btn-sm btn-outline-ebfbluelight fw-semibold" href="/customer/awb/9851/info/">157-4665 4543</a>
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        4,750
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        12
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        3,500
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        9
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        266
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        275
+                      
+                    </td>
+                  
+                    <td style="text-align: center; white-space:nowrap;" class="align-middle">
+                      
+                        <i class="bi bi-circle text-secondary me-2"></i>In progress
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="even">
+                  
+                    <td class="align-middle text-truncate" style="max-width: 500px">
+                      
+                        IRIDA LONG
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="etd">
+                      
+                        24-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="eta">
+                      
+                        24-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="airline">
+                      
+                        (JK) AERCARIBE
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. awb">
+                      
+                        AMS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. final">
+                      
+                        KZALA
+                      
+                    </td>
+                  
+                    <td class=" align-middle">
+                      
+                        <a class="btn btn-sm btn-outline-ebfbluelight fw-semibold" href="/customer/awb/9773/info/">543-1861 6581</a>
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        19,250
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        42
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        5,000
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        13
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        916
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        993
+                      
+                    </td>
+                  
+                    <td style="text-align: center; white-space:nowrap;" class="align-middle">
+                      
+                        <i class="bi bi-circle text-secondary me-2"></i>In progress
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+              
+                <tr class="odd">
+                  
+                    <td class="align-middle text-truncate" style="max-width: 500px">
+                      
+                        RDUHA
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="etd">
+                      
+                        22-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="eta">
+                      
+                        23-May-2026
+                      
+                    </td>
+                  
+                    <td class="align-middle text-nowrap" data-column="airline">
+                      
+                        (EK) EMIRATES SKY CARGO
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. awb">
+                      
+                        AMS
+                      
+                    </td>
+                  
+                    <td class="align-middle" style="max-width: 200px;" data-column="d. final">
+                      
+                        KZTSE
+                      
+                    </td>
+                  
+                    <td class=" align-middle">
+                      
+                        <a class="btn btn-sm btn-outline-ebfbluelight fw-semibold" href="/customer/awb/9727/info/">176-2654 4265</a>
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        3,750
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        9
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        3,750
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-ebfbluelight text-end">
+                      
+                        9
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        213
+                      
+                    </td>
+                  
+                    <td class="align-middle fw-semibold text-end">
+                      
+                        225
+                      
+                    </td>
+                  
+                    <td style="text-align: center; white-space:nowrap;" class="align-middle">
+                      
+                        <i class="bi bi-airplane-fill text-primary me-2"></i>Departed
+                      
+                    </td>
+                  
+                </tr>
+              
+            
+          </tbody>
+        
+        
+          
+            <tfoot >
+              <tr>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td >
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-end">31,750
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-end">74
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluelight text-end">12,250
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-ebfbluelight text-end">31
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-end">1571
+                  </td>
+                
+                  <td class="align-middle bg-body-secondary fw-semibold text-end">1685
+                  </td>
+                
+                  <td >
+                  </td>
+                
+              </tr>
+            </tfoot>
+          
+        
+      </table>
+    
+    
+      
+    
+  </div>
+
+</div>
+  </div>
+
+      </div>
+      <!-- Modal User Details-->
+<div id="htmxProfileModal" class="modal fade" data-bs-backdrop="static">
+  <div id="htmxProfileDialog"
+       class="modal-dialog modal-dialog-centered"
+       hx-target="this"></div>
+</div>
+
+      <div id="htmxModal"
+           class="modal fade"
+           data-bs-backdrop="static"
+           tabindex='-1'>
+        <div id="htmxDialog"
+             class="modal-dialog modal-lg modal-dialog-centered"
+             hx-target="this"></div>
+      </div>
+    </div>
+    <!-- BS JS -->
+    <script src="/static/js/vendors.min.cb0be743cd01.js"></script>
+    <script src="/static/js/external.min.f1f83a5d0c1d.js"></script>
+    
+
+<!-- Scripts needed for FilteredSelectMultipleHTMX widget -->
+<script src="/jsi18n/"></script>
+<script src="/static/admin/js/core.cf103cd04ebf.js"></script>
+<script src="/static/admin/js/SelectBox.7d3ce5a98007.js"></script>
+<script src="/static/js/misc/filtered-select-multiple-htmx.0634b619e155.js"></script>
+
+    <!-- Specific JS goes HERE -->
+    
+  
+
+  </body>
+</html>

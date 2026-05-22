@@ -7,10 +7,15 @@ const ebfPortalFactory = () => {
 
   return {
     baseUrl,
+    // Cuenta rol manager/exportador
     username: process.env.EBF_PORTAL_USER,
     password: process.env.EBF_PORTAL_PASS,
+    // Cuenta rol cliente (sesión separada — namespace /customer/*)
+    customerUsername: process.env.EBF_PORTAL_CUSTOMER_USER,
+    customerPassword: process.env.EBF_PORTAL_CUSTOMER_PASS,
     loginPath: '/accounts/login/',
     paths: {
+      // === rol manager/exportador ===
       coordinacionLista: '/exportador/coordinacion/lista/',
       coordinacionHistorico: '/exportador/coordinacion/historico/',
       coordinacionDetalle: '/exportador/detalle_coordinacion/',
@@ -23,6 +28,14 @@ const ebfPortalFactory = () => {
       vueloCard: '/exportador/detalle/vuelo/',
       detalleCreate: '/exportador/detalle/create/',
       boxWeightCalculator: '/exportador/box_weight_factor_calculator/',
+      // === rol cliente ===
+      customerAwbList: '/customer/awb/list/',
+      /** Prefix: `${customerAwbPrefix}<id>/<info|details|customers|documents>/` */
+      customerAwbPrefix: '/customer/awb/',
+      /** Static media — los archivos de docs viven acá, requieren cookie de sesión. */
+      customerMediaPrefix: '/media/docs_coordinacion/',
+      /** Prefix del perfil cliente: `${customerProfilePrefix}<id>/` */
+      customerProfilePrefix: '/users/external/cliente/',
     },
     timezone: 'America/Guayaquil',
     requestTimeoutMs: parseInt(

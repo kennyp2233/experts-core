@@ -20,8 +20,15 @@ const COLUMN_KEYS = [
 
 const TR_RX = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
 const TD_RX = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
+/** Botón ✏️ update — la fuente canónica del detalleId en el despacho real. */
+const UPDATE_ACTION_RX = /\/exportador\/coordinacion\/(\d+)\/update\//;
+/** Botón 🗑️ delete — fallback si el update no estuviera presente. */
+const DELETE_ACTION_RX = /\/exportador\/detalle\/(\d+)\/delete\//;
+/** Path detalle clásico (no observado en producción todavía, queda como último fallback). */
 const DETAIL_RX = /\/exportador\/detalle_coordinacion\/([^/"']+)\/?/;
 const PAGE_RX = /hx-get=["']\?page=(\d+)["']/g;
+/** "22-05-2026 12:29<br>EXPERTS" → ["22-05-2026 12:29", "EXPERTS"]. */
+const CREACION_SPLIT_RX = /<br\s*\/?>/i;
 
 function stripHtml(html: string): string {
   return html
@@ -72,8 +79,21 @@ export function parseCoordinacionList(html: string): {
       raw[key] = stripHtml(tds[idx] ?? '');
     });
 
-    const detailMatch = DETAIL_RX.exec(rowHtml);
-    const detalleId = detailMatch ? detailMatch[1] : null;
+    const detalleId =
+      UPDATE_ACTION_RX.exec(rowHtml)?.[1] ??
+      DELETE_ACTION_RX.exec(rowHtml)?.[1] ??
+      DETAIL_RX.exec(rowHtml)?.[1] ??
+      null;
+
+    // La columna "Creación" viene como "DD-MM-YYYY HH:MM<br>USERNAME"
+    const creacionRawHtml = tds[14] ?? '';
+    const creacionParts = creacionRawHtml.split(CREACION_SPLIT_RX);
+    const creacionFecha = creacionParts[0]
+      ? stripHtml(creacionParts[0]) || null
+      : null;
+    const creacionUser = creacionParts[1]
+      ? stripHtml(creacionParts[1]) || null
+      : null;
 
     items.push({
       etd: raw.etd || null,
@@ -91,6 +111,8 @@ export function parseCoordinacionList(html: string): {
       destinoAwb: raw.destinoAwb || null,
       destinoFinal: raw.destinoFinal || null,
       creacion: raw.creacion || null,
+      creacionFecha,
+      creacionUser,
       detalleId,
       raw,
     });
