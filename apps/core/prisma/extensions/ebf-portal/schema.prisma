@@ -1,0 +1,146 @@
+// Prisma schema for EBF Portal sync side-car.
+// Vive en prisma/extensions/ porque NO es un bounded context de dominio —
+// es metadata de sincronización entre Access (legacy) y EBF (portal externo).
+// Ver ACCESS_EBF_SYNC.md del módulo ebf-portal.
+
+generator ebfPortalSyncClient {
+  provider   = "prisma-client-js"
+  outputMode = "outputDir"
+  output     = "../../../node_modules/@internal/ebf-portal-sync-client"
+  engineType = "client"
+}
+
+datasource ebfPortalSyncDb {
+  provider = "postgresql"
+}
+
+// ===== SYNC MAPPING (1 fila por coordinación EBF) =====
+
+/// Estado del match de UNA coordinación EBF (= 1 AWB × 1 exportador × 1 producto).
+/// El AWB se normaliza sin espacio: "157-46654543" (no "157-4665 4543").
+model EbfCoordinacionSync {
+  id Int @id @default(autoincrement())
+
+  // === Identidad EBF (id accionable — usado para update/delete) ===
+  /// "detalleId" en URLs como /exportador/coordinacion/<id>/update/
+  ebfDetalleId      Int     @unique @map("ebf_detalle_id")
+  /// "EBF100312224" — alternate key humano (visible en lista despacho)
+  ebfHawbCode       String? @unique @map("ebf_hawb_code")
+  /// id del lado cliente (si está visible) — ej. 9850
+  ebfAwbCustomerId  Int?    @map("ebf_awb_customer_id")
+
+  // === Identificadores cruzados (anclas de match) ===
+  /// AWB IATA normalizado sin espacio
+  awbNumber       String  @map("awb_number")
+  /// DAE/FUE SENAE — "055-2026-40-XXXXXXXX"
+  daeNumber       String? @map("dae_number")
+  /// "EXPERTS HANDLING CARGO" / "FLORIECOLOGIC" / ...
+  exportadorEbf   String  @map("exportador_ebf")
+  /// alias EBF agrupado: "KAM", "RDUHA", "BRKAM", "IRIDA LONG"
+  consigneeAlias  String? @map("consignee_alias")
+  /// "ROSAS", "HORTENSIA", etc.
+  productoEbf     String? @map("producto_ebf")
+  productoEbfId   Int?    @map("producto_ebf_id")
+  fechaVuelo      DateTime? @map("fecha_vuelo")
+  /// "KZTSE", "KZALA" — con prefijo país del EBF cliente
+  destinoFinal    String? @map("destino_final")
+
+  // === Snapshot de métricas EBF (para detectar cambios al pollear) ===
+  ebfFbCoo  Float? @map("ebf_fb_coo")
+  ebfHbCoo  Float? @map("ebf_hb_coo")
+  ebfQbCoo  Float? @map("ebf_qb_coo")
+  ebfEbCoo  Float? @map("ebf_eb_coo")
+  ebfBxsCoo Float? @map("ebf_bxs_coo")
+  ebfPcsCoo Float? @map("ebf_pcs_coo")
+  /// 0 mientras WH no cierre
+  ebfBxsWh  Float? @map("ebf_bxs_wh")
+  ebfPcsWh  Float? @map("ebf_pcs_wh")
+
+  // === Estado del match ===
+  /// AWB_EXACT | DAE_ONLY | COMPOSITE | MANUAL | NONE
+  matchStrategy    String  @map("match_strategy")
+  matchConfidence  Float   @map("match_confidence")
+  /// SYNCED | ONLY_ACCESS | ONLY_EBF | MISMATCH | MANUAL_REVIEW | IGNORED
+  status           String
+  /// false para AWBs ajenos a EXPERTS (caso FLORIECOLOGIC etc.)
+  isOwnedByExperts Boolean @default(false) @map("is_owned_by_experts")
+  /// { bxsCoo: { access: 4, ebf: 4.25 }, pesos: { ... } }
+  discrepancies    Json?
+
+  // === Auditoría ===
+  lastSyncAt    DateTime? @map("last_sync_at")
+  /// Cuándo cambió algo en EBF (snapshot vs anterior)
+  lastChangedAt DateTime? @map("last_changed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // === Relaciones ===
+  accessLinks EbfDetalleAccessLink[]
+
+  @@index([awbNumber])
+  @@index([daeNumber])
+  @@index([status, exportadorEbf])
+  @@index([lastSyncAt])
+  @@map("ebf_coordinacion_sync")
+}
+
+// ===== N:1 DETAIL LINKS (Access detalle → EBF coordinación) =====
+
+/// Une N filas de PIN_DCoordina (cajas físicas Access) con 1 EbfCoordinacionSync.
+/// La asimetría es esperada: 1 EBF coordinación agrupa varios HAWBs físicos Access.
+model EbfDetalleAccessLink {
+  id        Int                 @id @default(autoincrement())
+  ebfSyncId Int                 @map("ebf_sync_id")
+  ebfSync   EbfCoordinacionSync @relation(fields: [ebfSyncId], references: [id], onDelete: Cascade)
+
+  // === Acceso (clave compuesta como columnas indexadas, NO FK) ===
+  accessBodCodigo Int     @map("access_bod_codigo")
+  accessDocTipo   String  @map("access_doc_tipo")
+  accessDocNumero Int     @map("access_doc_numero")
+  /// null si es link a nivel header
+  accessDetNumero Int?    @map("access_det_numero")
+  /// PIN_DCoordina.detGuiaHija — el HAWB físico Access
+  accessHawb      BigInt? @map("access_hawb")
+  /// finca / plantación
+  accessPlaCodigo Int?    @map("access_pla_codigo")
+  /// producto Access ("CLAVEL", "ROSAS"...)
+  accessProCodigo String? @map("access_pro_codigo")
+  /// PIN_DCoordina.detFUE — debería coincidir con daeNumber del EBF
+  accessFue       String? @map("access_fue")
+
+  /// AWB_EXACT | FUE_EXACT | COMPOSITE | MANUAL
+  matchReason String   @map("match_reason")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([accessBodCodigo, accessDocTipo, accessDocNumero])
+  @@index([accessFue])
+  @@index([accessHawb])
+  @@index([ebfSyncId])
+  @@map("ebf_detalle_access_link")
+}
+
+// ===== CATÁLOGO DE MAPEO ENTRE IDS DE LOS DOS SISTEMAS =====
+
+/// Mapping de IDs internos entre Access y EBF para entidades de catálogo
+/// (consignees, fincas, aerolíneas, destinos, productos). Resuelve la
+/// asimetría N:1 de consignees y otros desalineamientos de naming.
+model EbfCatalogMapping {
+  id         Int     @id @default(autoincrement())
+  /// consignee | shipper | airline | destination | product
+  entityType String  @map("entity_type")
+  accessId   String? @map("access_id")
+  ebfId      String? @map("ebf_id")
+  /// para debug humano
+  name       String
+  confidence Float?  @default(1.0)
+  /// true si lo confirmó un humano (no auto-derivado)
+  isManual   Boolean @default(false) @map("is_manual")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([entityType, accessId])
+  @@unique([entityType, ebfId])
+  @@index([entityType])
+  @@map("ebf_catalog_mapping")
+}
