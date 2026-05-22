@@ -77,6 +77,20 @@ export class EbfHttpClient {
     return res;
   }
 
+  /** GET con responseType arraybuffer — para descargas binarias (XLSX, PDFs, ZIPs). */
+  async getBinary(
+    path: string,
+    opts: EbfRequestOptions = {},
+  ): Promise<AxiosResponse<Buffer>> {
+    const res = await this.axios.get<Buffer>(path, {
+      headers: this.buildHeaders(path, opts),
+      responseType: 'arraybuffer',
+    });
+    this.jar.ingestSetCookie(res.headers['set-cookie']);
+    this.maybeDetectAuthRedirect(res, opts);
+    return res;
+  }
+
   /**
    * POST form-urlencoded con CSRF auto. Si la página objetivo requiere
    * `csrfmiddlewaretoken` debe venir en `body`; este método solo añade el

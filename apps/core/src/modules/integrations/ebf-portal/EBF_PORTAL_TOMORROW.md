@@ -1,55 +1,93 @@
 # EBF Portal — estado
 
-> Última captura logueada: 2026-05-19 (martes, ventana abierta).
-> Página de coordinación mapeada end-to-end. Submit real **NO** ejecutado todavía.
+> Última captura logueada: 2026-05-22 (vista de cliente integrada).
+> Coordinador submit real **NO** ejecutado todavía. Vistas cliente **NO** ejecutadas extremo a extremo todavía.
 
 ## Estado actual
 
 ### Listo y verificado contra el portal real
 
-- **Login** + cookie jar + relogin transparente al ver 302→login.
-- **Lista de coordinaciones** (despacho + histórico) — 15 columnas SSR.
-- **Lista de DAEs** — columnas dinámicas (headers descubiertos en runtime).
-- **Página coordinar** (`/exportador/detalle_coordinacion/`) — mapeo full:
+**Rol manager** (cuenta `EBF_PORTAL_USER`, namespace `/exportador/*`):
+- Login + cookie jar + relogin transparente al ver 302→login.
+- Lista de coordinaciones (despacho + histórico) — 15 columnas SSR.
+- Lista de DAEs — columnas dinámicas.
+- Página coordinar (`/exportador/detalle_coordinacion/`) — mapeo full:
   - Cascade `exportador → marcación → vuelo → DAE` (4 endpoints helper).
   - Card resumen del vuelo (`/exportador/detalle/vuelo/`).
   - Modal `Crear Detalle De Coordinación` (`/exportador/detalle/create/`):
     productos con flags (`isFullBxs`, `isCompoundProduct`, `errorMessage`),
     formset compuesto con `min_num_forms=2`, hidden replicado.
   - Calculadora `/exportador/box_weight_factor_calculator/` (POST JSON).
-- **Horarios** — ventanas configuradas en
+- Horarios — ventanas configuradas en
   [utils/horarios.util.ts](./utils/horarios.util.ts), aplicadas solo a writes.
+
+**Rol cliente** (cuenta `EBF_PORTAL_CUSTOMER_USER`, namespace `/customer/*`):
+- Login independiente con cookie jar separado (subclase
+  [EbfCustomerHttpClient](./http/ebf-customer-http.client.ts) +
+  [EbfCustomerAuthService](./auth/ebf-customer-auth.service.ts)).
+- Lista AWBs (`/customer/awb/list/`) con filtros (`etd_start`, `etd_end`,
+  `aerolinea`, `consignatarios`, `awb`), sort, paginación + totals del tfoot.
+- Header card AWB (`/customer/awb/<id>/info/`) — AWB, Airline, ETD/ETA,
+  Consignee, Shipper, Route + flags de tabs disponibles + document count.
+- Tab CUSTOMERS (`/customer/awb/<id>/customers/`) — resumen por consignee.
+- Tab DOCUMENTS (`/customer/awb/<id>/documents/`) — lista + URLs proxy de
+  descarga (los archivos están detrás de la cookie, NO accesibles desde el
+  front directamente).
+- Tab INFO (`/customer/awb/<id>/details/`) — parser parcial: filtros (4
+  selects) + HTML raw del contenedor de tablas para que el front lo
+  renderice (estructura per-consignee compleja, parsearla server-side es
+  churn por ahora).
+- Export XLSX (`?_export=xlsx`) y descargas individuales/bulk de docs
+  proxyados con `Content-Type` y `Content-Disposition` originales.
+- Perfil cliente parseado a JSON.
 
 ### Estructura del módulo
 
 ```
 ebf-portal/
 ├── ebf-portal.module.ts
-├── ebf-portal.controller.ts             # v1: /api/v1/integrations/ebf-portal/*
-├── ebf-portal.service.ts                # facade
-├── config/ebf-portal.config.ts          # paths + env
-├── http/{cookie-jar.ts, ebf-http.client.ts}
-├── auth/ebf-auth.service.ts             # ensureSession + relogin
+├── ebf-portal.controller.ts             # manager: /api/v1/integrations/ebf-portal/*
+├── ebf-customer.controller.ts           # cliente: /api/v1/integrations/ebf-portal/customer/*
+├── ebf-portal.service.ts                # facade (manager + cliente)
+├── config/ebf-portal.config.ts          # paths + env (ambos roles)
+├── http/
+│   ├── cookie-jar.ts
+│   ├── ebf-http.client.ts                # manager (jar propio)
+│   └── ebf-customer-http.client.ts       # cliente (subclass, jar propio)
+├── auth/
+│   ├── ebf-auth.service.ts               # manager
+│   └── ebf-customer-auth.service.ts      # cliente
 ├── services/
-│   ├── coordinacion.service.ts          # list/getDetalle (despacho) + update stub
-│   ├── coordinacion-selection.service.ts# cascade + vuelo card (read-only)
-│   ├── coordinacion-create.service.ts   # getCreateForm + calcBox + create
-│   └── dae.service.ts
+│   ├── coordinacion.service.ts           # list/getDetalle (despacho) + update stub
+│   ├── coordinacion-selection.service.ts # cascade + vuelo card (read-only)
+│   ├── coordinacion-create.service.ts    # getCreateForm + calcBox + create
+│   ├── dae.service.ts
+│   └── customer-awb.service.ts           # list, header, tabs, export, docs, profile
 ├── parsers/
 │   ├── csrf.parser.ts
-│   ├── coordinacion-list.parser.ts
-│   ├── coordinacion-detail.parser.ts    # PLACEHOLDER (otra página, sin mapear)
-│   ├── coordinacion-create-modal.parser.ts
-│   ├── form-fields.parser.ts            # genérico (legacy)
+│   ├── form-fields.parser.ts             # genérico (legacy)
 │   ├── select-options.parser.ts
-│   └── vuelo-card.parser.ts
+│   ├── vuelo-card.parser.ts
+│   ├── coordinacion-list.parser.ts
+│   ├── coordinacion-detail.parser.ts     # PLACEHOLDER (otra página, sin mapear)
+│   ├── coordinacion-create-modal.parser.ts
+│   ├── customer-awb-list.parser.ts
+│   ├── customer-awb-header.parser.ts
+│   ├── customer-awb-details.parser.ts    # parser parcial (raw HTML para tablas)
+│   ├── customer-awb-customers.parser.ts
+│   ├── customer-awb-documents.parser.ts
+│   └── customer-profile.parser.ts
 ├── utils/horarios.util.ts
-├── types/{coordinacion.types.ts, dae.types.ts, coordinacion-create.types.ts}
+├── types/{coordinacion.types.ts, dae.types.ts, coordinacion-create.types.ts, customer-awb.types.ts}
 ├── dto/{create-coordinacion.dto.ts, update-coordinacion.dto.ts, box-weight.dto.ts}
-└── research/                            # HTML/JS capturado el 2026-05-19
+└── research/                             # HTML/JS capturado de ambos roles
 ```
 
 ### Endpoints expuestos
+
+Todos bajo `/api/v1/integrations/ebf-portal/`.
+
+**Manager:**
 
 | Verbo | Path | Service |
 |---|---|---|
@@ -66,6 +104,21 @@ ebf-portal/
 | GET | `/coordinar/form?exportador&marcacion&vuelo&dae` | create.getCreateForm |
 | POST | `/coordinar/box-weight` | create.calculateBoxWeight |
 | POST | `/coordinar` | create.createCoordinacion **(write — no ejecutado todavía)** |
+
+**Cliente** (bajo `/customer/`):
+
+| Verbo | Path | Service |
+|---|---|---|
+| GET | `/customer/health` | facade.ensureCustomerSession |
+| GET | `/customer/awbs?etdStart&etdEnd&...` | customer.list |
+| GET | `/customer/awbs/:id` | customer.getHeader |
+| GET | `/customer/awbs/:id/details?filters` | customer.getDetails |
+| GET | `/customer/awbs/:id/customers?sort` | customer.getCustomers |
+| GET | `/customer/awbs/:id/documents` | customer.getDocuments |
+| GET | `/customer/awbs/:id/export?filters` | customer.exportDetailsXlsx (XLSX) |
+| GET | `/customer/awbs/:id/documents/download-all` | customer.downloadAllDocuments (ZIP) |
+| GET | `/customer/documents/download?file=...` | customer.downloadDocument (binario) |
+| GET | `/customer/profile/:clienteId` | customer.getProfile |
 
 ### Contrato del portal — cheatsheet
 
@@ -143,8 +196,38 @@ Plan de ejecución (con un humano supervisando cada paso):
   hay que coordinar masivamente desde EXPERTS, sumar `@nestjs/schedule` o un
   job Bull. Ver primero si el portal aguanta.
 
+## Smoke tests recomendados (rol cliente)
+
+```bash
+API=http://localhost:3000/api/v1/integrations/ebf-portal/customer
+
+# 1. health (debería loguear como expertshcargosa@gmail.com)
+curl $API/health
+
+# 2. lista del mes actual
+curl "$API/awbs?etdStart=2026-05-01&etdEnd=2026-05-31"
+
+# 3. detalle (sustituir <id> por uno de la lista — ej 9850)
+curl $API/awbs/9850
+curl $API/awbs/9850/details
+curl $API/awbs/9850/customers
+curl $API/awbs/9850/documents
+
+# 4. export XLSX (guarda como archivo)
+curl -o awb-9850.xlsx $API/awbs/9850/export
+
+# 5. profile
+curl $API/profile/570
+```
+
+Validaciones:
+- Header `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` en el export.
+- `downloads` en `/documents` apuntan a URLs `/api/v1/integrations/ebf-portal/customer/documents/download?file=...` — descargables sin estar logueado a EBF.
+- `details.filters` contienen consignees/trucks/shippers que tiene el AWB.
+
 ## Anti-foot-guns
 
+**Coordinador (manager):**
 - **Nunca llamar `EbfCoordinacionCreateService.createCoordinacion()` fuera de
   ventana operativa.** El service ya lo bloquea, pero el front debe avisar
   antes de que el usuario llene el form.
@@ -156,3 +239,19 @@ Plan de ejecución (con un humano supervisando cada paso):
   service ya lo re-extrae en cada `getCreateForm`.
 - **El cascade depende de IDs válidos *entre sí*.** Si el exportador no tiene
   marcaciones para hoy, las listas vienen vacías — no es bug.
+
+**Cliente:**
+- **Las cuentas manager y cliente NO comparten cookie jar.** Cada una tiene su
+  propio `EbfHttpClient` (subclase). Mezclar sesiones rompe la separación
+  de permisos del portal y puede causar 403s confusos.
+- **`/customer/documents/download?file=` valida el filename contra path
+  traversal** (rechaza `..` y separadores). No exponer este endpoint en
+  rutas públicas sin auth de EXPERTS.
+- **El `rawTablesHtml` del tab INFO incluye `hx-*` attrs del portal.** Sin
+  htmx cargado en el front quedan inertes, pero NO sanear ese HTML antes de
+  renderizarlo en un contexto donde el usuario pueda subir HTML arbitrario
+  (no es el caso hoy — el HTML viene del portal, pero conviene mantenerlo
+  en mente).
+- **El export XLSX no respeta paginación** — devuelve todos los datos del
+  AWB según los filtros. Para AWBs muy grandes el tamaño del archivo puede
+  ser notable; considerar streaming si llega a ser problema.
