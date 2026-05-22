@@ -16,6 +16,13 @@ const ebfPortalFactory = () => {
       coordinacionDetalle: '/exportador/detalle_coordinacion/',
       daesLista: '/exportador/daes/lista/',
       logout: '/users/logout/',
+      coordinarPage: '/exportador/detalle_coordinacion/',
+      populateMarcacion: '/exportador/populate_consignatario/',
+      populateVuelo: '/exportador/populate_doc_coordinacion_select/',
+      populateDae: '/exportador/populate_exportador_dae_select/',
+      vueloCard: '/exportador/detalle/vuelo/',
+      detalleCreate: '/exportador/detalle/create/',
+      boxWeightCalculator: '/exportador/box_weight_factor_calculator/',
     },
     timezone: 'America/Guayaquil',
     requestTimeoutMs: parseInt(
