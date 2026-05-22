@@ -1,0 +1,54 @@
+
+
+<div class="modal-content">
+  <div class="modal-header justify-content-center text-warning">
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="100"
+         height="100"
+         fill="currentColor"
+         class="bi bi-exclamation-circle"
+         viewBox="0 0 16 16">
+      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+      <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
+    </svg>
+  </div>
+  <div class="modal-body">
+    <div id="modal-indicator"
+         class="spinner-border text-ebfbluelight fixed-spinner">
+      <div class="indeterminate"></div>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <h3 class="modal-title text-muted">ELIMINAR EBF100312058 - (387985) (ID: 387985)</h3>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col">
+          
+            <h6>
+              Está seguro que desea <span class="text-danger">ELIMINAR EBF100312058 - (387985) (ID: 387985)</span>?
+            </h6>
+          
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      
+        <form class="w-100"
+              hx-post="/exportador/detalle/387985/delete/"
+              hx-indicator="#modal-indicator">
+          <input type="hidden" name="csrfmiddlewaretoken" value="AESC8KrElI2KbP9Ai6UwOhHs86KZAvPijPu1hiELpjyRl6kll4o9pKqKa4ZutjyC">
+          
+
+
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-success me-2">Aceptar</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </form>
+      
+    </div>
+  </div>
+</div>
