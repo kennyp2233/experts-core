@@ -13,6 +13,7 @@ const SCHEMAS = [
   { name: 'datos_maestros', path: './prisma/datos-maestros/schema.prisma' },
   { name: 'templates', path: './prisma/templates/schema.prisma' },
   { name: 'documentos', path: './prisma/documentos/schema.prisma' },
+  { name: 'ebf_portal_sync', path: './prisma/extensions/ebf-portal/schema.prisma' },
   // Agregar más según sea necesario
 ];
 
