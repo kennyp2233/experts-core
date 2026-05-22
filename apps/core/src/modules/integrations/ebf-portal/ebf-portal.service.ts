@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EbfCoordinacionService } from './services/coordinacion.service';
 import { EbfCoordinacionSelectionService } from './services/coordinacion-selection.service';
 import { EbfCoordinacionCreateService } from './services/coordinacion-create.service';
+import { EbfCoordinacionUpdateService } from './services/coordinacion-update.service';
 import { EbfDaeService } from './services/dae.service';
 import { EbfCustomerAwbService } from './services/customer-awb.service';
 import { EbfAuthService } from './auth/ebf-auth.service';
@@ -17,6 +18,7 @@ export class EbfPortalService {
     readonly coordinacion: EbfCoordinacionService,
     readonly selection: EbfCoordinacionSelectionService,
     readonly create: EbfCoordinacionCreateService,
+    readonly update: EbfCoordinacionUpdateService,
     readonly dae: EbfDaeService,
     readonly customer: EbfCustomerAwbService,
     private readonly auth: EbfAuthService,

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EbfHttpClient } from '../http/ebf-http.client';
 import { EbfAuthService } from '../auth/ebf-auth.service';
@@ -9,7 +9,6 @@ import type {
   CoordinacionListPage,
   CoordinacionListQuery,
 } from '../types/coordinacion.types';
-import type { UpdateCoordinacionDto } from '../dto/update-coordinacion.dto';
 import type { EbfPortalConfig } from '../config/ebf-portal.config';
 
 /**
@@ -58,12 +57,6 @@ export class EbfCoordinacionService {
       this.http.get(path, { detectAuthRedirect: true }),
     );
     return parseCoordinacionDetalle(id, String(res.data ?? ''));
-  }
-
-  async update(_id: string, _dto: UpdateCoordinacionDto): Promise<never> {
-    throw new NotImplementedException(
-      'EBF Portal — update coordinación pendiente de mapear (form de edición no capturado todavía).',
-    );
   }
 
   private buildQuery(params: Record<string, unknown>): string {

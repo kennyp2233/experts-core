@@ -28,6 +28,10 @@ const ebfPortalFactory = () => {
       vueloCard: '/exportador/detalle/vuelo/',
       detalleCreate: '/exportador/detalle/create/',
       boxWeightCalculator: '/exportador/box_weight_factor_calculator/',
+      /** Update — prefix + `<detalleId>/update/`. */
+      coordinacionUpdatePrefix: '/exportador/coordinacion/',
+      /** Delete — prefix + `<detalleId>/delete/`. ⚠️ asimetría: delete vive bajo /detalle/ no /coordinacion/. */
+      detalleDeletePrefix: '/exportador/detalle/',
       // === rol cliente ===
       customerAwbList: '/customer/awb/list/',
       /** Prefix: `${customerAwbPrefix}<id>/<info|details|customers|documents>/` */
