@@ -2,7 +2,7 @@ import { OnQueueActive, OnQueueCompleted, OnQueueFailed, Process, Processor } fr
 import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { PrismaClient } from '@internal/templates-client';
-import { LegacyDbService } from './legacy-db.service';
+import { FitoLegacyService } from './fito-legacy.service';
 import { XmlGeneratorService } from './xml-generator.service';
 import { XmlValidatorService } from './xml-validator.service';
 import { GenerateXmlDto } from '../dto/generate-xml.dto';
@@ -12,7 +12,7 @@ export class FitoProcessor {
     private readonly logger = new Logger(FitoProcessor.name);
 
     constructor(
-        private legacyDb: LegacyDbService,
+        private legacyDb: FitoLegacyService,
         private xmlGenerator: XmlGeneratorService,
         private xmlValidator: XmlValidatorService,
         @Inject('PrismaClientTemplates') private prisma: PrismaClient, // Correct injection token from TemplatesModule

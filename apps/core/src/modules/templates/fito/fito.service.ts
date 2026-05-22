@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { PrismaClient } from '@internal/templates-client';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
-import { LegacyDbService } from './services/legacy-db.service';
+import { FitoLegacyService } from './services/fito-legacy.service';
 
 @Injectable()
 export class FitoService {
@@ -12,7 +12,7 @@ export class FitoService {
     constructor(
         @InjectQueue('fito-xml') private fitoQueue: Queue,
         @Inject('PrismaClientTemplates') private prisma: PrismaClient,
-        private legacyDb: LegacyDbService
+        private legacyDb: FitoLegacyService
     ) { }
 
     async generate(dto: GenerateXmlDto) {
