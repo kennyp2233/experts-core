@@ -1,0 +1,556 @@
+<!-- Base template with top and side navigation -->
+
+
+<!DOCTYPE html>
+<html lang="es-ec">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      
+  Coordinación
+
+      | EBF Cargo
+    </title>
+    <link rel="shortcut icon"
+          href="/static/images/favicons/ebf-favicon.2cbf34bf0830.webp"
+          type="image/png" />
+    <!-- Custom BS CSS -->
+    <link rel="stylesheet"
+          href="/static/fonts/bootstrap-icons-1.11.3/font/bootstrap-icons.min.99c98a747647.css" />
+    <link rel="stylesheet" href="/static/css/project.min.1828a295f9f9.css" />
+    <!-- Specific CSS -->
+    
+    
+    <!-- Load Jquery before the HTML. Needed for bootstrap_datepicker_plus. -->
+    <script src="/static/js/jquery.min.2c872dbe60f4.js"></script>
+  </head>
+  <body data-bs-theme="dark">
+    <div>
+      <!-- Navbar -->
+      <nav class="navbar navbar-expand-xl navbar-absolute fixed-top navbar-dark bg-ebfbluedark p-1">
+        <div class="container-fluid">
+          <div class="navbar-wrapper">
+            <a class="navbar-brand py-0 ms-3 " href="#">
+              <img src="/static/images/ebf_logo_full.32a539f2770c.png"
+                   alt="EBF Logo"
+                   height="45px" />
+            </a>
+          </div>
+          <button id="navbar-toggle"
+                  class="navbar-toggler"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#navbarDropdown"
+                  aria-controls="navbarDropdown"
+                  aria-expanded="false"
+                  aria-label="Toggle navigation">
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+            <span class="navbar-toggler-bar navbar-kebab"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarDropdown">
+            
+  <!-- EXTERNAL USERS - Content of the Top Nav Bar, regardless of color -->
+
+  <ul class="navbar-nav ms-2 ms-md-5 mb-2 mb-lg-0">
+  <li class="nav-item me-2">
+    <a class="nav-link "
+       href="/exportador/coordinacion/lista/"><i class="bi bi-airplane-fill me-2"></i>Despacho</a>
+  </li>
+  <li class="nav-item me-2">
+    <a class="nav-link "
+       href="/exportador/coordinacion/historico/"><i class="bi bi-clock-history me-2"></i>Histórico</a>
+  </li>
+  <li class="nav-item me-2">
+    <a class="nav-link "
+       href="/exportador/daes/lista/"><i class="bi  bi-file-earmark-text-fill me-2"></i>Administración DAEs</a>
+  </li>
+  
+    <span class="d-inline-block"
+          tabindex="0"
+          
+          ">
+      <li class="nav-item me-2">
+        <a class="nav-link active "
+           href="/exportador/detalle_coordinacion/"><i class="bi bi-box-seam me-2"></i>Coordinar</a>
+      </li>
+    </span>
+  
+</ul>
+
+
+<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+  <li class="nav-item dropdown show">
+  <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="circle-half" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z" />
+    </symbol>
+    <symbol id="moon-stars-fill" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z" />
+    <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z" />
+    </symbol>
+    <symbol id="sun-fill" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
+    </symbol>
+  </svg>
+  <a class="nav-link dropdown-toggle"
+     href="#"
+     id="bd-theme"
+     role="button"
+     data-bs-toggle="dropdown"
+     aria-expanded="false">
+    <svg width="16"
+         height="16"
+         fill="currentColor"
+         class="bi my-1 theme-icon-active"
+         viewBox="0 0 16 16">
+      <use href="#circle-half"></use>
+    </svg>
+    <span class="d-lg-none ms-2" id="bd-theme-text">Cambiar Tema</span>
+  </a>
+  <ul class="dropdown-menu dropdown-menu-end"
+      aria-labelledby="bd-theme-text">
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center"
+              data-bs-theme-value="light"
+              aria-pressed="false">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#sun-fill"></use>
+        </svg>
+        Light
+      </button>
+    </li>
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center"
+              data-bs-theme-value="dark"
+              aria-pressed="false">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#moon-stars-fill"></use>
+        </svg>
+        Dark
+      </button>
+    </li>
+    <li>
+      <button type="button"
+              class="dropdown-item d-flex align-items-center active"
+              data-bs-theme-value="auto"
+              aria-pressed="true">
+        <svg width="16"
+             height="16"
+             fill="currentColor"
+             class="bi me-2 opacity-50 theme-icon">
+          <use href="#circle-half"></use>
+        </svg>
+        Auto
+      </button>
+    </li>
+  </ul>
+</li>
+
+  <li class="nav-item py-0 col-12 col-lg-auto">
+    <div class="vr d-none d-lg-flex h-100 mx-lg-1 text-white"></div>
+    <hr class="d-lg-none text-white" />
+  </li>
+  <li class="nav-item dropdown show">
+    <!-- Hack to make dropdown work, but should be without show -->
+    <a class="nav-link dropdown-toggle"
+       href="#"
+       id="navbarDropdownMenuLink"
+       role="button"
+       data-bs-toggle="dropdown"
+       aria-expanded="false">
+      <i class="bi bi-person-circle me-2"></i>EXPERTS
+    </a>
+    
+  <ul class="dropdown-menu dropdown-menu-end"
+    aria-labelledby="navbarDropdownMenuLink">
+  <li>
+    <button type="button"
+            class="dropdown-item"
+            hx-get="/users/external/exportador/231/"
+            hx-target="#htmxProfileDialog">
+      <i class="bi bi-person-circle me-2"></i>Mi Perfil
+    </button>
+  </li>
+  <li class="mx-auto col-12 col-lg-10">
+    <hr class=" my-1" />
+  </li>
+  <li>
+    <button type="button"
+            class="dropdown-item"
+            hx-get="/users/logout/"
+            hx-target="#htmxProfileDialog">
+      <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+    </button>
+  </li>
+</ul>
+
+
+  </li>
+</ul>
+
+
+          </div>
+        </div>
+      </nav>
+      <!-- End Navbar -->
+      <div class="position-fixed top-0 end-0 p-3"
+     style="margin-top: 100px;
+            z-index: 7000">
+  <div id="toast-error"
+       class="toast align-items-center text-white fw-semibold bg-danger border-0"
+       style="--bs-bg-opacity: .95"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true">
+    <div class="d-flex">
+      <div id="toast-error-body" class="toast-body"></div>
+      <button type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              data-bs-dismiss="toast"
+              aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+      <div class="position-fixed top-0 end-0 p-3"
+     style="margin-top: 50px;
+            z-index: 7000">
+  <div id="toast"
+       class="toast align-items-center text-white fw-semibold bg-success border-0"
+       style="--bs-bg-opacity: .9"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true">
+    <div class="d-flex">
+      <div id="toast-body" class="toast-body"></div>
+      <button type="button"
+              class="btn-close btn-close-white me-2 m-auto"
+              data-bs-dismiss="toast"
+              aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+      <!-- ALERTAS DE MENSAJES ACTIVOS -->
+      
+        <div class="container-fluid px-3 mt-3">
+          
+            <div class="alert alert-danger alert-dismissible fade show text-small mb-2"
+                 role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              DOMINGO 03 DE MAYO 2026: COORDINACIÓN DE 08:00 A 12:00. RECEPCIÓN DE CARGA DE 14:00 A 17:00.
+              <button type="button"
+                      class="btn-close"
+                      data-bs-dismiss="alert"
+                      aria-label="Close"></button>
+            </div>
+          
+            <div class="alert alert-warning alert-dismissible fade show text-small mb-2"
+                 role="alert">
+              <i class="bi bi-exclamation-circle-fill me-2"></i>
+              LA INFORMACIÓN REGISTRADA HA SIDO INGRESADA POR EL USUARIO Y SERÁ PROCESADA TAL COMO FUE PROPORCIONADA. EBF CARGO CIA LDTA NO SE RESPONSABILIZA POR ERRORES, OMISIONES O CONSECUENCIAS DERIVADAS DE DATOS INCORRECTOS.
+              <button type="button"
+                      class="btn-close"
+                      data-bs-dismiss="alert"
+                      aria-label="Close"></button>
+            </div>
+          
+            <div class="alert alert-danger alert-dismissible fade show text-small mb-2"
+                 role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              RECEPCIÓN Y DEVOLUCIONES: DE LUNES A VIERNES DE 16:00 A 21:00, SABADO HASTA LAS 17:00, Y FERIADOS HASTA LAS 20:00. COORDINACIÓN: LUNES A VIERNES DE 08:10 A 13:45, SÁBADO Y FERIADOS HASTA LAS 12:00. 
+LAS COORDINACIONES SON DIARIAS.
+              <button type="button"
+                      class="btn-close"
+                      data-bs-dismiss="alert"
+                      aria-label="Close"></button>
+            </div>
+          
+        </div>
+      
+      <div class="px-3">
+        
+  <div class="content">
+    <div class="row mb-3">
+      <h1>Coordinación</h1>
+    </div>
+    <div class="row mt-4 mx-1 mx-md-2 justify-content-center">
+      <div class="col-12 col-lg-4">
+        <form action="" id="multiple-detalle-form">
+          <input type="hidden" name="csrfmiddlewaretoken" value="TSuKcpfXTEdGxHDNYQfHt9PvfoYYkYTaf062Lg5DpR4FvOqVMRXqpL2saX5fRKk9">
+          
+
+<form  method="post" > <input type="hidden" name="csrfmiddlewaretoken" value="TSuKcpfXTEdGxHDNYQfHt9PvfoYYkYTaf062Lg5DpR4FvOqVMRXqpL2saX5fRKk9"> <div  
+     > <div  class="row " > <div 
+     class="col-md " > <p class="h5 pb-0 text-center">Información General</p> <hr class="pt-0 mt-0 text-custom-header"> </div> </div>
+<div  class="row " > <div 
+     class="col-md " > <div id="div_id_exportador" class="mb-3"> <label
+                for="id_exportador" class="form-label requiredField">
+                Exportador<span class="asteriskField">*</span> </label> <select name="exportador" id="id_exportador" name="exportador" class="select form-select"> <option value="1624" selected>ACHINA INLAGO MARIA TRANSITO</option> <option value="1651">ACUÑA JACOME SEGUNDO ANDERSON</option> <option value="1419">ADARAROSES S.A</option> <option value="1764">ADAYA ROSES</option> <option value="1875">ADRIFLOR S.A.S.</option> <option value="2">AGRIFEG</option> <option value="4">AGRIROSE</option> <option value="797">AGRIVALDANI SA</option> <option value="8">AGROCOEX S.A.</option> <option value="351">AGROGANA S.A.</option> <option value="158">AGROTERRANORTE SA</option> <option value="1538">ALBA ALBAMOCHO MARTHA CECILIA</option> <option value="1947">ALBAR S.A.S.</option> <option value="1611">ALEXA-FLOWERS S.A.S.</option> <option value="1412">ALPHAFLOWERS S.A.</option> <option value="1991">ANDRANGO GUAÑA CARLOS DAVID</option> <option value="1035">ASOPROAGRIPEDRO</option> <option value="703">ATTAROSES</option> <option value="1917">BANDA YUGSI SANDRA JANETH</option> <option value="1691">BENALCAZAR SANCHEZ JENNY LORENA</option> <option value="653">BENIT FLOR</option> <option value="905">BLESS FLOWER</option> <option value="363">BLOOMING ACRES</option> <option value="670">BOSQUEFLOWERS S.A</option> <option value="21">BOUTIQUE</option> <option value="1992">BREEZA S.A.</option> <option value="1697">CACUANGO MOLINA MARIA TERESA</option> <option value="1970">CALO GUAYTA CARLOS XAVIER</option> <option value="1313">CANTIZA-FLORES S.A.</option> <option value="1957">CAROLINA GARDENS</option> <option value="2037">CASAGEO S.A.S.</option> <option value="1298">CATUCUAGO INLAGO JOSE RODRIGO</option> <option value="25">CERES FARM</option> <option value="1554">CHALACA VALENCIA CRISTIAN RAMIRO</option> <option value="1829">CHAMBA YAGUANA MANUEL BENIGNO</option> <option value="1750">CHANGOLUISA CHINGO MYRIAN PATRICIA</option> <option value="713">CHECA SILVA</option> <option value="1959">CHORLANGO CHICO KATHERIN DAYANA</option> <option value="1910">COBACANGO INLAGO WALTER ALEJANDRO</option> <option value="1557">COMEXIGER S.A.S.</option> <option value="1840">CONLAGO FARINANGO CELIA AMPARO</option> <option value="1575">CUASCOTA COLLAGUAZO MARIA JUANA</option> <option value="1573">CUASCOTA INLAGO MARIA CLARA</option> <option value="467">DAVINCI ROSES</option> <option value="1951">DILANS FLOWERS</option> <option value="1506">DIMAFLORA EXPORT</option> <option value="1905">DISCOVER-ECUADOR S.A.S.</option> <option value="829">DULCES ROSAS</option> <option value="1955">EC BLOOMS S.A.S.</option> <option value="1220">ECOFLOR</option> <option value="35">ECOROSES</option> <option value="1507">ECUAFLOR S.A.</option> <option value="574">EDANA FLORALBA</option> <option value="289">EDEN ROSES</option> <option value="38">EFANDINA</option> <option value="487">EL CAMPANARIO DE SANTA ANITA SOCIEDAD CIVIL COMERC</option> <option value="1708">EMFACC MAGIC ROSES</option> <option value="1725">ENIGMA ROSES ENIGMAROSES SA</option> <option value="1615">ENRIQUEZ MORENO PABLO JAVIER</option> <option value="1687">ESPELETIA-FARMS S.A.S.</option> <option value="684">ESPERANZA ROSAS</option> <option value="1525">EVER FLORIST SOCIEDAD ANONIMA CIVIL</option> <option value="811">EXPORTCALAS S.A.</option> <option value="794">EXPROROSES</option> <option value="49">EXXIDE S.A</option> <option value="491">FARINROSES</option> <option value="958">FARMBLISSROSE SA</option> <option value="1976">FARMLINK S.A.S.</option> <option value="535">FEELFLOWERS</option> <option value="52">FIORENTINA</option> <option value="1384">FL. ALTAS CUMBRES</option> <option value="1798">FLORANDINA</option> <option value="73">FLOREQUISA</option> <option value="935">FLORES DE LA HACIENDA</option> <option value="782">FLORES DE LA VICTORIA</option> <option value="569">FLORES LA UNION</option> <option value="1423">FLOR HERMOSA</option> <option value="575">FLORICOLA AZERIFLORES</option> <option value="1240">FLORICOLA GUARAQUI</option> <option value="1822">FLORICOLA ROOS</option> <option value="667">FLORIECOLOGIC</option> <option value="91">FLORIFRUT</option> <option value="92">FLORISOL</option> <option value="479">FLORSANI CIA LTDA</option> <option value="95">FLOWER VILLAGE</option> <option value="79">FL. VERDES</option> <option value="97">GALAPAGOS</option> <option value="573">GALAXYTRADE CORP</option> <option value="98">GARDA</option> <option value="1754">GREENGROWERS S.A.S.</option> <option value="732">GREEN SOUL FLOR ETERNA CIA LTDA</option> <option value="2048">GUAPA ROSES S.A.S.</option> <option value="1850">GUASGUA ANDRANGO ANA LUCIA</option> <option value="1797">GUERRERO ARTEAGA MILTON GILDARDO</option> <option value="1719">GUEVARA BARRENO RENE DANILO</option> <option value="1217">GUZMAN ROSA</option> <option value="1470">GWFLOWERS S.A.S.</option> <option value="2016">HACIENDA RANCHO CAMILA</option> <option value="633">HAPPINESS FLOWERS</option> <option value="1014">HELEN FLOWERS</option> <option value="1487">HERRERA FARMS</option> <option value="1616">HIGH CONNECTION FLOWERS HCF CIA.LTDA.</option> <option value="108">HOJA VERDE</option> <option value="2015">INLAGO INLAGO SEGUNDO CARLOS</option> <option value="113">INROSES</option> <option value="593">IRENE FLOWERS</option> <option value="1757">JARDINES DE BOLIVAR CIA.LTDA.</option> <option value="1455">JELIMFLOWERS</option> <option value="980">JESSANT FLOWERS</option> <option value="117">JOSARFLOR</option> <option value="600">JOSETH &amp; MAXIMILIAN FLOWERS S.A</option> <option value="1106">JOYMARY FLOR</option> <option value="1257">KAIZEN ROSES CIA. LTDA.</option> <option value="1510">KAMYLAS FLOWERS CL</option> <option value="1160">KHADROSES</option> <option value="1745">LA ALEGRIAFARM S.A.S.</option> <option value="83">LA ROSALEDA</option> <option value="2006">LARTISAN-ROSES S.A.S.</option> <option value="1452">LATINAFARMS</option> <option value="987">LATINFLOWERS CIA LTDA</option> <option value="1074">LEON ROSES</option> <option value="686">LIFEFLOWERS</option> <option value="1316">LOLITA FLOWERS</option> <option value="1937">MAGALYROSES  S.A.S.</option> <option value="1793">MARYBELLA GARDENS S.A.S.</option> <option value="1882">MATIZ ROSES</option> <option value="1493">MAYERLY.C.FLOWERS</option> <option value="1278">MERAKI FARMS</option> <option value="131">MERIZALDE</option> <option value="1363">MONTEBELLOFARMS</option> <option value="1457">MONTEROSASLIMITADA C.L.</option> <option value="438">MULROSAS</option> <option value="1878">MUÑOZ ANDRADE CHRISTIAN DANIEL</option> <option value="139">MYSTIC  FLOWERS</option> <option value="854">NATBEAUTY S.A.</option> <option value="144">NEVADO EC</option> <option value="278">NIKITA FL</option> <option value="146">NINTANGA S.A.S.</option> <option value="383">OLIMPO</option> <option value="1141">PINANGO CACUANGO NELSON FERNANDO</option> <option value="1784">PINANGO CUASCOTA ALEXANDRA PATRICIA</option> <option value="1494">PINANGO CUASCOTA NELSON RODRIGO</option> <option value="1870">QUIMBIAMBA GUASGUA JAIRO RAUL</option> <option value="718">QUIMBIAMBA M. FLOWERS</option> <option value="514">R DEL CORAZON</option> <option value="168">R  DEL COTOPAXI</option> <option value="859">REALFLOWERS ECUADORIAN</option> <option value="1191">ROMANCE FLOWERS</option> <option value="162">ROSADEX</option> <option value="928">ROSA HEN</option> <option value="164">ROSAPRIMA</option> <option value="1323">ROSARIO GARDEN</option> <option value="394">ROSASPE</option> <option value="391">ROSELY</option> <option value="850">ROSEMIROVICH</option> <option value="176">ROSESUCCESS</option> <option value="1977">ROYALTY-FLOWERS S.A.</option> <option value="2057">SAMPI QUALITY FLOWERS</option> <option value="978">SANTINO FLOWERS</option> <option value="1848">SEPEDA QUINATOA YADIRA ARACELY</option> <option value="1522">SHEKINAH FLOWERS</option> <option value="1325">SILVA  ALBERTO</option> <option value="1444">SIMBAÑA FARINANGO MARIANA DE JESUS</option> <option value="420">SOLPACIFIC S A</option> <option value="1960">TALLANA GUALAVISI ELIECER FERMIN</option> <option value="1588">TANI FLORAL S.A.S.</option> <option value="2005">TEPAFLOR CIA LTDA</option> <option value="605">TERRA PACIFIC</option> <option value="1735">TESSA FARMS</option> <option value="1319">TIERRVERD CIA. LTDA.</option> <option value="1113">TOMAS FLOWERS</option> <option value="640">TOPA LLUMILUISA ROBERTO CARLOS</option> <option value="1834">TORRES COLLAGUAZO ELVIA MARINA</option> <option value="1767">TUQUERES QUIMBIAMBA JUAN DIEGO</option> <option value="1625">TUQUERREZ CALUGUILLIN SEGUNDO ERNESTO</option> <option value="592">UGSHA FARMS CIA LTDA</option> <option value="1686">ULCUANGO ANDRANGO LUIS BAYARDO</option> <option value="2060">ULCUANGO QUIMBIAMBA MARIA MAGDALENA</option> <option value="1364">UTOPIA CHIVAN</option> <option value="1367">UTOPIA FYC</option> <option value="1366">UTOPIA LA MORA</option> <option value="1368">UTOPIA STAMARTHA</option> <option value="1365">UTOPIA TOLITA</option> <option value="2036">VACA RUEDA JHIMMY PAUL</option> <option value="1178">VALENTINA FLOWERS</option> <option value="309">VALLE VERDE</option> <option value="832">VARELA ANDRADE RICARDO DANIEL</option> <option value="1689">VARGAS VALLE VICTOR HUGO</option> <option value="554">VIOLETA FLOWERS</option> <option value="768">VOLCANO GARDENS PLANTACIONES S.A.</option> <option value="1161">WORLD ROSES CENTER</option> <option value="1944">YARY FLOWER S.A.S.</option> <option value="743">YOLI ROSES</option>
+
+</select> </div> </div> </div>
+<div  class="row " > <div 
+     class="col-md " > <div id="div_id_consignatario_marcacion" class="mb-3"> <label
+                for="id_consignatario_marcacion" class="form-label requiredField">
+                Marcación<span class="asteriskField">*</span> </label> <select name="consignatario_marcacion" id="id_consignatario_marcacion" name="consignatario_marcacion" class="select form-select" required> <option value="" selected>---------</option>
+
+</select> </div> </div> </div>
+
+</div>
+<div  
+     > <div  class="row " > <div 
+     class="col-md " > <p class="h5 pb-0 text-center">Destino y Fecha de Vuelo</p> <hr class="pt-0 mt-0 text-custom-header"> </div> </div>
+<div  class="row " > <div 
+     class="col-md " > <div id="div_id_vuelo" class="mb-3"> <label
+                for="id_vuelo" class="form-label requiredField">
+                Vuelo<span class="asteriskField">*</span> </label> <select name="vuelo" id="id_vuelo" name="vuelo" class="select form-select" required> <option value="" selected>---------</option>
+
+</select> </div> </div> </div>
+<div  class="row " > <div 
+     class="col-md " > <div id="div_id_dae" class="mb-3"> <label
+                for="id_dae" class="form-label requiredField">
+                Dae<span class="asteriskField">*</span> </label> <select name="dae" id="id_dae" name="dae" class="select form-select" required> <option value="" selected>---------</option>
+
+</select> </div> </div> </div>
+
+</div> </form>
+
+        </form>
+      </div>
+      <div class="content col-12 col-lg-8 border rounded-2"
+           hx-headers='{"X-CSRFToken": "TSuKcpfXTEdGxHDNYQfHt9PvfoYYkYTaf062Lg5DpR4FvOqVMRXqpL2saX5fRKk9"}'>
+        <p class="h5 pb-0 mt-3">Detalles de Coordinación del Vuelo</p>
+        <div class="row mt-3 mx-1 border rounded shadow py-3"
+             id="id_detalle_vuelo">
+          <div class="col">
+  <div class="row">
+    <div class="col-6 col-md-4">
+      <b>Exportador: </b><span id="exportador">
+        
+          ---
+        
+      </span>
+    </div>
+    <div class="col-6 col-md-4">
+      <b>Cliente: </b> <span id="cliente">
+        
+          ---
+        
+      </span>
+    </div>
+    <div class="col-6 col-md-4">
+      <b>AWB: </b> <span id="awb">
+        
+          ---
+        
+      </span>
+    </div>
+  </div>
+  <div class="row mt-3">
+    <div class="col-6 col-md-4">
+      <b>Fecha de Vuelo: </b><span id="fecha_vuelo">
+        
+          ---
+        
+      </span>
+    </div>
+    <div class="col-6 col-md-4">
+      <b>Ruta: </b> <span id="ruta">
+        
+          ---
+        
+      </span>
+    </div>
+    <div class="col-6 col-md-4">
+      <b>Aerolínea: </b> <span id="aerolinea">
+        
+          ---
+        
+      </span>
+    </div>
+  </div>
+</div>
+
+        </div>
+        <div class="row my-3">
+          <div class="col">
+            <button class="btn btn-sm btn-primary" id="id-refresh-btn">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <div class="col-12 col-md-4 col-lg-2 text-end me-4">
+            <button class="btn btn-success fw-bold px-4"
+                    hx-get="/exportador/detalle/create/"
+                    hx-target="#htmxDialog"
+                    hx-indicator="#bar-indicator"
+                    hx-include="#multiple-detalle-form"
+                    id="id-create-button">Coordinar</button>
+          </div>
+        </div>
+        <div hx-trigger="updateTable from:body"
+             hx-get="/exportador/detalle_coordinacion/"
+             hx-target="#table-container"
+             hx-swap="innerHTML"
+             hx-include="#multiple-detalle-form"
+             hx-indicator="#bar-indicator"></div>
+        
+        
+        <div id="bar-indicator" class="progress">
+          <div class="indeterminate"></div>
+        </div>
+        
+
+
+
+  <div id="table-container"
+       class="table-container table-responsive-lg">
+    
+      <table id="table"
+             class="table table-hover">
+        
+          
+            <thead >
+              <tr>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=created_at" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    F. Coordinación
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=producto" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    Producto
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=fb_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    FB
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=hb_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    1/2
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=qb_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    1/4
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=eb_coo" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    1/8
+                  </th>
+                
+                  <th class="align-middle bg-primary-subtle text-center" >
+                    BXS
+                  </th>
+                
+                  <th class="align-middle bg-primary-subtle text-center" >
+                    PCS
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=dae" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    DAE
+                  </th>
+                
+                  <th class="align-middle orderable text-nowrap"  hx-get="/exportador/detalle_coordinacion/?sort=hawb" hx-trigger="click" hx-indicator="#bar-indicator" hx-target="#table-container" hx-swap="outerHTML" role="button" >
+                    HAWB
+                  </th>
+                
+                  <th style="text-align: center; white-space:nowrap;" >
+                    Acciones
+                  </th>
+                
+              </tr>
+            </thead>
+          
+        
+        
+          <tbody id="body-target" >
+            
+              <tr>
+                <p class="h6 mt-3 mb-2 text-danger">No hay resultados que mostrar.</p>
+              </tr>
+            
+            
+              
+            
+          </tbody>
+        
+        
+          
+        
+      </table>
+    
+    
+      
+    
+  </div>
+
+
+        <div class="row text-end">
+          <p class="text-muted mb-1">
+            * Únicamente se pueden Editar/Eliminar los "detalles de coordinación" con "fecha de coordinación" igual a la actual.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+    <div id="htmxModal"
+         class="modal fade"
+         data-bs-backdrop="static"
+         tabindex="-1">
+      <div id="htmxDialog"
+           class="modal-dialog  modal-dialog-centered"
+           hx-target="this"></div>
+    </div>
+  
+
+      </div>
+      <!-- Modal User Details-->
+<div id="htmxProfileModal" class="modal fade" data-bs-backdrop="static">
+  <div id="htmxProfileDialog"
+       class="modal-dialog modal-dialog-centered"
+       hx-target="this"></div>
+</div>
+
+      <div id="htmxModal"
+           class="modal fade"
+           data-bs-backdrop="static"
+           tabindex='-1'>
+        <div id="htmxDialog"
+             class="modal-dialog  modal-dialog-centered"
+             hx-target="this"></div>
+      </div>
+    </div>
+    <!-- BS JS -->
+    <script src="/static/js/vendors.min.cb0be743cd01.js"></script>
+    <script src="/static/js/external.min.f1f83a5d0c1d.js"></script>
+    
+
+<!-- Scripts needed for FilteredSelectMultipleHTMX widget -->
+<script src="/jsi18n/"></script>
+<script src="/static/admin/js/core.cf103cd04ebf.js"></script>
+<script src="/static/admin/js/SelectBox.7d3ce5a98007.js"></script>
+<script src="/static/js/misc/filtered-select-multiple-htmx.0634b619e155.js"></script>
+
+    <!-- Specific JS goes HERE -->
+    
+  <script>
+    var baseUrl = window.location.origin;
+    const VUELO_URL = '/exportador/populate_doc_coordinacion_select/';
+    const CONSIGNATARIO_URL = '/exportador/populate_consignatario/';
+    const DAE_URL = '/exportador/populate_exportador_dae_select/';
+    const DETALLE_VUELO_URL = '/exportador/detalle/vuelo/';
+  </script>
+  <script src="/static/js/detalles_coordinacion/selection_form.ab2d0a094752.js"></script>
+
+  </body>
+</html>

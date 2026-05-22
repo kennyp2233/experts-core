@@ -1,129 +1,158 @@
-# EBF Portal — continuar mañana
+# EBF Portal — estado
 
-> Fecha de captura inicial: 2026-05-17 (domingo, fuera de ventana de coordinación 08:00–13:30 EC).
-> El portal oculta acciones de creación/edición fuera de esa ventana — por eso quedaron stub.
+> Última captura logueada: 2026-05-19 (martes, ventana abierta).
+> Página de coordinación mapeada end-to-end. Submit real **NO** ejecutado todavía.
 
 ## Estado actual
 
 ### Listo y verificado contra el portal real
-- **Login**: GET `/accounts/login/?next=/` → extrae `csrfmiddlewaretoken` + cookie `__Secure-csrftoken` → POST a `/accounts/login/` con ambos. Retorna 302 y emite `__Secure-sessionid`.
-- **Cliente HTTP**: cookie jar manual (sin tough-cookie), `maxRedirects: 0` para detectar 302→login y auto-reloguear (`EBF_SESSION_EXPIRED` → `forceRelogin()`).
-- **Lista de coordinaciones**: parser tabla SSR de 15 columnas (`ETD, AWB, Exportador, Marcación, Producto, DAE, HAWB, BXS-COO, PCS-COO, BXS-WH, PCS-WH, Origen, D. AWB, D. Final, Creación`). Paginación detectada por `hx-get="?page=N"`.
-- **Lista DAEs**: parser dinámico (headers `<th>` → keys), columnas a confirmar.
-- **Histórico**: misma vista que lista, flag `includeHistorico` en query.
-- **Horarios**: util `isWithinWindow()` con timezone `America/Guayaquil` aplicado solo a writes.
 
-### Stub / pendiente
-- **`create()` coordinación** — lanza `NotImplementedException` con mensaje claro.
-- **`update()` coordinación** — idem.
-- **`getDetalle()` parser** — retorna `raw.html` sin descomponer (no se vio HTML autenticado del detalle).
-- **`detalleId` en filas de la lista** — extracción por regex genérica del path `/exportador/detalle_coordinacion/<id>/`. Si las filas usan htmx con atributos no estándar, queda `null`. Confirmar mañana.
+- **Login** + cookie jar + relogin transparente al ver 302→login.
+- **Lista de coordinaciones** (despacho + histórico) — 15 columnas SSR.
+- **Lista de DAEs** — columnas dinámicas (headers descubiertos en runtime).
+- **Página coordinar** (`/exportador/detalle_coordinacion/`) — mapeo full:
+  - Cascade `exportador → marcación → vuelo → DAE` (4 endpoints helper).
+  - Card resumen del vuelo (`/exportador/detalle/vuelo/`).
+  - Modal `Crear Detalle De Coordinación` (`/exportador/detalle/create/`):
+    productos con flags (`isFullBxs`, `isCompoundProduct`, `errorMessage`),
+    formset compuesto con `min_num_forms=2`, hidden replicado.
+  - Calculadora `/exportador/box_weight_factor_calculator/` (POST JSON).
+- **Horarios** — ventanas configuradas en
+  [utils/horarios.util.ts](./utils/horarios.util.ts), aplicadas solo a writes.
 
-## Cuando vuelvas (lunes 2026-05-18 en horario 08:00–13:30 EC)
-
-### 1. Verifica login + lista funcionan end-to-end desde el back
-
-```bash
-# en el host del back, con .env apuntando a portal.ebfcargo.com y credenciales
-curl http://localhost:3000/api/v1/integrations/ebf-portal/health
-curl http://localhost:3000/api/v1/integrations/ebf-portal/coordinaciones
-curl http://localhost:3000/api/v1/integrations/ebf-portal/daes
-```
-
-Si `health` falla, comprobar env vars:
-- `EBF_PORTAL_USER` (`manager@expertshcargo.com`)
-- `EBF_PORTAL_PASS`
-- `EBF_PORTAL_BASE_URL` (default `https://portal.ebfcargo.com`)
-
-### 2. Capturar HTML autenticado del detalle y de los forms
-
-Loguearse desde el back (o reusar el curl manual del research) y guardar a disco:
-
-```bash
-# Detalle (sustituir <id> por uno real de la lista)
-curl -sS -b cookies.txt "https://portal.ebfcargo.com/exportador/detalle_coordinacion/<id>/" > detalle.html
-
-# Probable URL del form de creación — explorar también desde el dashboard logueado:
-# 1) Abrir https://portal.ebfcargo.com/exportador/coordinacion/lista/ con la sesión activa
-# 2) Buscar botón "Nueva coordinación" / "Crear" — capturar el href real
-# 3) GET esa URL y guardar como create_form.html
-```
-
-### 3. Confirmar / refinar parsers
-
-- `parsers/coordinacion-list.parser.ts:DETAIL_RX` — comprobar que las filas reales tienen una URL `/exportador/detalle_coordinacion/<id>/` o un `hx-get`/`data-id`. Si es diferente, ajustar.
-- `parsers/coordinacion-detail.parser.ts` — implementar de verdad: extraer secciones (datos generales, marcas, vuelos, adjuntos). Si la página es compleja, considerar agregar `cheerio` como dep — el parser manual escala mal con DOM anidado.
-
-### 4. Mapear forms de create/update y reemplazar los stub
-
-Workflow:
-```ts
-// pseudocódigo del flujo write
-const formPage = await http.get('/<url-del-form>/', { detectAuthRedirect: true });
-const forms = parseForms(String(formPage.data));
-const target = forms.find(f => f.action === '/<url-de-submit>/'); // o el que tenga el csrf
-const body: Record<string, string> = {
-  csrfmiddlewaretoken: target.csrfToken!,
-  // … campos del DTO mapeados a target.fields[].name
-};
-const res = await http.postForm(target.action!, body, { detectAuthRedirect: true });
-// 302 a /<lista>/ = OK ; 200 con form recargado = errores de validación (parsear errores del HTML)
-```
-
-Pasos concretos:
-1. Correr `parseForms(html)` (en `parsers/form-fields.parser.ts`) sobre el HTML del form de creación y loggear el resultado.
-2. Pegar la lista de fields (name + type + required + options) en este MD como "contrato del form".
-3. Definir DTO **tipado** con `class-validator` que mapee 1:1 a esos fields. Reemplazar el `fields: Record<string,string>` de `create-coordinacion.dto.ts` / `update-coordinacion.dto.ts`.
-4. En `EbfCoordinacionService.create/update`, reemplazar el `throw NotImplementedException` por: GET form → extraer csrf → POST con datos.
-5. Encolar con Bull (`fito-xml` ya existe como ejemplo) si vamos a paralelizar — el portal puede tener race conditions del lado servidor.
-
-### 5. Validación de horarios
-
-Ya está integrada en `create/update` vía `assertCoordinacionWindow()`. Si el portal cambia ventanas, editar `utils/horarios.util.ts:COORDINACION_WINDOWS`.
-
-### 6. Considerar agregar deps (opcional)
-
-Si el HTML del detalle es complejo o los parsers regex empiezan a fallar:
-```
-npm i cheerio
-```
-- `tough-cookie` + `axios-cookiejar-support` solo si aparece la necesidad de soportar múltiples dominios o expiración real (improbable).
-
-### 7. Aún sin tocar — decisiones para retomar
-
-- **¿Persistir resultados en PG?** Hoy todo es pasthrough. Cuando se decida side-car (ver [docs/decisions/0001-hybrid-access-postgres.md](../../../../../../docs/decisions/0001-hybrid-access-postgres.md)), crear un schema `prisma/extensions/ebf-portal/` con tablas mirror + `ebfCoordinacionId` indexado.
-- **¿Trigger automatizado?** Hoy bajo demanda. Si se quiere cron de pull, sumar `@nestjs/schedule` (ya no agrega complejidad).
-- **¿Auditoría?** Hoy logs `[EBF-PORTAL]` por consola. Si los writes son críticos, persistir cada submit (DTO + status + HTML de respuesta) en una tabla `ebf_portal_audit`.
-
-## Arquitectura del módulo (referencia rápida)
+### Estructura del módulo
 
 ```
-src/modules/integrations/ebf-portal/
-├── ebf-portal.module.ts            # wiring
-├── ebf-portal.controller.ts        # endpoints v1: /api/v1/integrations/ebf-portal/*
-├── ebf-portal.service.ts           # facade (orquesta auth + delega en services)
-├── config/ebf-portal.config.ts     # env vars tipadas (registerAs 'ebfPortal')
-├── http/
-│   ├── cookie-jar.ts               # jar minimal name→value
-│   └── ebf-http.client.ts          # axios + jar + Referer auto + 302→login detection
-├── auth/
-│   └── ebf-auth.service.ts         # ensureSession() + forceRelogin() concurrent-safe
+ebf-portal/
+├── ebf-portal.module.ts
+├── ebf-portal.controller.ts             # v1: /api/v1/integrations/ebf-portal/*
+├── ebf-portal.service.ts                # facade
+├── config/ebf-portal.config.ts          # paths + env
+├── http/{cookie-jar.ts, ebf-http.client.ts}
+├── auth/ebf-auth.service.ts             # ensureSession + relogin
 ├── services/
-│   ├── coordinacion.service.ts     # list / detail (raw) / create (stub) / update (stub)
-│   └── dae.service.ts              # list (columnas dinámicas)
+│   ├── coordinacion.service.ts          # list/getDetalle (despacho) + update stub
+│   ├── coordinacion-selection.service.ts# cascade + vuelo card (read-only)
+│   ├── coordinacion-create.service.ts   # getCreateForm + calcBox + create
+│   └── dae.service.ts
 ├── parsers/
-│   ├── csrf.parser.ts              # csrfmiddlewaretoken del HTML
-│   ├── coordinacion-list.parser.ts # tabla SSR → 15 columnas + paginación
-│   ├── coordinacion-detail.parser.ts  # PLACEHOLDER
-│   └── form-fields.parser.ts       # introspección genérica de <form>
-├── utils/
-│   └── horarios.util.ts            # ventanas + isWithinWindow(tz='America/Guayaquil')
-├── types/
-│   ├── coordinacion.types.ts
-│   └── dae.types.ts
-└── dto/
-    ├── create-coordinacion.dto.ts  # STUB (fields: Record<string,string>)
-    └── update-coordinacion.dto.ts  # STUB
+│   ├── csrf.parser.ts
+│   ├── coordinacion-list.parser.ts
+│   ├── coordinacion-detail.parser.ts    # PLACEHOLDER (otra página, sin mapear)
+│   ├── coordinacion-create-modal.parser.ts
+│   ├── form-fields.parser.ts            # genérico (legacy)
+│   ├── select-options.parser.ts
+│   └── vuelo-card.parser.ts
+├── utils/horarios.util.ts
+├── types/{coordinacion.types.ts, dae.types.ts, coordinacion-create.types.ts}
+├── dto/{create-coordinacion.dto.ts, update-coordinacion.dto.ts, box-weight.dto.ts}
+└── research/                            # HTML/JS capturado el 2026-05-19
 ```
 
-**Regla de oro:** ninguna lógica de scraping/POST fuera de `services/` y `parsers/`. El `controller` solo enruta, el `facade` solo delega. Si un archivo supera ~250 líneas, partirlo.
+### Endpoints expuestos
+
+| Verbo | Path | Service |
+|---|---|---|
+| GET | `/health` | facade |
+| GET | `/coordinaciones?page&sort&historico` | coordinacion.list |
+| GET | `/coordinaciones/:id` | coordinacion.getDetalle (raw HTML) |
+| PUT | `/coordinaciones/:id` | coordinacion.update **(stub)** |
+| GET | `/daes?page` | dae.list |
+| GET | `/coordinar/exportadores` | selection.listExportadores |
+| GET | `/coordinar/marcaciones?exportador` | selection.listMarcaciones |
+| GET | `/coordinar/vuelos?exportador&marcacion` | selection.listVuelos |
+| GET | `/coordinar/daes?exportador&marcacion&vuelo` | selection.listDaes |
+| GET | `/coordinar/vuelo-card?exportador&marcacion&vuelo&dae?` | selection.getVueloCard |
+| GET | `/coordinar/form?exportador&marcacion&vuelo&dae` | create.getCreateForm |
+| POST | `/coordinar/box-weight` | create.calculateBoxWeight |
+| POST | `/coordinar` | create.createCoordinacion **(write — no ejecutado todavía)** |
+
+### Contrato del portal — cheatsheet
+
+```
+GET /exportador/detalle_coordinacion/             → página HTML + (con HX-Request) tabla parcial
+GET /exportador/populate_consignatario/?exportador=X
+GET /exportador/populate_doc_coordinacion_select/?exportador=X&consignatario_marcacion=Y
+GET /exportador/populate_exportador_dae_select/?exportador=X&consignatario_marcacion=Y&doc_coordinacion=Z
+GET /exportador/detalle/vuelo/?exportador&consignatario_marcacion&vuelo&dae
+GET /exportador/detalle/create/?exportador&consignatario_marcacion&vuelo&dae
+POST /exportador/detalle/create/  (urlencoded — body en `coordinacion-create.service.ts:buildSubmitBody`)
+POST /exportador/box_weight_factor_calculator/ (JSON {fb_coo, hb_coo, qb_coo, eb_coo})
+```
+
+⚠️ Nombre confuso: el select se llama `vuelo` en el DOM pero el endpoint de DAEs lo recibe como **`doc_coordinacion`**.
+
+## Próximo paso — primera coordinación real
+
+Plan de ejecución (con un humano supervisando cada paso):
+
+1. **Smoke read-only end-to-end** desde un cliente HTTP (curl / Bruno):
+   ```
+   GET  /api/v1/integrations/ebf-portal/health
+   GET  /api/v1/integrations/ebf-portal/coordinar/exportadores
+   GET  /api/v1/integrations/ebf-portal/coordinar/marcaciones?exportador=164
+   GET  /api/v1/integrations/ebf-portal/coordinar/vuelos?exportador=164&marcacion=164
+   GET  /api/v1/integrations/ebf-portal/coordinar/daes?exportador=164&marcacion=164&vuelo=9721
+   GET  /api/v1/integrations/ebf-portal/coordinar/vuelo-card?exportador=164&marcacion=164&vuelo=9721
+   GET  /api/v1/integrations/ebf-portal/coordinar/form?exportador=164&marcacion=164&vuelo=9721&dae=21566
+   ```
+   Validar que los IDs reales tienen sentido (compararlos con lo que ve un usuario logueado en el portal).
+
+2. **Dry run de la calculadora**:
+   ```
+   POST /api/v1/integrations/ebf-portal/coordinar/box-weight
+   { "fb_coo": 0, "hb_coo": 4, "qb_coo": 0, "eb_coo": 0 }
+   ```
+   Confirmar que el resultado coincide con lo que muestra el modal del portal con esos mismos valores.
+
+3. **Primer submit real (CON confirmación humana)**. Body mínimo:
+   ```
+   POST /api/v1/integrations/ebf-portal/coordinar
+   {
+     "exportadorId": 164,
+     "consignatarioMarcacionId": 164,
+     "docCoordinacionId": 9721,
+     "daeId": 21566,
+     "productoId": 1,
+     "hbCoo": 1, "qbCoo": 0, "ebCoo": 0
+   }
+   ```
+   Verificar:
+   - Respuesta 302 `{ ok: true, status: 302, redirectTo: ... }`.
+   - La coordinación aparece en `/exportador/coordinacion/lista/` del portal.
+   - Si vuelve 200 con `errors[]`, parsear y corregir antes del siguiente intento.
+
+4. **Auditoría posterior**. Cuando el flujo sea estable, persistir cada submit
+   (DTO + status + redirect + errors + html truncado) en una tabla side-car PG
+   `ebf_portal_coordinacion_audit`. Schema candidato:
+   `prisma/extensions/ebf-portal/` (ver
+   [docs/decisions/0001-hybrid-access-postgres.md](../../../../../../docs/decisions/0001-hybrid-access-postgres.md)).
+
+## Decisiones pendientes
+
+- **Concurrencia.** Hoy el submit es síncrono. Si el portal lo soporta mal,
+  encolar con Bull (referencia: módulo `templates/fito`). Por ahora KISS.
+- **Update / edit.** Form de edición no capturado. Cuando aparezca el caso de
+  uso, mapear igual que create — el path es probablemente
+  `/exportador/detalle/<id>/update/` o similar.
+- **Borrado.** Mismo status que update.
+- **Detalle individual.** [coordinacion-detail.parser.ts](./parsers/coordinacion-detail.parser.ts)
+  sigue placeholder — esa página no es la de coordinar, es el detalle de una
+  coordinación ya creada (URL todavía sin confirmar). Bajo demanda.
+- **Trigger automatizado / cron.** Hoy todo es bajo demanda. Si en algún momento
+  hay que coordinar masivamente desde EXPERTS, sumar `@nestjs/schedule` o un
+  job Bull. Ver primero si el portal aguanta.
+
+## Anti-foot-guns
+
+- **Nunca llamar `EbfCoordinacionCreateService.createCoordinacion()` fuera de
+  ventana operativa.** El service ya lo bloquea, pero el front debe avisar
+  antes de que el usuario llene el form.
+- **No bypasear `assertCoordinacionWindow()`.** Si urge un test, hacerlo en
+  staging contra un portal de pruebas, no comentando el guard.
+- **No persistir el `rawHtml` del submit sin truncar.** Los responses 200 con
+  errores pueden traer páginas completas — limitar a 50 KB para la auditoría.
+- **CSRF se renueva por request.** No cachear `csrfToken` entre llamadas — el
+  service ya lo re-extrae en cada `getCreateForm`.
+- **El cascade depende de IDs válidos *entre sí*.** Si el exportador no tiene
+  marcaciones para hoy, las listas vienen vacías — no es bug.

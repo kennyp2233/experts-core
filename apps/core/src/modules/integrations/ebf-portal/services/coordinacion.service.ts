@@ -4,20 +4,19 @@ import { EbfHttpClient } from '../http/ebf-http.client';
 import { EbfAuthService } from '../auth/ebf-auth.service';
 import { parseCoordinacionList } from '../parsers/coordinacion-list.parser';
 import { parseCoordinacionDetalle } from '../parsers/coordinacion-detail.parser';
-import {
-  COORDINACION_WINDOWS,
-  describeWindows,
-  isWithinWindow,
-} from '../utils/horarios.util';
 import type {
   CoordinacionDetalle,
   CoordinacionListPage,
   CoordinacionListQuery,
 } from '../types/coordinacion.types';
-import type { CreateCoordinacionDto } from '../dto/create-coordinacion.dto';
 import type { UpdateCoordinacionDto } from '../dto/update-coordinacion.dto';
 import type { EbfPortalConfig } from '../config/ebf-portal.config';
 
+/**
+ * Lecturas de la sección de despacho del portal: lista (`/exportador/
+ * coordinacion/lista/`) e histórico. La creación de coordinaciones vive en
+ * `EbfCoordinacionCreateService` (página `/exportador/detalle_coordinacion/`).
+ */
 @Injectable()
 export class EbfCoordinacionService {
   private readonly logger = new Logger(EbfCoordinacionService.name);
@@ -61,34 +60,10 @@ export class EbfCoordinacionService {
     return parseCoordinacionDetalle(id, String(res.data ?? ''));
   }
 
-  async create(_dto: CreateCoordinacionDto): Promise<never> {
-    this.assertCoordinacionWindow();
-    throw new NotImplementedException(
-      'EBF Portal — create coordinación pendiente. Mapear form en horario operativo (ver EBF_PORTAL_TOMORROW.md).',
-    );
-  }
-
   async update(_id: string, _dto: UpdateCoordinacionDto): Promise<never> {
-    this.assertCoordinacionWindow();
     throw new NotImplementedException(
-      'EBF Portal — update coordinación pendiente. Mapear form en horario operativo (ver EBF_PORTAL_TOMORROW.md).',
+      'EBF Portal — update coordinación pendiente de mapear (form de edición no capturado todavía).',
     );
-  }
-
-  /**
-   * Lanza si no estamos dentro de la ventana de coordinación. Las
-   * operaciones de lectura no la requieren — solo writes.
-   */
-  private assertCoordinacionWindow(): void {
-    const inside = isWithinWindow(COORDINACION_WINDOWS, this.cfg.timezone);
-    if (!inside) {
-      this.logger.warn(
-        `[EBF-PORTAL] write attempt outside coordinación window (${describeWindows(COORDINACION_WINDOWS)} ${this.cfg.timezone})`,
-      );
-      throw new NotImplementedException(
-        `Portal EBF fuera de ventana de coordinación. Ventanas: ${describeWindows(COORDINACION_WINDOWS)} (${this.cfg.timezone}).`,
-      );
-    }
   }
 
   private buildQuery(params: Record<string, unknown>): string {

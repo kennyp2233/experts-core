@@ -1,0 +1,174 @@
+
+
+
+<div class="modal-content" id="modal-htmx">
+  <form hx-post="/exportador/detalle/create/"  hx-indicator="#modal-indicator" hx-trigger='submit once'  hx-include='#multiple-detalle-form'>
+    <input type="hidden" name="csrfmiddlewaretoken" value="ffHhlkqoevn8kBHx4b3HwNudMqShASHcBnjzUbg4KIe7iIuFScLqspHaHZZy7E8b">
+    <div>
+      <div class="modal-header">
+        <h3 class="modal-title text-muted">Crear Detalle De Coordinación</h3>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"></button>
+      </div>
+      <div class="modal-body overflow-auto">
+        <div id="modal-indicator"
+             class="spinner-border text-ebfbluelight fixed-spinner">
+          <div class="indeterminate"></div>
+        </div>
+        
+        
+        
+  
+    <div class="container-fluid">
+
+<form  method="post" > <input type="hidden" name="csrfmiddlewaretoken" value="ffHhlkqoevn8kBHx4b3HwNudMqShASHcBnjzUbg4KIe7iIuFScLqspHaHZZy7E8b"> <div  
+     > <div  class="row " > <input type="hidden"
+    name="exportador"
+    value="164"
+    
+    
+    />
+<input type="hidden"
+    name="consignatario_marcacion"
+    value="164"
+    
+    
+    />
+<input type="hidden"
+    name="doc_coordinacion"
+    value="9721"
+    
+    
+    />
+<input type="hidden"
+    name="dae"
+    value="21566"
+    
+    
+    />
+
+</div>
+
+</div>
+<div  
+     > <div  class="row " > <div 
+     class="col-md mb-2" > <p class='text-muted'>Se coordinará en Piezas (Números Enteros), de acuerdo al tamaño de caja a enviarse.</p>
+</div> </div>
+
+</div>
+<div  
+     > <div  class="row " > <div 
+     class="col-md " > <div id="div_id_producto" class="mb-3"> <label
+                for="id_producto" class="form-label requiredField">
+                Producto<span class="asteriskField">*</span> </label> <select name="producto" class="customselectwithdatafield form-select" id="id_producto"> <option value="228" data-is-full-bxs="False" data-is-compound-product="False" data-error-message="">ANEMONE</option> <option value="337" data-is-full-bxs="False" data-is-compound-product="False" data-error-message="">LISIANTHUS</option> <option value="387" data-is-full-bxs="False" data-is-compound-product="False" data-error-message="">RANUNCULOS</option> <option value="1" data-is-full-bxs="False" data-is-compound-product="False" data-error-message="">ROSAS</option>
+
+</select> </div> </div> </div>
+
+</div>
+<div  
+     > <div  class="row " > <div 
+     class="col-md " > <div id='id-compound-container' class='alert alert-secondary'></div>
+</div> </div>
+
+</div>
+<div  
+     > <div  class="row " > <div 
+     class="col-md mb-2" > <div id='id-msg-destino' class='alert alert-danger' role='alert'></div>
+</div> </div>
+
+</div>
+<div  
+      id="id-compound-container-formset"> <p class='h6'>Variedad Productos</p><hr class='mt-0'><div class="row justify-content-center"> <div class="col-12"> <div class="table-responsive-md"> <table class="table col-md-12"> <input type="hidden" name="compound_products-TOTAL_FORMS" value="2" id="id_compound_products-TOTAL_FORMS"> <input type="hidden" name="compound_products-INITIAL_FORMS" value="0" id="id_compound_products-INITIAL_FORMS"> <input type="hidden" name="compound_products-MIN_NUM_FORMS" value="2" id="id_compound_products-MIN_NUM_FORMS"> <input type="hidden" name="compound_products-MAX_NUM_FORMS" value="1000" id="id_compound_products-MAX_NUM_FORMS"> <thead> <tr> <th for="id_compound_products-0-producto"
+                  class="text-center col-form-label requiredField">
+                Producto
+                <span class="asteriskField">*</span> </th> <th for="id_compound_products-0-DELETE"
+                  class="text-center col-form-label ">
+                Borrar
+                
+              </th> </tr> </thead> <tbody> <tr class=" row1 formset_row-compound_products"> <td style="vertical-align:top; min-width:130px;" class="text-center"> <input type="hidden" name="compound_products-0-id" id="id_compound_products-0-id"><input type="hidden" name="compound_products-0-detalle_coordinacion" id="id_compound_products-0-detalle_coordinacion"> <div class="mt-2"> <div id="div_id_compound_products-0-producto" class="mb-3"> <select name="compound_products-0-producto" class="select form-select" id="id_compound_products-0-producto"> <option value="" selected>---------</option> <option value="228">ANEMONE</option> <option value="337">LISIANTHUS</option> <option value="387">RANUNCULOS</option> <option value="1">ROSAS</option>
+
+</select> </div> </div> </td> <td style="vertical-align:top; min-width:130px;" class="text-center"> <div class="mt-2"> <div class="mb-3"> <div id="div_id_compound_products-0-DELETE" class="mb-3"> <input type="checkbox" name="compound_products-0-DELETE" class="checkboxinput form-check-input" id="id_compound_products-0-DELETE"> </div> </div> </div> </td> </tr> <tr class=" row2 formset_row-compound_products"> <td style="vertical-align:top; min-width:130px;" class="text-center"> <input type="hidden" name="compound_products-1-id" id="id_compound_products-1-id"><input type="hidden" name="compound_products-1-detalle_coordinacion" id="id_compound_products-1-detalle_coordinacion"> <div class="mt-2"> <div id="div_id_compound_products-1-producto" class="mb-3"> <select name="compound_products-1-producto" class="select form-select" id="id_compound_products-1-producto"> <option value="" selected>---------</option> <option value="228">ANEMONE</option> <option value="337">LISIANTHUS</option> <option value="387">RANUNCULOS</option> <option value="1">ROSAS</option>
+
+</select> </div> </div> </td> <td style="vertical-align:top; min-width:130px;" class="text-center"> <div class="mt-2"> <div class="mb-3"> <div id="div_id_compound_products-1-DELETE" class="mb-3"> <input type="checkbox" name="compound_products-1-DELETE" class="checkboxinput form-check-input" id="id_compound_products-1-DELETE"> </div> </div> </div> </td> </tr> </tbody> </table>
+</div>
+</div>
+</div>
+<br />
+<script type="text/javascript">
+  /*
+  Initialize the dynamic formset for adding and removing rows.
+  File at js/django-dynamic-formset/jquery.formset.js
+  */
+  $('.formset_row-compound_products').formset({
+    addText: '<i class="bi bi-plus-circle-fill text-success me-1"></i> Agregar fila',
+    deleteText: '<i class="bi bi-x-circle-fill text-danger"></i>',
+    addCssClass: 'add-row ',
+    deleteCssClass: 'delete-row',
+    prefix: 'compound_products',
+    removed: (e) => {
+      let fields = e.find(":input:not([type=hidden])");
+      fields.each((field) => {
+        fields[field].removeAttribute("value");
+      })
+    },
+  });
+</script> </div>
+<div  
+      id="id-detalle-box-input-container"> <div  
+     > <div  class="row form-row" > <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_fb_coo" class="mb-3"> <label
+                for="id_fb_coo" class="form-label requiredField">
+                (FB)<span class="asteriskField">*</span> </label> <input type="number" name="fb_coo" value="0" min="0" style=" background-color: var(--bs-secondary-bg);" class="numberinput form-control" readonly="readonly" tabindex="-1" name="fb" required id="id_fb_coo"> </div> </div> <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_hb_coo" class="mb-3"> <label
+                for="id_hb_coo" class="form-label requiredField">
+                1/2 (HB)<span class="asteriskField">*</span> </label> <input type="number" name="hb_coo" value="0" min="0" name="hb" class="numberinput form-control" required id="id_hb_coo"> </div> </div> <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_qb_coo" class="mb-3"> <label
+                for="id_qb_coo" class="form-label requiredField">
+                1/4 (QB)<span class="asteriskField">*</span> </label> <input type="number" name="qb_coo" value="0" min="0" name="qb" class="numberinput form-control" required id="id_qb_coo"> </div> </div> <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_eb_coo" class="mb-3"> <label
+                for="id_eb_coo" class="form-label requiredField">
+                1/8 (EB)<span class="asteriskField">*</span> </label> <input type="number" name="eb_coo" value="0" min="0" name="eb" class="numberinput form-control" required id="id_eb_coo"> </div> </div> </div>
+
+</div>
+<div  
+     > <div  class="row form-row" > <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_bxs_coo" class="mb-3"> <label
+                for="id_bxs_coo" class="form-label">
+                Total BXS 
+            </label> <input type="number" name="bxs_coo" value="0.0" min="0" step="any" readonly="readonly" tabindex="-1" style="background-color: var(--bs-secondary-bg);" class="numberinput form-control" id="id_bxs_coo"> </div> </div> <div 
+     class="form-group col-6 col-md-3" > <div id="div_id_pcs_coo" class="mb-3"> <label
+                for="id_pcs_coo" class="form-label">
+                Total PCS 
+            </label> <input type="number" name="pcs_coo" value="0" min="0" readonly="readonly" tabindex="-1" style="background-color: var(--bs-secondary-bg);" class="numberinput form-control" id="id_pcs_coo"> </div> </div> </div>
+
+</div>
+
+</div> </form>
+</div>
+  
+
+      </div>
+      <div class="modal-footer">
+        
+  
+          <button type="submit" class="btn btn-success me-2" id="id_submit_button">Crear Detalle De Coordinación</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        
+
+      </div>
+    </div>
+  </form>
+  
+  <script>
+    var baseUrl = window.location.origin;
+    var BOX_WEIGHT_CALCULATOR_URL = baseUrl + '/exportador/box_weight_factor_calculator/';
+    var DEBOUNCE_DELAY = '500';
+    var CSRFToken = 'ffHhlkqoevn8kBHx4b3HwNudMqShASHcBnjzUbg4KIe7iIuFScLqspHaHZZy7E8b';
+  </script>
+  <script src="/static/js/detalles_coordinacion/update_creation_fields.528c85b3fd3f.js"></script>
+  <script src="/static/js/detalles_coordinacion/add_compound_produc_msg.46b95515a1e0.js"></script>
+  <script src="/static/js/detalles_coordinacion/is_product_in_country.b8d3ffc07ae4.js"></script>
+
+</div>
