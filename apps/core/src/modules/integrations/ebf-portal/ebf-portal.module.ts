@@ -7,6 +7,7 @@ import { EbfCustomerAuthService } from './auth/ebf-customer-auth.service';
 import { EbfCoordinacionService } from './services/coordinacion.service';
 import { EbfCoordinacionSelectionService } from './services/coordinacion-selection.service';
 import { EbfCoordinacionCreateService } from './services/coordinacion-create.service';
+import { EbfCoordinacionUpdateService } from './services/coordinacion-update.service';
 import { EbfDaeService } from './services/dae.service';
 import { EbfCustomerAwbService } from './services/customer-awb.service';
 import { EbfPortalService } from './ebf-portal.service';
@@ -25,6 +26,7 @@ import ebfPortalConfig from './config/ebf-portal.config';
     EbfCoordinacionService,
     EbfCoordinacionSelectionService,
     EbfCoordinacionCreateService,
+    EbfCoordinacionUpdateService,
     EbfDaeService,
     EbfCustomerAwbService,
     EbfPortalService,

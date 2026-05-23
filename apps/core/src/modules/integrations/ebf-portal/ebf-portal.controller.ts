@@ -1,11 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
-  Put,
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -47,17 +48,6 @@ export class EbfPortalController {
   @ApiOperation({ summary: 'Detalle crudo de una coordinación (despacho)' })
   async getCoordinacion(@Param('id') id: string) {
     return this.service.coordinacion.getDetalle(id);
-  }
-
-  @Put('coordinaciones/:id')
-  @ApiOperation({
-    summary: 'Actualizar coordinación (STUB — form de edición sin mapear)',
-  })
-  async updateCoordinacion(
-    @Param('id') id: string,
-    @Body() dto: UpdateCoordinacionDto,
-  ) {
-    return this.service.coordinacion.update(id, dto);
   }
 
   @Get('daes')
@@ -175,5 +165,39 @@ export class EbfPortalController {
   })
   async createCoordinacion(@Body() dto: CreateCoordinacionDto) {
     return this.service.create.createCoordinacion(dto);
+  }
+
+  // ---------- UPDATE / DELETE sobre coordinación existente ----------
+
+  @Get('coordinar/:detalleId/edit-form')
+  @ApiOperation({
+    summary:
+      'Modal de edición parseado para un detalleId. Read-only — no requiere ventana.',
+  })
+  async getEditForm(@Param('detalleId', ParseIntPipe) detalleId: number) {
+    return this.service.update.getUpdateForm(detalleId);
+  }
+
+  @Patch('coordinar/:detalleId')
+  @ApiOperation({
+    summary:
+      'Actualiza una coordinación existente (write — requiere ventana operativa).',
+  })
+  async updateCoordinar(
+    @Param('detalleId', ParseIntPipe) detalleId: number,
+    @Body() dto: UpdateCoordinacionDto,
+  ) {
+    return this.service.update.updateCoordinacion(detalleId, dto);
+  }
+
+  @Delete('coordinar/:detalleId')
+  @ApiOperation({
+    summary:
+      'Elimina una coordinación existente (write — requiere ventana operativa, irreversible).',
+  })
+  async deleteCoordinar(
+    @Param('detalleId', ParseIntPipe) detalleId: number,
+  ) {
+    return this.service.update.deleteCoordinacion(detalleId);
   }
 }
