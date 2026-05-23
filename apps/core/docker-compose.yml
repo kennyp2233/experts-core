@@ -22,7 +22,7 @@ services:
       - .env
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_started
       db-setup:
@@ -43,7 +43,8 @@ services:
       - DATABASE_URL_DOCUMENTOS=postgresql://postgres:password@postgres:5432/experts_core?schema=documentos
       - DATABASE_URL_EBF_PORTAL_SYNC=postgresql://postgres:password@postgres:5432/experts_core?schema=ebf_portal_sync
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     restart: "no"
@@ -59,6 +60,12 @@ services:
       - "5433:5432"
     volumes:
       - experts-core_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d experts_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   redis:
