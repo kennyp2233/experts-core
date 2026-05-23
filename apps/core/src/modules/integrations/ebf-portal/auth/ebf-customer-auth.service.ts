@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EbfCustomerHttpClient } from '../http/ebf-customer-http.client';
 import { extractCsrfFormToken } from '../parsers/csrf.parser';
@@ -40,9 +45,12 @@ export class EbfCustomerAuthService {
   }
 
   private async performLogin(): Promise<void> {
+    // Ver comentario en EbfAuthService.performLogin — mismo trato:
+    // 503 para config server-side faltante, 502 para fallas del upstream EBF.
+    // Nunca 401 (eso lo reservamos para "la sesión EXPERTS del cliente expiró").
     if (!this.cfg.customerUsername || !this.cfg.customerPassword) {
-      throw new UnauthorizedException(
-        'EBF_PORTAL_CUSTOMER_USER / EBF_PORTAL_CUSTOMER_PASS no configurados.',
+      throw new ServiceUnavailableException(
+        'EBF Portal: EBF_PORTAL_CUSTOMER_USER / EBF_PORTAL_CUSTOMER_PASS no configurados en el server.',
       );
     }
 
@@ -50,13 +58,13 @@ export class EbfCustomerAuthService {
     const pageRes = await this.http.get(loginUrl);
     const formToken = extractCsrfFormToken(String(pageRes.data ?? ''));
     if (!formToken) {
-      throw new UnauthorizedException(
-        'No se pudo extraer csrfmiddlewaretoken del login HTML (cliente).',
+      throw new BadGatewayException(
+        'EBF Portal (cliente): no se pudo extraer csrfmiddlewaretoken del login HTML.',
       );
     }
     if (!this.http.csrfToken()) {
-      throw new UnauthorizedException(
-        'Cookie __Secure-csrftoken no fue emitida por el portal (cliente).',
+      throw new BadGatewayException(
+        'EBF Portal (cliente): cookie __Secure-csrftoken no emitida.',
       );
     }
 
@@ -69,8 +77,8 @@ export class EbfCustomerAuthService {
     });
 
     if (res.status !== 302 || !this.http.hasSession()) {
-      throw new UnauthorizedException(
-        `Login a EBF Portal (cliente) falló (status=${res.status}, hasSession=${this.http.hasSession()}).`,
+      throw new BadGatewayException(
+        `EBF Portal (cliente): login falló (status=${res.status}, hasSession=${this.http.hasSession()}). Revisar creds o status del portal.`,
       );
     }
     this.logger.log(

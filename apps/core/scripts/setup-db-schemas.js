@@ -119,11 +119,17 @@ async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   if (failCount > 0) {
-    console.error('⚠️  Se encontraron errores. Manteniendo el proceso vivo para depuración...');
-    console.error('    Por favor revise los logs arriba para ver el error de migración.');
-    // Keep alive forever (or until manually stopped) to prevent Docker restart loop
-    setInterval(() => { }, 1000);
-    return;
+    console.error('⚠️  Se encontraron errores en el setup de schemas.');
+    console.error('    Revise los logs arriba para ver el error de migración.');
+    if (process.env.KEEP_ALIVE_ON_ERROR === 'true') {
+      // Solo en dev/debug: mantener el container vivo para inspeccionar via `docker exec`.
+      // En producción exit 1 para que el `api` (que depende con service_completed_successfully)
+      // no quede colgado en `Created` esperando a un db-setup que nunca termina.
+      console.error('    KEEP_ALIVE_ON_ERROR=true — manteniendo proceso vivo para depuración.');
+      setInterval(() => { }, 1000);
+      return;
+    }
+    process.exit(1);
   }
 
   process.exit(0);
