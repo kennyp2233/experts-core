@@ -1,5 +1,8 @@
-import { IsArray, IsInt, IsOptional, IsString, ValidateNested, IsObject, IsNumber, IsBoolean } from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString, ValidateNested, IsObject, IsNumber, IsBoolean, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+
+// Catálogo "Uso previsto" de Agrocalidad (GUIA), obligatorio desde 2026-10-01
+export const CODIGOS_USO_PREVISTO = ['0001', '0002', '0003', '0004', '0005', '0006'] as const;
 
 export class FitoXmlConfigDto {
     @IsString()
@@ -28,6 +31,9 @@ export class FitoXmlConfigDto {
 
     @IsString()
     direccionConsignatario: string;
+
+    @IsIn(CODIGOS_USO_PREVISTO)
+    codigoUsoPrevisto: string;
 
     @IsOptional()
     @IsString()

@@ -13,7 +13,7 @@ export class XmlGeneratorService {
         // Validate required config fields
         const requiredFields = ['tipoSolicitud', 'codigoIdioma', 'codigoTipoProduccion', 'fechaEmbarque',
             'codigoPuertoEc', 'codigoPuertoDestino', 'nombreMarca',
-            'nombreConsignatario', 'direccionConsignatario'];
+            'nombreConsignatario', 'direccionConsignatario', 'codigoUsoPrevisto'];
         const missingFields = requiredFields.filter(f => !config[f]);
         if (missingFields.length > 0) {
             throw new Error(`Campos requeridos faltantes en config: ${missingFields.join(', ')}`);
@@ -57,6 +57,8 @@ export class XmlGeneratorService {
                         nombreMarca: { _text: config.nombreMarca },
                         nombreConsignatario: { _text: config.nombreConsignatario },
                         direccionConsignatario: { _text: config.direccionConsignatario },
+                        // Orden según esquema Agrocalidad: va después de direccionConsignatario/permisoImportacion
+                        codigoUsoPrevisto: { _text: config.codigoUsoPrevisto },
                         // Only include informacionAdicional if it has a value
                         ...(config.informacionAdicional ? { informacionAdicional: { _text: config.informacionAdicional } } : {})
                     },
