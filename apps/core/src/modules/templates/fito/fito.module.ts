@@ -8,6 +8,7 @@ import { FitoLegacyService } from './services/fito-legacy.service';
 import { XmlGeneratorService } from './services/xml-generator.service';
 import { XmlValidatorService } from './services/xml-validator.service';
 import { FitoProcessor } from './services/fito-processor.service';
+import { FitoMapeoService } from './services/fito-mapeo.service';
 
 @Module({
     imports: [
@@ -16,11 +17,12 @@ import { FitoProcessor } from './services/fito-processor.service';
             name: 'fito-xml',
         }),
         CatalogsModule,
-        // PrismaClientTemplates lo da TemplatesModule (global).
+        // PrismaClientTemplates lo da DatabaseModule (@Global).
     ],
     controllers: [FitoController],
     providers: [
         FitoService,
+        FitoMapeoService,
         FitoLegacyService,
         XmlGeneratorService,
         XmlValidatorService,

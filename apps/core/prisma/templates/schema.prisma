@@ -125,3 +125,18 @@ model FitoXml {
     @@index([docNumero], map: "idx_fito_xml_doc_numero")
     @@map("fito_xmls")
 }
+
+// Mapeo recordado proCodigo (Access, PIN_*) → código Agrocalidad. Side-car PG
+// (Modo 2, write-aside): se upsertea en cada POST /fito/generate. Sin FK a Access.
+model FitoProductoMapeo {
+    id                Int      @id @default(autoincrement())
+    proCodigo         String   @unique @map("pro_codigo") @templatesDb.VarChar(50)
+    codigoAgrocalidad String   @map("codigo_agrocalidad") @templatesDb.VarChar(20)
+    nombreComun       String?  @map("nombre_comun") @templatesDb.VarChar(200)
+    subtipo           String?  @templatesDb.VarChar(100)
+    vecesUsado        Int      @default(1) @map("veces_usado")
+    createdAt         DateTime @default(now()) @map("created_at") @templatesDb.Timestamp()
+    updatedAt         DateTime @updatedAt @map("updated_at") @templatesDb.Timestamp()
+
+    @@map("fito_producto_mapeo")
+}

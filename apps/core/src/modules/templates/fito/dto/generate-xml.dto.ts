@@ -55,6 +55,11 @@ export class ProductMappingDto {
 
     @IsNumber()
     confidence: number;
+
+    // Subtipo de producto elegido en el paso de mapeo; se recuerda junto al mapeo.
+    @IsOptional()
+    @IsString()
+    subtipo?: string;
 }
 
 export class GuiaHijaAgregadaDto {

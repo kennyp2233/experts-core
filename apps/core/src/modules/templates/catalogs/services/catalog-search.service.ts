@@ -142,12 +142,14 @@ export class CatalogSearchService {
      */
     async searchProductosAutocomplete(query: string, limit = 15, subtipo?: string) {
         if (!query || query.length < 2) return [];
+        const q = normalize(query);
 
         const where: any = {
             activo: true,
             OR: [
                 { codigoAgrocalidad: { contains: query, mode: 'insensitive' } },
-                { nombreComun: { contains: query, mode: 'insensitive' } }
+                { nombreComun: { contains: query, mode: 'insensitive' } },
+                ...(q ? [{ nombreComunNormalizado: { contains: q } }] : []),
             ]
         };
 
@@ -156,11 +158,25 @@ export class CatalogSearchService {
             where.nombreSubtipoProducto = subtipo;
         }
 
-        return this.prisma.catalogoProducto.findMany({
+        // Se traen más candidatos y se ordenan por relevancia: antes salía
+        // "Anemona nemerosa" primero al buscar "rosa" (orden alfabético).
+        const candidatos = await this.prisma.catalogoProducto.findMany({
             where,
-            select: { codigoAgrocalidad: true, nombreComun: true, nombreSubtipoProducto: true },
-            orderBy: { nombreComun: 'asc' },
-            take: limit
+            select: { codigoAgrocalidad: true, nombreComun: true, nombreComunNormalizado: true, nombreSubtipoProducto: true },
+            take: 200
         });
+
+        const relevancia = (nombre: string) => {
+            if (nombre === q) return 0;
+            if (nombre.startsWith(q)) return 1;
+            if (nombre.split(' ').some(palabra => palabra.startsWith(q))) return 2;
+            return 3;
+        };
+
+        return candidatos
+            .map(c => ({ c, nombre: c.nombreComunNormalizado ?? normalize(c.nombreComun ?? '') }))
+            .sort((a, b) => relevancia(a.nombre) - relevancia(b.nombre) || a.nombre.length - b.nombre.length || a.nombre.localeCompare(b.nombre))
+            .slice(0, limit)
+            .map(({ c: { codigoAgrocalidad, nombreComun, nombreSubtipoProducto } }) => ({ codigoAgrocalidad, nombreComun, nombreSubtipoProducto }));
     }
 }

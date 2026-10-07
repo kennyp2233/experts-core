@@ -11,14 +11,17 @@ import { EbfCoordinacionUpdateService } from './services/coordinacion-update.ser
 import { EbfDaeService } from './services/dae.service';
 import { EbfCustomerAwbService } from './services/customer-awb.service';
 import { EbfPortalService } from './ebf-portal.service';
+import { EbfListCacheService } from './cache/ebf-list-cache.service';
 import { EbfPortalController } from './ebf-portal.controller';
 import { EbfCustomerController } from './ebf-customer.controller';
 import ebfPortalConfig from './config/ebf-portal.config';
 
+// REDIS_CLIENT (para EbfListCacheService) lo provee RedisModule (@Global).
 @Module({
   imports: [ConfigModule.forFeature(ebfPortalConfig)],
   controllers: [EbfPortalController, EbfCustomerController],
   providers: [
+    EbfListCacheService,
     EbfHttpClient,
     EbfCustomerHttpClient,
     EbfAuthService,

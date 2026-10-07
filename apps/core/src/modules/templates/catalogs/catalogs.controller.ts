@@ -7,15 +7,22 @@ import {
     UseInterceptors,
     UploadedFile,
     ParseFilePipeBuilder,
-    HttpStatus
+    HttpStatus,
+    UseGuards
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { CatalogsService } from './catalogs.service';
 import { ReloadCatalogDto } from './dto/reload-catalog.dto';
 import { SearchProductoDto } from './dto/search-producto.dto';
+import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/v1/guards/roles.guard';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
 @Controller({ path: 'catalogs', version: '1' })
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class CatalogsController {
     constructor(private readonly service: CatalogsService) { }
 

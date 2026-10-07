@@ -4,6 +4,7 @@ import { Queue } from 'bull';
 import { PrismaClient } from '@internal/templates-client';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
 import { FitoLegacyService } from './services/fito-legacy.service';
+import { FitoMapeoService } from './services/fito-mapeo.service';
 
 @Injectable()
 export class FitoService {
@@ -12,7 +13,8 @@ export class FitoService {
     constructor(
         @InjectQueue('fito-xml') private fitoQueue: Queue,
         @Inject('PrismaClientTemplates') private prisma: PrismaClient,
-        private legacyDb: FitoLegacyService
+        private legacyDb: FitoLegacyService,
+        private mapeos: FitoMapeoService
     ) { }
 
     async generate(dto: GenerateXmlDto) {
@@ -37,6 +39,12 @@ export class FitoService {
         }));
 
         await this.fitoQueue.addBulk(jobs);
+
+        // 3. Recordar mapeos proCodigo → Agrocalidad (PG, best-effort).
+        // Fire-and-forget después de encolar: nunca falla ni demora la generación.
+        this.mapeos.remember(dto.productMappings).catch((error) =>
+            this.logger.warn(`[FITO-MAPEO] no se pudieron recordar mapeos: ${error?.message ?? error}`),
+        );
 
         return {
             message: 'Generation started',
@@ -77,6 +85,14 @@ export class FitoService {
 
     async getDestinoByCode(desCodigo: string) {
         return this.legacyDb.getDestinoByCode(desCodigo);
+    }
+
+    async getMapeos(codigos?: string | string[]) {
+        return this.mapeos.findByCodigos(codigos);
+    }
+
+    async getSugerencias(codigos?: string | string[]) {
+        return this.mapeos.sugerir(codigos);
     }
 }
 

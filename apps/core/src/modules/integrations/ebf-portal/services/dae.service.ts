@@ -2,22 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EbfHttpClient } from '../http/ebf-http.client';
 import { EbfAuthService } from '../auth/ebf-auth.service';
+import { parseDaeList } from '../parsers/dae-list.parser';
 import type { DaeListPage } from '../types/dae.types';
 import type { EbfPortalConfig } from '../config/ebf-portal.config';
-
-const TR_RX = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
-const TD_RX = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
-const TH_RX = /<th\b[^>]*>([\s\S]*?)<\/th>/gi;
-const PAGE_RX = /hx-get=["']\?page=(\d+)["']/g;
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 @Injectable()
 export class EbfDaeService {
   private readonly logger = new Logger(EbfDaeService.name);
   private readonly cfg: EbfPortalConfig;
+  /** Columnas ya reportadas como vacías — loguear una sola vez por proceso. */
+  private readonly warnedEmptyColumns = new Set<string>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -42,47 +36,23 @@ export class EbfDaeService {
       { detectAuthRedirect: true },
     );
     const html = String(res.data ?? '');
-
-    const headers: string[] = [];
-    TH_RX.lastIndex = 0;
-    let h: RegExpExecArray | null;
-    while ((h = TH_RX.exec(html)) !== null) {
-      const txt = stripHtml(h[1]);
-      if (txt) headers.push(txt);
-    }
-
-    const items: DaeListPage['items'] = [];
-    TR_RX.lastIndex = 0;
-    let row: RegExpExecArray | null;
-    while ((row = TR_RX.exec(html)) !== null) {
-      const rowHtml = row[1];
-      if (!/<td\b/i.test(rowHtml)) continue;
-      const tds: string[] = [];
-      TD_RX.lastIndex = 0;
-      let t: RegExpExecArray | null;
-      while ((t = TD_RX.exec(rowHtml)) !== null) tds.push(stripHtml(t[1]));
-      if (tds.length === 0) continue;
-      const raw: Record<string, string> = {};
-      tds.forEach((v, i) => {
-        const key = headers[i] ?? `col${i}`;
-        raw[key] = v;
-      });
-      items.push({ raw });
-    }
-
-    const pageNums = new Set<number>();
-    let m: RegExpExecArray | null;
-    PAGE_RX.lastIndex = 0;
-    while ((m = PAGE_RX.exec(html)) !== null) pageNums.add(parseInt(m[1], 10));
-    const maxPage = pageNums.size ? Math.max(...pageNums) : 1;
     const currentPage = query.page ?? 1;
+    const parsed = parseDaeList(html, currentPage);
+
+    for (const { column, sampleHtml } of parsed.emptyColumns) {
+      if (this.warnedEmptyColumns.has(column)) continue;
+      this.warnedEmptyColumns.add(column);
+      this.logger.warn(
+        `[EBF-PORTAL] DAEs: columna "${column}" vacía en todas las filas (¿ícono/markup no reconocido?). Muestra: ${sampleHtml}`,
+      );
+    }
 
     return {
-      items,
+      items: parsed.items,
       page: currentPage,
-      hasNextPage: maxPage > currentPage,
+      hasNextPage: parsed.hasNextPage,
       retrievedAt: new Date().toISOString(),
-      columns: headers,
+      columns: parsed.columns,
     };
   }
 }

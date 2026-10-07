@@ -4,8 +4,10 @@ import {
   Get,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
 import { EbfAccessSyncService } from './ebf-access-sync.service';
 
 const STATUSES = [
@@ -23,10 +25,11 @@ type StatusFilter = (typeof STATUSES)[number];
  * Manual trigger (POST /run) útil para tests y debugging — corre el ciclo
  * en foreground y devuelve el report directamente (sin pasar por Bull).
  *
- * Bajo `/api/v1/sync/ebf-access/*`.
+ * Bajo `/api/v1/sync/ebf-access/*`. Requiere sesión (JWT cookie), cualquier rol.
  */
 @ApiTags('Sync / EBF-Access')
 @Controller({ path: 'sync/ebf-access', version: '1' })
+@UseGuards(JwtAuthGuard)
 export class EbfAccessSyncController {
   constructor(private readonly service: EbfAccessSyncService) {}
 
