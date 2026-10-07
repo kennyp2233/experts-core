@@ -1,11 +1,17 @@
-import { Controller, Post, Body, Get, Param, Query, Res, StreamableFile, Header } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { FitoService } from './fito.service';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/v1/guards/roles.guard';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
 @ApiTags('FITO Generation')
 @Controller({ path: 'fito', version: '1' })
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class FitoController {
     constructor(private readonly service: FitoService) { }
 
@@ -65,6 +71,15 @@ export class FitoController {
     @ApiOperation({ summary: 'Get destination info by code from PIN_auxDestinos' })
     async getDestinoByCode(@Param('codigo') codigo: string) {
         return this.service.getDestinoByCode(codigo);
+    }
+
+    @Get('mapeos')
+    @ApiOperation({
+        summary: 'Mapeos recordados proCodigo → codigoAgrocalidad (PG side-car) para los códigos dados',
+    })
+    @ApiQuery({ name: 'codigos', required: false, type: String, example: 'ROS,GYP' })
+    async getMapeos(@Query('codigos') codigos?: string | string[]) {
+        return this.service.getMapeos(codigos);
     }
 }
 

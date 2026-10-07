@@ -8,17 +8,36 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
 import { EbfPortalService } from './ebf-portal.service';
+import {
+  EbfListCacheService,
+  parseFreshFlag,
+} from './cache/ebf-list-cache.service';
 import { CreateCoordinacionDto } from './dto/create-coordinacion.dto';
 import { UpdateCoordinacionDto } from './dto/update-coordinacion.dto';
 import { BoxWeightDto } from './dto/box-weight.dto';
 
+const FRESH_QUERY_DOC = {
+  name: 'fresh',
+  required: false,
+  type: Boolean,
+  description:
+    'true → ignora la cache (TTL 120 s), consulta el portal en vivo y repuebla la cache.',
+} as const;
+
+/** Requiere sesión (JWT cookie), cualquier rol. */
 @ApiTags('Integrations / EBF Portal')
 @Controller({ path: 'integrations/ebf-portal', version: '1' })
+@UseGuards(JwtAuthGuard)
 export class EbfPortalController {
-  constructor(private readonly service: EbfPortalService) {}
+  constructor(
+    private readonly service: EbfPortalService,
+    private readonly cache: EbfListCacheService,
+  ) {}
 
   @Get('health')
   @ApiOperation({ summary: 'Verificar que el login al portal EBF funciona' })
@@ -29,19 +48,33 @@ export class EbfPortalController {
   // ---------- DESPACHO / LISTAS ----------
 
   @Get('coordinaciones')
-  @ApiOperation({ summary: 'Lista de coordinaciones (despacho)' })
+  @ApiOperation({
+    summary: 'Lista de coordinaciones (despacho). Cacheada 120 s salvo ?fresh=true.',
+  })
+  @ApiQuery(FRESH_QUERY_DOC)
   async listCoordinaciones(
     @Query('page') page?: string,
     @Query('sort') sort?: string,
     @Query('historico') historico?: string,
+    @Query('fresh') fresh?: string,
   ) {
-    return this.service.coordinacion.list({
+    const query = {
       page: page ? parseInt(page, 10) : undefined,
       sort: sort as Parameters<
         typeof this.service.coordinacion.list
       >[0]['sort'],
       includeHistorico: historico === 'true' || historico === '1',
-    });
+    };
+    return this.cache.getOrFetch(
+      'coordinaciones',
+      {
+        historico: query.includeHistorico,
+        page: query.page ?? 1,
+        sort: query.sort,
+      },
+      () => this.service.coordinacion.list(query),
+      { fresh: parseFreshFlag(fresh) },
+    );
   }
 
   @Get('coordinaciones/:id')
@@ -51,11 +84,21 @@ export class EbfPortalController {
   }
 
   @Get('daes')
-  @ApiOperation({ summary: 'Lista de DAEs (scraping, columnas dinámicas)' })
-  async listDaes(@Query('page') page?: string) {
-    return this.service.dae.list({
-      page: page ? parseInt(page, 10) : undefined,
-    });
+  @ApiOperation({
+    summary: 'Lista de DAEs (scraping, columnas dinámicas). Cacheada 120 s salvo ?fresh=true.',
+  })
+  @ApiQuery(FRESH_QUERY_DOC)
+  async listDaes(
+    @Query('page') page?: string,
+    @Query('fresh') fresh?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    return this.cache.getOrFetch(
+      'daes',
+      { page: pageNum ?? 1 },
+      () => this.service.dae.list({ page: pageNum }),
+      { fresh: parseFreshFlag(fresh) },
+    );
   }
 
   // ---------- COORDINAR (página /exportador/detalle_coordinacion/) ----------
@@ -164,7 +207,9 @@ export class EbfPortalController {
       'Crea un detalle de coordinación en EBF (write — requiere ventana operativa).',
   })
   async createCoordinacion(@Body() dto: CreateCoordinacionDto) {
-    return this.service.create.createCoordinacion(dto);
+    return this.invalidatingCoordinaciones(() =>
+      this.service.create.createCoordinacion(dto),
+    );
   }
 
   // ---------- UPDATE / DELETE sobre coordinación existente ----------
@@ -187,7 +232,9 @@ export class EbfPortalController {
     @Param('detalleId', ParseIntPipe) detalleId: number,
     @Body() dto: UpdateCoordinacionDto,
   ) {
-    return this.service.update.updateCoordinacion(detalleId, dto);
+    return this.invalidatingCoordinaciones(() =>
+      this.service.update.updateCoordinacion(detalleId, dto),
+    );
   }
 
   @Delete('coordinar/:detalleId')
@@ -198,6 +245,22 @@ export class EbfPortalController {
   async deleteCoordinar(
     @Param('detalleId', ParseIntPipe) detalleId: number,
   ) {
-    return this.service.update.deleteCoordinacion(detalleId);
+    return this.invalidatingCoordinaciones(() =>
+      this.service.update.deleteCoordinacion(detalleId),
+    );
+  }
+
+  /**
+   * Ejecuta un write al portal e invalida la cache de listas de
+   * coordinaciones (vigentes + histórico) haya salido bien o no: un write
+   * fallido a mitad de camino también puede haber cambiado el portal.
+   * `invalidate` nunca lanza, así que no tapa el error original.
+   */
+  private async invalidatingCoordinaciones<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } finally {
+      await this.cache.invalidate('coordinaciones');
+    }
   }
 }

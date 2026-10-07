@@ -6,10 +6,16 @@ import {
   Query,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
 import { EbfPortalService } from './ebf-portal.service';
+import {
+  EbfListCacheService,
+  parseFreshFlag,
+} from './cache/ebf-list-cache.service';
 import type { BinaryDownload } from './services/customer-awb.service';
 
 /**
@@ -17,14 +23,22 @@ import type { BinaryDownload } from './services/customer-awb.service';
  * separado del controller manager para evitar que un archivo crezca >250
  * líneas. Los endpoints que descargan archivos usan `@Res()` passthrough
  * para escribir headers binarios sin re-procesar.
+ *
+ * Requiere sesión (JWT cookie), cualquier rol. Los links de descarga
+ * (export / documents) dependen de que la cookie `access_token` viaje en la
+ * navegación (mismo site que la API).
  */
 @ApiTags('Integrations / EBF Portal (Customer)')
 @Controller({
   path: 'integrations/ebf-portal/customer',
   version: '1',
 })
+@UseGuards(JwtAuthGuard)
 export class EbfCustomerController {
-  constructor(private readonly service: EbfPortalService) {}
+  constructor(
+    private readonly service: EbfPortalService,
+    private readonly cache: EbfListCacheService,
+  ) {}
 
   @Get('health')
   @ApiOperation({ summary: 'Verificar login del rol cliente al portal EBF.' })
@@ -35,7 +49,7 @@ export class EbfCustomerController {
   @Get('awbs')
   @ApiOperation({
     summary:
-      'Lista AWBs del cliente. ETD start/end son obligatorios (YYYY-MM-DD).',
+      'Lista AWBs del cliente. ETD start/end son obligatorios (YYYY-MM-DD). Cacheada 120 s salvo ?fresh=true.',
   })
   @ApiQuery({ name: 'etdStart', type: String, example: '2026-05-01' })
   @ApiQuery({ name: 'etdEnd', type: String, example: '2026-05-31' })
@@ -44,6 +58,13 @@ export class EbfCustomerController {
   @ApiQuery({ name: 'awb', type: String, required: false })
   @ApiQuery({ name: 'page', type: Number, required: false })
   @ApiQuery({ name: 'sort', type: String, required: false })
+  @ApiQuery({
+    name: 'fresh',
+    type: Boolean,
+    required: false,
+    description:
+      'true → ignora la cache (TTL 120 s), consulta el portal en vivo y repuebla la cache.',
+  })
   async list(
     @Query('etdStart') etdStart: string,
     @Query('etdEnd') etdEnd: string,
@@ -52,8 +73,9 @@ export class EbfCustomerController {
     @Query('awb') awb?: string,
     @Query('page') page?: string,
     @Query('sort') sort?: string,
+    @Query('fresh') fresh?: string,
   ) {
-    return this.service.customer.list({
+    const query = {
       etdStart,
       etdEnd,
       aerolinea,
@@ -61,7 +83,13 @@ export class EbfCustomerController {
       awb,
       page: page ? parseInt(page, 10) : undefined,
       sort,
-    });
+    };
+    return this.cache.getOrFetch(
+      'customer-awbs',
+      { ...query, page: query.page ?? 1 },
+      () => this.service.customer.list(query),
+      { fresh: parseFreshFlag(fresh) },
+    );
   }
 
   @Get('awbs/:id')
