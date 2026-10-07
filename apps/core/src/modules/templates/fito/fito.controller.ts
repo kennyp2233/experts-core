@@ -81,5 +81,14 @@ export class FitoController {
     async getMapeos(@Query('codigos') codigos?: string | string[]) {
         return this.service.getMapeos(codigos);
     }
+
+    @Get('mapeos/sugerencias')
+    @ApiOperation({
+        summary: 'Mapeo recomendado por código: recordado (decisión previa) o sugerido (coincidencia exacta en el catálogo)',
+    })
+    @ApiQuery({ name: 'codigos', required: false, type: String, example: 'ROSAS,STOCK' })
+    async getSugerencias(@Query('codigos') codigos?: string | string[]) {
+        return this.service.getSugerencias(codigos);
+    }
 }
 

@@ -90,5 +90,9 @@ export class FitoService {
     async getMapeos(codigos?: string | string[]) {
         return this.mapeos.findByCodigos(codigos);
     }
+
+    async getSugerencias(codigos?: string | string[]) {
+        return this.mapeos.sugerir(codigos);
+    }
 }
 
