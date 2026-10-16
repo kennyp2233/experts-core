@@ -149,11 +149,12 @@ export class OpcionesService {
           ...(t ? { OR: [{ nombreShipper: ins(t) }, { alias: ins(t) }, { iataCodeCarrier: ins(t) }] } : {}),
         };
         const rs = await this.db.agenciaIata.findMany({ where, orderBy: { nombreShipper: 'asc' }, take });
+        // Como el combo "Agencia - IATA" del viejo: el nombre de la agencia; abajo, su código IATA.
         return rs.map((r) => ({
           id: r.id,
-          codigo: r.iataCodeCarrier,
-          nombre: r.alias || r.nombreShipper,
-          detalle: r.alias && r.alias !== r.nombreShipper ? r.nombreShipper : null,
+          codigo: null,
+          nombre: r.nombreShipper || r.alias || '',
+          detalle: r.iataCodeCarrier ? `IATA ${r.iataCodeCarrier}` : null,
         }));
       }
       case 'aerolineas': {

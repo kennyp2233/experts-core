@@ -188,7 +188,8 @@ export class IngresosGuiasService {
         creadoPor: d.creadoPorLegacy,
         creadoEn: iso(d.creadoEnLegacy ?? d.createdAt),
         actualizadoPor: d.actualizadoPorLegacy,
-        actualizadoEn: iso(d.actualizadoEnLegacy ?? (d.codigoAccess === null ? d.updatedAt : null)),
+        // En los del sistema nuevo, solo si alguien lo modificó (no al crearlo ni al recalcular su estado).
+        actualizadoEn: iso(d.actualizadoEnLegacy ?? (d.codigoAccess === null && d.actualizadoPorLegacy ? d.updatedAt : null)),
       },
       anterior: anterior?.numero != null ? { id: anterior.id, numero: anterior.numero } : null,
       siguiente: siguiente?.numero != null ? { id: siguiente.id, numero: siguiente.numero } : null,
