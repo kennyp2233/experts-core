@@ -19,12 +19,13 @@ jobs:
         run: C:\deploy\deploy-experts-core.ps1
 
       # Cada `docker compose up --build` deja capas en la caché de build (llegó a
-      # 22 GB en el disco de la PC). Se borra lo que no se usó en 7 días: el
-      # próximo build sigue usando la caché reciente.
+      # 22 GB en el disco de la PC). Se deja un tope de 8 GB: Docker borra primero
+      # lo menos usado y el próximo build sigue usando la caché reciente. (Un filtro
+      # por fecha no sirve: cada build vuelve a "usar" casi toda la caché.)
       - name: Limpiar caché de build de Docker
         if: always()
         continue-on-error: true
         shell: powershell
         run: |
-          docker builder prune -f --filter "until=168h"
+          docker builder prune -f --max-used-space 8gb
           docker system df
