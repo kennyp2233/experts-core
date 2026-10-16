@@ -146,6 +146,13 @@ guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una gu�
 - Sync: la cabecera trae aerolínea (`docExtra`), tipo de stock (`docCert`) y la agencia IATA (por dígitos de
   `docRefer`); una guía que el viejo borra (anuló o modificó su ingreso) queda **ANULADA**; si una guía del viejo ya
   está en un ingreso nuevo no se muda: queda como error del sync (se cargó en los dos).
+- Pantallas (16/10/2026, comparadas con `frmPIN_CoorGuias` dibujada con `legacy-analysis/tools/vb6render.py`): la lista
+  tiene las columnas del viejo (Doc. · Fecha · Aerolínea por su nombre · Referencia · Tipo Stock · Estado), con la
+  guía, su situación y la coordinación en una línea (96 % de los ingresos traen una sola), con filas compactas. El
+  documento lleva la cabecera como ficha en el orden del viejo (Fecha · Aerolínea · Referencia = agencia y su código
+  IATA · Tipo de stock | Stock verificado · registrado · modificado). Debajo, el resumen "Total guías · Coordinadas ·
+  Préstamos · Devoluciones · Libres" y la grilla "Secuencia de guías" (Número · Situación · Coordinación · Préstamo ·
+  Observaciones · Devolución). Tiene anterior / siguiente por N°, sin los anulados, como el viejo.
 - No se migra: Asignación (sin uso), Certificación, Facturación, Pagos y Facturación AWBs (muertos desde 2012–2015).
 - Pendiente (preguntar al dueño): botón "Reemplazar guía" (ingreso nuevo + cambio en la coordinación + anular el viejo,
   ~70 veces al año); si la referencia (agencia IATA) debe ser obligatoria; impresión del ingreso (no se usa desde 2022).
