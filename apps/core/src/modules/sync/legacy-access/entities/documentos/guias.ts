@@ -1,0 +1,125 @@
+import type { Prisma } from '@internal/documentos-client';
+import { idDe } from '../../engine/sync-engine';
+import { fechaDia, fechaHora, flag, int, numSin0, txt } from '../../engine/normalize';
+import { AccessRow, EntidadSync } from '../../engine/sync.types';
+
+type Tx = Prisma.TransactionClient;
+
+/** "129-4595 9174" → "129-45959174" (clave de la guía madre). */
+export function normalizarAwb(v: unknown): string | null {
+  const s = txt(v)?.replace(/\s+/g, '');
+  return s ? s : null;
+}
+
+const ESTADO_LOTE = ['ANULADO', 'INGRESADO', 'GUIAS_COORDINADAS', 'CANCELADO'] as const;
+const ESTADO_GUIA: Record<number, 'INGRESADA' | 'COORDINADA' | 'PRESTADA'> = {
+  1: 'INGRESADA',
+  2: 'COORDINADA',
+  3: 'PRESTADA',
+};
+
+interface LoteRow extends AccessRow {
+  aerMin: unknown;
+  aerMax: unknown;
+  virMin: unknown;
+  virMax: unknown;
+}
+
+/**
+ * PIN_MCoordina con docTipo 'CGU' (lote de guías AWB ingresadas al stock)
+ * → DocumentoBase. La aerolínea y el tipo de stock se toman de sus guías si
+ * todas coinciden.
+ */
+export const loteGuias: EntidadSync<LoteRow, any, Tx> = {
+  entidad: 'loteGuias',
+  leer: async (ctx) => {
+    const lotes = await ctx.legacy.queryBridge<AccessRow>(
+      "SELECT m.docNumero, m.docFecha, m.docRefer, m.docEstado, m.docNota, u.docFecCre, u.docUsuCre, u.docFecAct, u.docUsuAct FROM PIN_MCoordina AS m LEFT JOIN dDocUsuario AS u ON (u.bodCodigo = m.bodCodigo AND u.docTipo = m.docTipo AND u.docNumero = m.docNumero) WHERE m.docTipo = 'CGU'",
+    );
+    const agg = await ctx.legacy.queryBridge<AccessRow>(
+      "SELECT docNumero, MIN(aerCodigo) AS aerMin, MAX(aerCodigo) AS aerMax, MIN(guiVirtual) AS virMin, MAX(guiVirtual) AS virMax FROM PIN_DCoorGuias WHERE docTipo = 'CGU' GROUP BY docNumero",
+    );
+    const porDoc = new Map(agg.map((a) => [txt(a.docNumero), a]));
+    return lotes.map((l) => {
+      const a = porDoc.get(txt(l.docNumero));
+      return { ...l, aerMin: a?.aerMin ?? null, aerMax: a?.aerMax ?? null, virMin: a?.virMin ?? null, virMax: a?.virMax ?? null };
+    });
+  },
+  clave: (r) => txt(r.docNumero),
+  mapear: (r, ctx) => {
+    const unaAerolinea = r.aerMin !== null && int(r.aerMin) === int(r.aerMax);
+    const unTipo = r.virMin !== null && int(r.virMin) === int(r.virMax);
+    return {
+      codigoAccess: int(r.docNumero),
+      fecha: fechaDia(r.docFecha),
+      idAerolinea: unaAerolinea ? idDe(ctx, 'aerolinea', r.aerMin) : null,
+      tipoStock: unTipo ? (flag(r.virMin) ? 'VIRTUAL' : 'NORMAL') : null,
+      estado: ESTADO_LOTE[int(r.docEstado) ?? -1] ?? null,
+      referencia: txt(r.docRefer),
+      nota: txt(r.docNota),
+      creadoPorLegacy: txt(r.docUsuCre),
+      creadoEnLegacy: fechaHora(r.docFecCre),
+      actualizadoPorLegacy: txt(r.docUsuAct),
+      actualizadoEnLegacy: fechaHora(r.docFecAct),
+    };
+  },
+  guardar: async (db, d) =>
+    (
+      await db.documentoBase.upsert({
+        where: { codigoAccess: d.codigoAccess },
+        create: d,
+        update: d,
+        select: { id: true },
+      })
+    ).id,
+  desactivar: async (db, id) => {
+    await db.documentoBase.updateMany({ where: { id }, data: { estado: 'ANULADO' } });
+  },
+};
+
+/**
+ * PIN_DCoorGuias → GuiaMadre (una guía AWB del stock). Clave: el número AWB
+ * sin espacios, que es único en Access. Se hace upsert (nunca se borra) porque
+ * las coordinaciones y guías hijas apuntan a su id.
+ */
+export const guiaMadre: EntidadSync<AccessRow, any, Tx> = {
+  entidad: 'guiaMadre',
+  leer: (ctx) =>
+    ctx.legacy.queryBridge(
+      "SELECT docNumero, guiNumero, aerCodigo, guiEstado, guiNumCoor, guiNota, guiFecha, guiDev, guiFecDev, guiVirtual FROM PIN_DCoorGuias WHERE docTipo = 'CGU'",
+    ),
+  clave: (r) => normalizarAwb(r.guiNumero),
+  mapear: (r, ctx) => {
+    const numero = normalizarAwb(r.guiNumero)!;
+    // Prefijo de 3 caracteres: numérico (IATA) o alfanumérico (ej. "F37" de FEMKE).
+    const m = numero.match(/^([0-9A-Z]{3})-?(\d{1,9})$/i);
+    if (!m) return { omitir: `número AWB no reconocible: ${txt(r.guiNumero)}` };
+    const idDocumentoBase = idDe(ctx, 'loteGuias', r.docNumero);
+    if (idDocumentoBase === null) return { omitir: `el lote ${txt(r.docNumero)} no está sincronizado` };
+    const estado = int(r.guiEstado);
+    return {
+      numero,
+      prefijo: /^\d+$/.test(m[1]) ? Number(m[1]) : null,
+      secuencial: Number(m[2]),
+      idDocumentoBase,
+      idAerolinea: idDe(ctx, 'aerolinea', r.aerCodigo),
+      estado: estado === null ? null : (ESTADO_GUIA[estado] ?? null),
+      virtual: flag(r.guiVirtual),
+      prestada: estado === 3,
+      observaciones: txt(r.guiNota),
+      fechaPrestamo: fechaDia(r.guiFecha),
+      devolucion: txt(r.guiDev) === '1',
+      fechaDevolucion: fechaDia(r.guiFecDev),
+      coordinacionAccess: int(numSin0(r.guiNumCoor)),
+    };
+  },
+  guardar: async (db, d) =>
+    (
+      await db.guiaMadre.upsert({
+        where: { numero: d.numero },
+        create: d,
+        update: d,
+        select: { id: true },
+      })
+    ).id,
+};

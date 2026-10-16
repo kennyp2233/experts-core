@@ -12,6 +12,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { EbfPortalModule } from './modules/integrations/ebf-portal/ebf-portal.module';
 import { EbfAccessSyncModule } from './modules/sync/ebf-access/ebf-access-sync.module';
+import { LegacySyncModule } from './modules/sync/legacy-access/legacy-sync.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { AppControllerV1 } from './v1/app/app.controller';
@@ -51,6 +52,7 @@ import { RedisModule } from './redis/redis.module';
     TemplatesModule,
     EbfPortalModule,
     EbfAccessSyncModule,
+    LegacySyncModule,
     HealthModule,
     BullModule.forRootAsync({
       inject: [ConfigService],

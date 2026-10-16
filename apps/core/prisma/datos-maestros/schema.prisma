@@ -1,4 +1,9 @@
 // Prisma schema for Productos Bounded Context (within Datos Maestros)
+//
+// Los campos `codigoAccess` / `codigo` guardan la clave del registro en la
+// base Access legacy y son la llave del sync Access → PG
+// (ver src/modules/sync/legacy-access/). Los `///` indican la columna
+// Access de origen.
 generator productosClient {
     provider   = "prisma-client-js"
     outputMode = "outputDir"
@@ -18,8 +23,12 @@ enum OpcionProducto {
 
 model Producto {
     id                  Int                  @id @default(autoincrement())
+    /// PIN_MProductos.proCodigo (ej. "ROSAS") — también llave del sync
+    codigo              String?              @unique
     nombre              String
     descripcion         String?
+    /// PIN_MProductos.proRefer
+    referencia          String?
     nombreBotanico      String?
     especie             String?
     medidaId            Int
@@ -34,6 +43,8 @@ model Producto {
     productosCompuestos ProductosCompuesto[]
     productosMiPros     ProductosMiPro[]
     fincasProductos     FincaProducto[]
+    componentes         ProductoComponente[] @relation("ProductoComponentes")
+    usadoEn             ProductoComponente[] @relation("ComponenteDe")
 
     // Relations
     medida Medida @relation(fields: [medidaId], references: [id])
@@ -44,12 +55,16 @@ model ProductosAranceles {
     productId        Int
     arancelesDestino String?
     arancelesCodigo  String?
+    /// PIN_DProCodAso.desCodigo → PIN_auxOtrDes
+    idOtroDestino    Int?
     createdAt        DateTime @default(now())
     updatedAt        DateTime @updatedAt
 
-    producto Producto @relation(fields: [productId], references: [id], onDelete: Cascade)
+    producto    Producto     @relation(fields: [productId], references: [id], onDelete: Cascade)
+    otroDestino OtroDestino? @relation(fields: [idOtroDestino], references: [id])
 }
 
+/// Access: PIN_DProDecAdi (declaración adicional por producto y país).
 model ProductosCompuesto {
     id          Int      @id @default(autoincrement())
     productId   Int
@@ -67,18 +82,52 @@ model ProductosMiPro {
     acuerdo    String?
     djoCode    String?
     tariffCode String?
+    /// mipro_producto_arancel.idCertificado
+    idAcuerdo  Int?
     createdAt  DateTime @default(now())
     updatedAt  DateTime @updatedAt
 
-    producto Producto @relation(fields: [productId], references: [id], onDelete: Cascade)
+    producto           Producto            @relation(fields: [productId], references: [id], onDelete: Cascade)
+    acuerdoArancelario AcuerdoArancelario? @relation(fields: [idAcuerdo], references: [idAcuerdo])
+}
+
+/// Access: PIN_dProComp — flores que componen un producto compuesto (bouquets).
+model ProductoComponente {
+    id           Int  @id @default(autoincrement())
+    productId    Int
+    componenteId Int
+    orden        Int
+    stems        Int?
+
+    producto   Producto @relation("ProductoComponentes", fields: [productId], references: [id], onDelete: Cascade)
+    componente Producto @relation("ComponenteDe", fields: [componenteId], references: [id])
+
+    @@unique([productId, orden])
+}
+
+/// Access: PIN_auxOtrDes — agrupaciones de destino usadas por los aranceles.
+model OtroDestino {
+    id              Int     @id @default(autoincrement())
+    /// PIN_auxOtrDes.desCodigo
+    codigoAccess    Int?    @unique
+    nombre          String
+    plantillaModo   Int?
+    plantillaNombre String?
+    estado          Boolean @default(true)
+
+    aranceles ProductosAranceles[]
 }
 
 // ===== MEDIDA MODEL =====
 
 model Medida {
-    id     Int     @id @default(autoincrement())
-    nombre String  @unique
-    estado Boolean @default(true)
+    id           Int     @id @default(autoincrement())
+    /// PIN_auxUnidades.uniCodigo
+    codigoAccess Int?    @unique
+    nombre       String  @unique
+    /// PIN_auxUnidades.uniImpresion (ej. "TALLOS DE")
+    impresion    String?
+    estado       Boolean @default(true)
 
     // Relations
     productos Producto[]
@@ -87,20 +136,26 @@ model Medida {
 // ===== FUNCIONARIO AGROCALIDAD MODEL =====
 
 model FuncionarioAgrocalidad {
-    id        Int      @id @default(autoincrement())
-    nombre    String
-    telefono  String?
-    email     String?
-    estado    Boolean? @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @default(now()) @updatedAt
+    id           Int      @id @default(autoincrement())
+    /// PIN_auxFuncionarios.funCodigo
+    codigoAccess Int?     @unique
+    nombre       String
+    telefono     String?
+    email        String?
+    estado       Boolean? @default(true)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @default(now()) @updatedAt
 }
 
 // ===== EMBARCADORES MODEL =====
 
+/// Access: PIN_auxClientes.
 model Embarcador {
     id                   Int     @id @default(autoincrement())
+    /// PIN_auxClientes.cliCodigo
+    codigoAccess         Int?    @unique
     nombre               String
+    alias                String?
     ci                   String?
     direccion            String?
     telefono             String?
@@ -134,24 +189,39 @@ model Pais {
 
 // ===== ACUERDO ARANCELARIO MODEL =====
 
+/// Access: mipro_tipos_certificado.
 model AcuerdoArancelario {
-    idAcuerdo Int    @id @default(autoincrement())
-    nombre    String
+    idAcuerdo          Int     @id @default(autoincrement())
+    /// mipro_tipos_certificado.ID
+    codigoAccess       Int?    @unique
+    nombre             String
+    tipoCertificado    String?
+    tipoAcuerdo        String?
+    descripcionDefault String?
+    tariffCodeDefault  String?
+    djoCodeDefault     String?
+    criterioOrigen     String?
+    estado             Boolean @default(true)
 
     // Relations
-    paises Pais[]
+    paises         Pais[]
+    productosMiPro ProductosMiPro[]
 }
 
 // ===== DESTINO MODEL =====
 
+/// Access: PIN_auxDestinos con desTipo = 'DES'.
 model Destino {
     id          Int      @id @default(autoincrement())
+    /// PIN_auxDestinos.desCodigo — código IATA (ej. "AMS")
+    codigo      String?  @unique
     nombre      String?
     aeropuerto  String?
-    idPais      Int
+    idPais      Int?
     sesaId      String?
     leyendaFito String?
     cobroFitos  Boolean? @default(false)
+    estado      Boolean  @default(true)
 
     // Relations
     pais               Pais?                @relation(fields: [idPais], references: [idPais])
@@ -161,12 +231,16 @@ model Destino {
 
 // ===== ORIGEN MODEL =====
 
+/// Access: PIN_auxDestinos con desTipo = 'ORI'.
 model Origen {
     id          Int     @id @default(autoincrement())
+    /// PIN_auxDestinos.desCodigo — código IATA (ej. "UIO")
+    codigo      String? @unique
     nombre      String
     aeropuerto  String?
     idPais      Int?
     idCaeAduana Int?
+    estado      Boolean @default(true)
 
     // Relations
     pais            Pais?           @relation(fields: [idPais], references: [idPais])
@@ -177,7 +251,9 @@ model Origen {
 // ===== CAE ADUANA MODEL =====
 
 model CaeAduana {
-    idCaeAduana  Int    @id @default(autoincrement())
+    idCaeAduana  Int     @id @default(autoincrement())
+    /// CAE_ADUANA.ID con ceros a la izquierda (ej. "055")
+    codigo       String? @unique
     codigoAduana Int?
     nombre       String
 
@@ -187,9 +263,13 @@ model CaeAduana {
 
 // ===== CLIENTE MODEL =====
 
+/// Access: PIN_auxClientesAux.
 model Cliente {
     id                Int      @id @default(autoincrement())
+    /// PIN_auxClientesAux.cliCodigo
+    codigoAccess      Int?     @unique
     nombre            String
+    alias             String?
     ruc               String?
     direccion         String?
     telefono          String?
@@ -218,24 +298,31 @@ model Cliente {
 
 // ===== CONSIGNATARIO MODELS =====
 
+/// Access: PIN_auxMarcas (marcaciones).
 model Consignatario {
     id           Int      @id @default(autoincrement())
+    /// PIN_auxMarcas.marCodigo
+    codigoAccess Int?     @unique
     nombre       String
+    alias        String?
     ruc          String?
     direccion    String?
-    idEmbarcador Int
-    idCliente    Int
+    /// PIN_auxMarcas.cliCodigo → Embarcador
+    idEmbarcador Int?
+    /// PIN_auxMarcas.cliCodigoAux → Cliente
+    idCliente    Int?
     telefono     String?
     email        String?
     ciudad       String?
     pais         String?
+    paisSigla    String?
     estado       Boolean  @default(true)
     createdAt    DateTime @default(now())
     updatedAt    DateTime @updatedAt
 
     // Relations
-    embarcador  Embarcador                @relation(fields: [idEmbarcador], references: [id])
-    cliente     Cliente                   @relation(fields: [idCliente], references: [id])
+    embarcador  Embarcador?               @relation(fields: [idEmbarcador], references: [id])
+    cliente     Cliente?                  @relation(fields: [idCliente], references: [id])
     caeSice     ConsignatarioCaeSice?
     facturacion ConsignatarioFacturacion?
     fito        ConsignatarioFito?
@@ -278,12 +365,16 @@ model ConsignatarioFacturacion {
 }
 
 model ConsignatarioFito {
-    idConsignatario  Int     @id
-    fitoDeclaredName String?
-    fitoFormaA       String?
-    fitoNombre       String?
-    fitoDireccion    String?
-    fitoPais         String?
+    idConsignatario     Int     @id
+    /// PIN_auxMarcas.marXMLNombre
+    fitoDeclaredName    String?
+    /// PIN_auxMarcas.marXMLDireccion
+    fitoDeclaredAddress String?
+    fitoFormaA          String?
+    fitoNombre          String?
+    fitoDireccion       String?
+    /// PIN_auxMarcas.marXMLPais
+    fitoPais            String?
 
     // Relations
     consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
@@ -312,25 +403,28 @@ model ConsignatarioGuiaM {
 }
 
 model ConsignatarioTransmision {
-    idConsignatario         Int     @id
-    consigneeNombreTrans    String?
-    consigneeDireccionTrans String?
-    consigneeCiudadTrans    String?
-    consigneeProvinciaTrans String?
-    consigneePaisTrans      String?
-    consigneeEueoriTrans    String?
-    notifyNombreTrans       String?
-    notifyDireccionTrans    String?
-    notifyCiudadTrans       String?
-    notifyProvinciaTrans    String?
-    notifyPaisTrans         String?
-    notifyEueoriTrans       String?
-    hawbNombreTrans         String?
-    hawbDireccionTrans      String?
-    hawbCiudadTrans         String?
-    hawbProvinciaTrans      String?
-    hawbPaisTrans           String?
-    hawbEueoriTrans         String?
+    idConsignatario          Int     @id
+    consigneeNombreTrans     String?
+    consigneeDireccionTrans  String?
+    consigneeCiudadTrans     String?
+    consigneeProvinciaTrans  String?
+    consigneePaisTrans       String?
+    consigneeSiglasPaisTrans String?
+    consigneeEueoriTrans     String?
+    notifyNombreTrans        String?
+    notifyDireccionTrans     String?
+    notifyCiudadTrans        String?
+    notifyProvinciaTrans     String?
+    notifyPaisTrans          String?
+    notifySiglasPaisTrans    String?
+    notifyEueoriTrans        String?
+    hawbNombreTrans          String?
+    hawbDireccionTrans       String?
+    hawbCiudadTrans          String?
+    hawbProvinciaTrans       String?
+    hawbPaisTrans            String?
+    hawbSiglasPaisTrans      String?
+    hawbEueoriTrans          String?
 
     // Relations
     consignatario Consignatario @relation(fields: [idConsignatario], references: [id], onDelete: Cascade)
@@ -347,21 +441,28 @@ model FincaChofer {
 }
 
 model FincaProducto {
-    idFincasProductos Int @id @default(autoincrement())
+    idFincasProductos Int     @id @default(autoincrement())
     idFinca           Int
     idProducto        Int
+    /// PIN_auxPlanProductos.proNombre — nombre con el que la finca vende el producto
+    nombre            String?
 
     // Relations
     finca    Finca    @relation(fields: [idFinca], references: [id])
     producto Producto @relation(fields: [idProducto], references: [id])
 }
 
+/// Access: PIN_auxPlantaciones.
 model Finca {
     id                      Int      @id @default(autoincrement())
+    /// PIN_auxPlantaciones.plaCodigo
+    codigoAccess            Int?     @unique
     nombreFinca             String
     tag                     String?
     rucFinca                String?
     tipoDocumento           String
+    /// PIN_auxPlantaciones.plaDireccion
+    direccion               String?
     generaGuiasCertificadas Boolean? @default(false)
     iGeneralTelefono        String?
     iGeneralEmail           String?
@@ -373,16 +474,42 @@ model Finca {
     aNombre                 String?
     aCodigo                 String?
     aDireccion              String?
+    /// Medidas de la caja full en cm (PIN_auxPlantaciones.plaDim1..3) — se usan para el volumen
+    cajaLargo               Float?
+    cajaAncho               Float?
+    cajaAlto                Float?
     estado                  Boolean  @default(true)
     createdAt               DateTime @default(now())
     updatedAt               DateTime @updatedAt
 
-    fincasChoferes  FincaChofer[]
-    fincasProductos FincaProducto[]
+    fincasChoferes       FincaChofer[]
+    fincasProductos      FincaProducto[]
+    registrosAgrocalidad RegistroAgrocalidad[]
+}
+
+/// Access: pin_auxagrocalidad — registro de sitios de producción de Agrocalidad.
+model RegistroAgrocalidad {
+    id           Int     @id @default(autoincrement())
+    /// pin_auxagrocalidad.ID
+    codigoAccess Int     @unique
+    /// Código Agrocalidad (ej. "EC11-AGC189")
+    codigo       String
+    razonSocial  String
+    provincia    String?
+    canton       String?
+    direccion    String?
+    strCod       String?
+    idFinca      Int?
+
+    finca Finca? @relation(fields: [idFinca], references: [id])
+
+    @@index([codigo])
 }
 
 model Chofer {
     id           Int      @id @default(autoincrement())
+    /// PIN_auxChofers.choCodigo
+    codigoAccess Int?     @unique
     nombre       String
     ruc          String
     placasCamion String?
@@ -397,35 +524,46 @@ model Chofer {
 // ===== BODEGUERO MODEL =====
 
 model Bodeguero {
-    id          Int      @id @default(autoincrement())
-    nombre      String
-    ci          String
-    claveBodega String
-    estado      Boolean? @default(true)
+    id           Int      @id @default(autoincrement())
+    /// PIN_auxBodegueros.bodID
+    codigoAccess Int?     @unique
+    nombre       String
+    ci           String
+    claveBodega  String
+    estado       Boolean? @default(true)
 }
 
 // ===== AEROLINEA MODELS =====
 
 model Aerolinea {
-    id                Int            @id @default(autoincrement())
-    nombre            String
-    ciRuc             String?
-    direccion         String?
-    telefono          String?
-    email             String?
-    ciudad            String?
-    pais              String?
-    contacto          String?
-    modo              ModoAerolinea? @default(EN_PIEZAS) // en piezas, en fulles
-    maestraGuiasHijas Boolean?       @default(false)
-    codigo            String?
-    prefijoAwb        String?
-    codigoCae         String?
-    estado            Boolean?       @default(true)
-    afiliadoCass      Boolean?       @default(false)
-    guiasVirtuales    Boolean?       @default(true)
-    createdAt         DateTime       @default(now())
-    updatedAt         DateTime       @updatedAt
+    id                     Int            @id @default(autoincrement())
+    /// PIN_auxAerolineas.aerCodigo
+    codigoAccess           Int?           @unique
+    nombre                 String
+    alias                  String?
+    ciRuc                  String?
+    direccion              String?
+    telefono               String?
+    email                  String?
+    ciudad                 String?
+    pais                   String?
+    contacto               String?
+    modo                   ModoAerolinea? @default(EN_PIEZAS) // en piezas, en fulles
+    maestraGuiasHijas      Boolean?       @default(false)
+    codigo                 String?
+    prefijoAwb             String?
+    codigoCae              String?
+    /// PIN_auxAerolineas.aerLeyenda
+    leyenda                String?
+    /// Destinatarios del correo de reservas (aerRecipient)
+    reservasDestinatarios  String?
+    reservasNombreContacto String?
+    reservasAsunto         String?
+    estado                 Boolean?       @default(true)
+    afiliadoCass           Boolean?       @default(false)
+    guiasVirtuales         Boolean?       @default(true)
+    createdAt              DateTime       @default(now())
+    updatedAt              DateTime       @updatedAt
 
     // Relations
     aerolineasPlantilla AerolineasPlantilla?
@@ -504,8 +642,12 @@ model AerolineasPlantilla {
     conceptos ConceptoCosto[]
 }
 
+/// Access: PIN_auxShippers.
 model AgenciaIata {
     id                 Int     @id @default(autoincrement())
+    /// PIN_auxShippers.shiCodigo
+    codigoAccess       Int?    @unique
+    alias              String?
     nombreShipper      String
     rucShipper         String?
     direccionShipper   String?
@@ -528,7 +670,10 @@ model AgenciaIata {
 
 model SubAgencia {
     id            Int      @id @default(autoincrement())
+    /// PIN_auxSubagencias.ageCodigo
+    codigoAccess  Int?     @unique
     nombre        String
+    alias         String?
     ciRuc         String?
     direccion     String?
     telefono      String?
@@ -541,14 +686,20 @@ model SubAgencia {
     estado        Boolean? @default(true)
 }
 
+/// Access: PIN_auxEmbarque.
 model TipoEmbarque {
     id                  Int     @id @default(autoincrement())
+    /// PIN_auxEmbarque.embCodigo (ej. "FLORES")
+    codigo              String? @unique
     nombre              String
+    /// PIN_auxEmbarque.embNombre — texto que se imprime en la guía (una línea por renglón)
+    descripcionGuia     String?
     idTipoCarga         Int?
     idTipoEmbalaje      Int?
     regimen             String?
     mercancia           String?
     harmonisedCommodity String?
+    orden               Int?
 
     // Relations
     carga    TipoCarga?    @relation(fields: [idTipoCarga], references: [id])
@@ -556,18 +707,87 @@ model TipoEmbarque {
 }
 
 // Catalog models
+/// Catálogo ECUAPASS de tipos de carga.
 model TipoCarga {
-    id     Int    @id @default(autoincrement())
+    id     Int     @id @default(autoincrement())
+    /// Código ECUAPASS (ej. "CG")
+    codigo String? @unique
     nombre String
 
     // Relations
     tiposEmbarque TipoEmbarque[]
 }
 
+/// Catálogo ECUAPASS de tipos de embalaje.
 model TipoEmbalaje {
-    id     Int    @id @default(autoincrement())
+    id     Int     @id @default(autoincrement())
+    /// Código ECUAPASS (ej. "035" = caja)
+    codigo String? @unique
     nombre String
 
     // Relations
     tiposEmbarque TipoEmbarque[]
+}
+
+/// Access: CAE_TIPODOCUMENTO (1 RUC, 2 cédula, 3 pasaporte, 4 catastro, 5 otros).
+model TipoDocumentoIdentidad {
+    id     Int    @id @default(autoincrement())
+    codigo Int    @unique
+    nombre String
+}
+
+// ===== PARÁMETROS DEL SISTEMA =====
+
+/// Parámetros del negocio traídos de Access: _PARAMETROS, _PIN_MParams,
+/// eEmpresa y eBodega (aplanados a clave/valor; la clave lleva prefijo de origen).
+model Parametro {
+    clave       String   @id
+    descripcion String?
+    valorNumero Float?
+    valorTexto  String?
+    /// Tabla Access de la que viene
+    fuente      String
+    updatedAt   DateTime @updatedAt
+}
+
+// ===== SYNC ACCESS → PG =====
+
+/// Una fila por registro Access visto por el sync. Guarda el hash de lo que se
+/// escribió para saltar los que no cambiaron, y marca los que desaparecen de Access.
+model SyncLegacyRegistro {
+    id           Int       @id @default(autoincrement())
+    /// Entidad del sync (ej. "finca", "consignatario")
+    entidad      String
+    /// Clave del registro en Access, como texto
+    claveAccess  String
+    /// id del registro en PG
+    idPg         String?
+    hash         String
+    vistoEn      DateTime
+    /// Si dejó de aparecer en Access: desde cuándo (se desactiva, no se borra)
+    ausenteDesde DateTime?
+
+    @@unique([entidad, claveAccess])
+}
+
+/// Historial de corridas del sync (de todos los grupos: maestros y documentos).
+model SyncLegacyEjecucion {
+    id           Int       @id @default(autoincrement())
+    iniciadoEn   DateTime  @default(now())
+    finalizadoEn DateTime?
+    /// maestros | documentos
+    grupo        String    @default("maestros")
+    /// incremental | completo
+    modo         String?
+    /// EN_CURSO | OK | CON_ERRORES | ERROR | OMITIDO
+    estado       String
+    dryRun       Boolean   @default(false)
+    /// Reescribió todo sin mirar los hashes (reconciliación)
+    forzado      Boolean   @default(false)
+    /// cron | manual
+    origen       String
+    resumen      Json?
+    error        String?
+
+    @@index([iniciadoEn])
 }

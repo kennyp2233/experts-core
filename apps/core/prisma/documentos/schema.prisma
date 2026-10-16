@@ -1,4 +1,10 @@
 // Prisma schema for Documentos Bounded Context
+//
+// Los campos `codigoAccess` guardan la clave del documento en la base Access
+// legacy y son la llave del sync Access → PG (ver
+// src/modules/sync/legacy-access/). Los `///` indican la columna Access
+// de origen. Las FKs a datos maestros (idFinca, idConsignatario, …) son
+// lógicas: viven en otro schema.
 generator documentosClient {
   provider   = "prisma-client-js"
   outputMode = "outputDir"
@@ -16,28 +22,63 @@ enum TipoStock {
   VIRTUAL
 }
 
-model DocumentoBase {
-  id            Int         @id @default(autoincrement())
-  fecha         DateTime?
-  idAerolinea   Int? // FK to Datos Maestros
-  idAgenciaIata Int? // FK to Datos Maestros
-  tipoStock     TipoStock?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  guiasMadre    GuiaMadre[]
+/// Estados de un lote de guías (catálogo _PIN_auxEstadaDocGuias del sistema viejo).
+enum EstadoLoteGuias {
+  ANULADO
+  INGRESADO
+  GUIAS_COORDINADAS
+  CANCELADO
 }
 
+/// Estado de cada guía del stock (PIN_DCoorGuias.guiEstado 1/2/3).
+enum EstadoGuiaMadre {
+  INGRESADA
+  COORDINADA
+  PRESTADA
+}
+
+/// Access: PIN_MCoordina con docTipo = 'CGU' (lote de guías AWB ingresadas al stock).
+model DocumentoBase {
+  id                   Int              @id @default(autoincrement())
+  /// PIN_MCoordina.docNumero (docTipo CGU)
+  codigoAccess         Int?             @unique
+  fecha                DateTime?
+  idAerolinea          Int? // FK to Datos Maestros
+  idAgenciaIata        Int? // FK to Datos Maestros
+  tipoStock            TipoStock?
+  estado               EstadoLoteGuias?
+  referencia           String?
+  nota                 String?
+  /// Auditoría del sistema viejo (dDocUsuario)
+  creadoPorLegacy      String?
+  creadoEnLegacy       DateTime?
+  actualizadoPorLegacy String?
+  actualizadoEnLegacy  DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  guiasMadre           GuiaMadre[]
+}
+
+/// Access: PIN_DCoorGuias (una guía AWB del stock).
 model GuiaMadre {
   id                    Int                    @id @default(autoincrement())
-  prefijo               Int
+  /// PIN_DCoorGuias.guiNumero sin espacios (ej. "129-45959174") — llave del sync
+  numero                String?                @unique
+  /// Prefijo IATA numérico; null si la aerolínea usa uno alfanumérico (ej. "F37" de FEMKE) — ver `numero`
+  prefijo               Int?
   secuencial            Int
   idDocumentoBase       Int
   documentoBase         DocumentoBase          @relation(fields: [idDocumentoBase], references: [id])
+  idAerolinea           Int? // FK to Datos Maestros
+  estado                EstadoGuiaMadre?
+  virtual               Boolean?               @default(false)
   prestada              Boolean?               @default(false)
   observaciones         String?
   fechaPrestamo         DateTime?
   devolucion            Boolean?               @default(false)
   fechaDevolucion       DateTime?
+  /// PIN_DCoorGuias.guiNumCoor — coordinación (docNumero) que la usó
+  coordinacionAccess    Int?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   documentoCoordinacion DocumentoCoordinacion?
@@ -72,9 +113,11 @@ enum TipoRuta {
   VIA3
 }
 
+/// PIN_MCoordina.docEstado: 1 abierta (BORRADOR), 2 cortada (CORTADO), 0 anulada.
 enum EstadoCoordinacion {
   BORRADOR
   CORTADO
+  ANULADO
 }
 
 enum TipoPago {
@@ -82,12 +125,24 @@ enum TipoPago {
   COLLECT
 }
 
+/// Juego de valores de una coordinación: el normal y el del "corte extra"
+/// (columnas *_ex de PIN_dDocExtra, que la facturación usa si extCorte_ex = 1).
+enum TipoLiquidacion {
+  NORMAL
+  CORTE_EXTRA
+}
+
 // ===== COORDINACION MODELS =====
 
+/// Access: PIN_MCoordina (docTipo 'COO') + PIN_dDocCoor + PIN_dDocExtra.
 model DocumentoCoordinacion {
-  id          Int       @id @default(autoincrement())
-  idGuiaMadre Int       @unique
-  guiaMadre   GuiaMadre @relation(fields: [idGuiaMadre], references: [id])
+  id           Int       @id @default(autoincrement())
+  /// PIN_MCoordina.docNumero (docTipo COO) — llave del sync
+  codigoAccess Int?      @unique
+  idGuiaMadre  Int       @unique
+  guiaMadre    GuiaMadre @relation(fields: [idGuiaMadre], references: [id])
+  /// PIN_dDocCoor.docNumGuia tal cual (ej. "369-8469 5461")
+  numeroGuia   String?
 
   // Header Snapshot from AerolineasPlantilla
   tarifaRate                Float?  @default(0)
@@ -97,25 +152,72 @@ model DocumentoCoordinacion {
   plantillaReservas         String?
 
   // Operational Data
-  idProducto         Int
-  idAgenciaIata      Int
-  idDestinoAwb       Int
-  idDestinoFinalDocs Int
+  idProducto         Int?
+  idAgenciaIata      Int?
+  idDestinoAwb       Int?
+  idDestinoFinalDocs Int?
+  /// PIN_dDocCoor.marCodigo → Consignatario (datos maestros)
+  idConsignatario    Int?
+  /// PIN_dDocCoor.aerCodigo → Aerolinea (datos maestros)
+  idAerolinea        Int?
+  /// PIN_MCoordina.embCodigo → TipoEmbarque (datos maestros)
+  idTipoEmbarque     Int?
   estadoActual       EstadoCoordinacion @default(BORRADOR)
 
   pago            TipoPago @default(PREPAID)
   fechaVuelo      DateTime
   fechaAsignacion DateTime @default(now())
 
+  referencia String?
+  nota       String?
+
+  // Totales físicos (PIN_dDocCoor)
+  totalFulls   Float?
+  totalCajas   Float?
+  totalKgs     Float?
+  totalVolumen Float?
+  cupoFulls    Float?
+
+  // Liquidación resumida (PIN_dDocExtra.doc*)
+  corteExtra        Boolean @default(false)
+  liqFulls          Float?
+  liqPiezas         Int?
+  liqPesoBruto      Float?
+  liqPesoCobrable   Float?
+  liqTarifa         Float?
+  liqFlete          Float?
+  liqDueAgent       Float?
+  liqDueCarrier     Float?
+  liqTotal          Float?
+  comision          Float?
+  incentivo         Float?
+  /// PIN_dDocExtra.extCO
+  certificadoOrigen String?
+  ingresoId         Int?
+
+  /// Columnas del sistema viejo sin semántica confirmada (docCA, docCFE, docCert, docFITO, awbFactura, …)
+  datosLegacy Json?
+
+  /// Auditoría del sistema viejo (dDocUsuario)
+  creadoPorLegacy      String?
+  creadoEnLegacy       DateTime?
+  actualizadoPorLegacy String?
+  actualizadoEnLegacy  DateTime?
+
   // Relational Snapshots
-  rutas  DocumentoRuta[]
-  costos DocumentoCosto[]
+  rutas         DocumentoRuta[]
+  costos        DocumentoCosto[]
+  liquidaciones DocumentoLiquidacion[]
+  manifiesto    DocumentoManifiesto?
+  marcas        DocumentoMarca[]
+  medidas       DocumentoMedida[]
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   guiaHijas GuiaHija[]
 }
 
+/// Access: PIN_dDocRuta. Los datos del vuelo de cada tramo van en la fila VIA del tramo.
 model DocumentoRuta {
   id                      Int                   @id @default(autoincrement())
   idDocumentoCoordinacion Int
@@ -127,6 +229,18 @@ model DocumentoRuta {
   destinoId      Int? // Snapshot FK
   viaAerolineaId Int? // Snapshot FK
   orden          Int?
+  /// Código tal cual en Access (IATA de aeropuerto o de aerolínea)
+  codigo         String?
+
+  // Vuelo del tramo (solo filas VIA)
+  vuelo             String?
+  fechaHoraSalida   DateTime?
+  fechaHoraLlegada  DateTime?
+  /// "ETD" / "ATD"…
+  salidaTipo        String?
+  llegadaTipo       String?
+  salidaConfirmada  Boolean?
+  llegadaConfirmada Boolean?
 }
 
 model DocumentoCosto {
@@ -141,9 +255,95 @@ model DocumentoCosto {
   multiplicador TipoMultiplicador?
 }
 
+/// Access: PIN_dDocExtra — valores de flete y cargos de la coordinación.
+model DocumentoLiquidacion {
+  id                      Int                   @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+  tipo                    TipoLiquidacion
+
+  pesoCobrable   Float?
+  tarifa         Float?
+  // Cargos de aerolínea
+  guiaAerea      Float?
+  combustible    Float?
+  seguridad      Float?
+  otros          Float?
+  iva            Float?
+  handling       Float?
+  // Cargos de agencia (extCodAge*)
+  cargoAwa       Float?
+  cargoCha       Float?
+  cargoPca       Float?
+  cargoTax       Float?
+  cargoMma       Float?
+  cargoHawb      Float?
+  cargoFitos     Float?
+  aux1           Float?
+  aux2           Float?
+  aux3Handling   Float?
+  calAux         Float?
+  /// Solo NORMAL
+  auxOtros       Float?
+  /// Solo NORMAL (extRateAgree)
+  tarifaAcordada Float?
+  /// Solo CORTE_EXTRA (extCalPCA_ex)
+  calculaPca     Boolean?
+
+  @@unique([idDocumentoCoordinacion, tipo])
+}
+
+/// Access: PIN_DCoorCAE (+ campos CAE de PIN_dDocRuta) — manifiesto aduanero del vuelo.
+model DocumentoManifiesto {
+  idDocumentoCoordinacion Int                   @id
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+  /// Ej. "UIO"
+  origen                  String?
+  /// Distrito aduanero, ej. "055"
+  aduana                  String?
+  anio                    String?
+  /// Código IATA del transportista, ej. "5Y"
+  tipo                    String?
+  numero                  String?
+  digitoVerificador       String?
+  vuelo                   String?
+  fechaArribo             String?
+  horaArribo              String?
+  /// Secuencial de la guía en el manifiesto (MSN), ej. "0026"
+  secuencial              String?
+  /// Ej. "CEC-2022-5Y-052167-0026" (PIN_dDocRuta.Manifiesto)
+  referencia              String?
+}
+
+/// Access: PIN_dDocMar — marcas adicionales de la coordinación.
+model DocumentoMarca {
+  id                      Int                   @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+  orden                   Int
+  /// → Consignatario (datos maestros)
+  idConsignatario         Int?
+}
+
+/// Access: PIN_DCooMedidas — medidas de las cajas para el volumen.
+model DocumentoMedida {
+  id                      Int                   @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
+  orden                   Int
+  largo                   Float?
+  ancho                   Float?
+  alto                    Float?
+  fulls                   Float?
+  piezas                  Int?
+  kgs                     Float?
+}
+
 // 1. Catálogo de Cajas (Indispensable para calcular Fulls en el API)
 model TipoCaja {
-  id         Int    @id @default(autoincrement())
+  id         Int     @id @default(autoincrement())
+  /// FB / HB / QB / EB
+  codigo     String? @unique
   nombre     String // Ej: "Tabaco", "Cuarto", "Full"
   factorFull Float // El valor clave: 0.5, 0.25, 1.00
 
@@ -152,24 +352,30 @@ model TipoCaja {
 }
 
 // 2. La Cabecera (Logística y Totales Físicos)
+/// Access: líneas de PIN_DCoordina agrupadas por detGuiaHija.
 model GuiaHija {
   id Int @id @default(autoincrement())
 
   // Relaciones y Rastreabilidad
   idDocumentoCoordinacion Int
-  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id])
+  documentoCoordinacion   DocumentoCoordinacion @relation(fields: [idDocumentoCoordinacion], references: [id], onDelete: Cascade)
   idGuiaMadre             Int
   guiaMadre               GuiaMadre             @relation(fields: [idGuiaMadre], references: [id])
-  idFinca                 Int // FK Logical to Datos Maestros
+  idFinca                 Int? // FK Logical to Datos Maestros
+  /// → Consignatario (datos maestros)
+  idConsignatario         Int?
 
   // Identificadores
   numeroGuiaHija String // El HAWB (House Air Waybill)
   anio           Int
   secuencial     Int
+  /// DAE de la guía hija (PIN_DCoordina.detFUE)
+  dae            String?
 
   // --- DATOS REALES (Lo que no se puede calcular) ---
   pesoBruto   Float @default(0) // Lectura de báscula (CRÍTICO para flete)
   totalPiezas Int   @default(0) // Cantidad física de cajas (Checksum)
+  totalFulls  Float @default(0)
 
   // Metadatos de sistema
   createdAt DateTime @default(now())
@@ -177,26 +383,69 @@ model GuiaHija {
 
   // Relación con el contenido
   detalles GuiaHijaDetalle[]
+
+  @@index([numeroGuiaHija])
+  @@index([dae])
 }
 
 // 3. El Detalle (Qué hay dentro de las cajas)
+/// Access: una línea de PIN_DCoordina.
 model GuiaHijaDetalle {
   id Int @id @default(autoincrement())
 
   // Relación con la Cabecera
   idGuiaHija Int
-  guiaHija   GuiaHija @relation(fields: [idGuiaHija], references: [id])
+  guiaHija   GuiaHija @relation(fields: [idGuiaHija], references: [id], onDelete: Cascade)
+
+  /// PIN_DCoordina.detNumero
+  numeroLinea Int?
 
   // Relación con el Producto (Movido aquí para permitir guías mixtas)
-  idProducto Int // Variedad de flor (Ej: Freedom, Explorer)
+  idProducto      Int? // Variedad de flor (Ej: Freedom, Explorer)
+  /// PIN_DCoordina.proCodigo tal cual
+  codigoProducto  String?
+  idFinca         Int?
+  idConsignatario Int?
 
-  // Relación con el Tipo de Caja (Para saber el factor full)
-  idTipoCaja Int
-  tipoCaja   TipoCaja @relation(fields: [idTipoCaja], references: [id])
+  // Relación con el Tipo de Caja (Para saber el factor full) — se deduce de fulls/cajas
+  idTipoCaja Int?
+  tipoCaja   TipoCaja? @relation(fields: [idTipoCaja], references: [id])
 
   // --- COMPOSICIÓN DEL EMPAQUE ---
   cantidadCajas Int // Cuántas cajas de este tipo hay
-  ramosPorCaja  Int // Ej: 10, 12, 15 ramos
-  tallosPorRamo Int // Ej: 25 tallos (o grado)
+  ramosPorCaja  Int? // Ej: 10, 12, 15 ramos
+  tallosPorRamo Int? // Ej: 25 tallos (o grado)
   longitud      Int? // Ej: 50, 60, 70 cm (Opcional pero útil)
+
+  // --- Lo que guarda el sistema viejo por línea ---
+  fulls            Float?
+  pesoKg           Float?
+  tallos           Int?
+  valor            Float?
+  dae              String?
+  largo            Float?
+  ancho            Float?
+  alto             Float?
+  factura          String?
+  nota             String?
+  /// "E" / "I" / vacío (detOrigen)
+  origen           String?
+  usuario          String?
+  fechaRegistro    DateTime?
+  secuencialLegacy Int?
+}
+
+// ===== SYNC ACCESS → PG =====
+
+/// Bitácora del sync para las entidades de este schema (ver la de datos_maestros).
+model SyncLegacyRegistro {
+  id           Int       @id @default(autoincrement())
+  entidad      String
+  claveAccess  String
+  idPg         String?
+  hash         String
+  vistoEn      DateTime
+  ausenteDesde DateTime?
+
+  @@unique([entidad, claveAccess])
 }

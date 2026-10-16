@@ -28,7 +28,7 @@ const removeSchemaParam = (connectionString: string): string => {
  * Creates a Prisma client factory for a given database URL environment variable.
  * Handles the schema parameter by setting the search_path via PostgreSQL options.
  */
-const createPrismaFactory = <T>(
+export const createPrismaFactory = <T>(
     envKey: string,
     ClientClass: new (options: { adapter: PrismaPg }) => T,
 ) => {
