@@ -49,6 +49,9 @@ export interface IngresoDetalle extends IngresoResumen {
   verificado: boolean;
   editable: boolean;
   auditoria: { creadoPor: string | null; creadoEn: string | null; actualizadoPor: string | null; actualizadoEn: string | null };
+  /** Documento anterior / siguiente por N° (los botones Anterior y Siguiente del sistema viejo). */
+  anterior: { id: number; numero: number } | null;
+  siguiente: { id: number; numero: number } | null;
 }
 
 export interface PrevisualizacionIngreso {
@@ -154,6 +157,19 @@ export class IngresosGuiasService {
     const r = this.resumen(d, refs);
     const vigentes = d.guiasMadre.filter((g) => g.estado !== 'ANULADA');
     const estadoCalculado = d.estado === 'ANULADO' ? 'ANULADO' : estadoSegunGuias(d.guiasMadre);
+    // Como la lista vieja, se navega sin los anulados (salvo que se esté viendo uno).
+    const vecino = (lado: 'anterior' | 'siguiente') =>
+      d.numero === null
+        ? null
+        : this.db.documentoBase.findFirst({
+            where: {
+              numero: lado === 'anterior' ? { lt: d.numero } : { gt: d.numero },
+              ...(d.estado === 'ANULADO' ? {} : { OR: [{ estado: null }, { estado: { not: 'ANULADO' } }] }),
+            },
+            orderBy: { numero: lado === 'anterior' ? 'desc' : 'asc' },
+            select: { id: true, numero: true },
+          });
+    const [anterior, siguiente] = await Promise.all([vecino('anterior'), vecino('siguiente')]);
     return {
       ...r,
       nota: d.nota,
@@ -172,8 +188,11 @@ export class IngresosGuiasService {
         creadoPor: d.creadoPorLegacy,
         creadoEn: iso(d.creadoEnLegacy ?? d.createdAt),
         actualizadoPor: d.actualizadoPorLegacy,
-        actualizadoEn: iso(d.actualizadoEnLegacy ?? (d.codigoAccess === null ? d.updatedAt : null)),
+        // En los del sistema nuevo, solo si alguien lo modificó (no al crearlo ni al recalcular su estado).
+        actualizadoEn: iso(d.actualizadoEnLegacy ?? (d.codigoAccess === null && d.actualizadoPorLegacy ? d.updatedAt : null)),
       },
+      anterior: anterior?.numero != null ? { id: anterior.id, numero: anterior.numero } : null,
+      siguiente: siguiente?.numero != null ? { id: siguiente.id, numero: siguiente.numero } : null,
     };
   }
 

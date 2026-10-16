@@ -15,6 +15,7 @@ import { ExploradorMaestrosService } from './maestros/explorador-maestros.servic
 import { OpcionesController } from './maestros/opciones.controller';
 import { OpcionesService } from './maestros/opciones.service';
 import { FlowerCargoService } from './documentos/flowercargo.service';
+import { ReportesDiaService } from './documentos/reportes-dia.service';
 
 /**
  * Operación del sistema nuevo (reemplazo del sistema viejo, ADR 0003):
@@ -43,6 +44,7 @@ import { FlowerCargoService } from './documentos/flowercargo.service';
     ExploradorMaestrosService,
     OpcionesService,
     FlowerCargoService,
+    ReportesDiaService,
   ],
   exports: [NombresMaestrosService, CoordinacionesService],
 })
