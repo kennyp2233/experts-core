@@ -30,6 +30,13 @@ services:
     restart: unless-stopped
     volumes:
       - ./src:/app/src
+    # Los logs de consola del contenedor no rotan por defecto (crecen hasta el
+    # próximo deploy). Máximo 3 archivos de 10 MB.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
   db-setup:
     build: .
