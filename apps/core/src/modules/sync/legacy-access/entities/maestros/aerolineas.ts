@@ -40,8 +40,13 @@ export const aerolinea: EntidadSync = {
       tipo: c.tipo,
       abreviatura: txt(r[`aerCod${c.n}`]),
       valor: (c.val ? num(r[c.val]) : null) ?? 0,
-      multiplicador:
-        c.peso && flag(r[c.peso]) ? ('CHARGEABLE_WEIGHT' as const) : null,
+      // Los conceptos con columna Peso siempre son por kg: aerCodNPeso = 1 → sobre
+      // peso cobrable, 0 → sobre peso bruto (legacy-analysis/reglas/liquidacion.md R13).
+      multiplicador: c.peso
+        ? flag(r[c.peso])
+          ? ('CHARGEABLE_WEIGHT' as const)
+          : ('GROSS_WEIGHT' as const)
+        : null,
     })).filter((c) => c.abreviatura !== null || c.valor !== 0);
     return {
       base: {

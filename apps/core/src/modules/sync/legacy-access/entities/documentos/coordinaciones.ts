@@ -357,8 +357,9 @@ export const coordinacion: EntidadSync<CoordinacionRow, any, Tx> = {
         liqPesoCobrable: num(x?.docCW),
         liqTarifa: num(x?.docRate),
         liqFlete: num(x?.docFlete),
-        liqDueAgent: num(x?.docDA),
-        liqDueCarrier: num(x?.docDC),
+        // Ojo: Access guarda los cargos de aerolínea en docDA y los de agencia en docDC.
+        liqDueCarrier: num(x?.docDA),
+        liqDueAgent: num(x?.docDC),
         liqTotal: num(x?.docTotal),
         comision: num(x?.docComision),
         incentivo: num(x?.docIncentivo),

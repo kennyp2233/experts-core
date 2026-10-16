@@ -449,3 +449,15 @@ model SyncLegacyRegistro {
 
   @@unique([entidad, claveAccess])
 }
+
+// ===== CONTADORES =====
+
+/// Contadores del sistema nuevo (ej. "guiaHija"). Se incrementan con un único
+/// INSERT … ON CONFLICT DO UPDATE … RETURNING dentro de la transacción: dos
+/// usuarios a la vez nunca reciben el mismo número (el sistema viejo leía y
+/// actualizaba sin transacción).
+model Contador {
+  clave     String   @id
+  valor     Int
+  updatedAt DateTime @default(now()) @updatedAt
+}

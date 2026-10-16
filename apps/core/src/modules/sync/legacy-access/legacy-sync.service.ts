@@ -8,6 +8,7 @@ import {
 } from '@internal/datos-maestros-client';
 import { PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
 import { LegacyDbService } from '../../integrations/legacy-db/legacy-db.service';
+import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { ENTIDADES_DOCUMENTOS } from './entities/documentos';
 import { ENTIDADES_MAESTROS } from './entities/maestros';
 import { sincronizarEntidad } from './engine/sync-engine';
@@ -18,8 +19,6 @@ import {
   ResumenEntidad,
   SyncContext,
 } from './engine/sync.types';
-
-export const PRISMA_DOCUMENTOS_SYNC = 'PrismaClientDocumentosSync';
 
 export type GrupoSync = 'maestros' | 'documentos';
 export const GRUPOS: GrupoSync[] = ['maestros', 'documentos'];
@@ -68,7 +67,7 @@ export class LegacySyncService {
 
   constructor(
     @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
-    @Inject(PRISMA_DOCUMENTOS_SYNC) private readonly documentos: PrismaDocumentos,
+    @Inject(PRISMA_DOCUMENTOS) private readonly documentos: PrismaDocumentos,
     private readonly legacy: LegacyDbService,
     private readonly config: ConfigService,
     private readonly http: HttpService,
