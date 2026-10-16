@@ -36,14 +36,24 @@ export class OpcionesService {
     const porIds = ids?.length ? { id: { in: ids } } : null;
     switch (tipo) {
       case 'guias': {
+        // Se busca por número y/o aerolínea: "8469", "KL", "klm 8469".
+        const digitos = t.replace(/\D/g, '');
+        const letras = t.replace(/[\d\s-]/g, '');
+        const aerolineas = letras
+          ? await this.db.aerolinea.findMany({
+              where: { OR: [{ codigo: ins(letras) }, { nombre: ins(letras) }, { alias: ins(letras) }] },
+              select: { id: true },
+            })
+          : null;
         const where = porIds ?? {
           estado: 'INGRESADA' as const,
-          ...(t ? { numero: { contains: t.replace(/[\s-]/g, '') } } : {}),
+          ...(digitos ? { numero: { contains: digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos } } : {}),
+          ...(aerolineas ? { idAerolinea: { in: aerolineas.map((x) => x.id) } } : {}),
         };
         const guias = await this.docs.guiaMadre.findMany({ where, orderBy: [{ numero: 'asc' }], take });
         const aer = await this.db.aerolinea.findMany({
           where: { id: { in: [...new Set(guias.map((g) => g.idAerolinea).filter((x): x is number => x !== null))] } },
-          select: { id: true, nombre: true, codigo: true },
+          select: { id: true, nombre: true, codigo: true, alias: true },
         });
         const a = new Map(aer.map((x) => [x.id, x]));
         return guias.map((g) => {
@@ -52,7 +62,7 @@ export class OpcionesService {
             id: g.id,
             codigo: g.numero,
             nombre: g.numero ? awb(g.numero) : `Guía ${g.id}`,
-            detalle: [al?.nombre, g.virtual ? 'virtual' : null, g.estado !== 'INGRESADA' ? g.estado : null]
+            detalle: [al ? `${al.codigo ?? ''} ${al.alias?.trim() || al.nombre}`.trim() : null, g.virtual ? 'virtual' : null]
               .filter(Boolean)
               .join(' · '),
             extra: { idAerolinea: g.idAerolinea, virtual: g.virtual },
@@ -68,13 +78,23 @@ export class OpcionesService {
           where,
           orderBy: { nombre: 'asc' },
           take,
-          include: { guiaM: { include: { destino: { select: { id: true, codigo: true } } } } },
+          include: {
+            guiaM: { include: { destino: { select: { id: true, codigo: true } } } },
+            cliente: { select: { nombre: true, alias: true } },
+          },
         });
         return rs.map((r) => ({
           id: r.id,
           codigo: s(r.codigoAccess),
           nombre: r.nombre,
-          detalle: [r.ciudad, r.pais].filter(Boolean).join(', ') || null,
+          // El cliente de la marca (el "Embarcador" del sistema viejo) y la ciudad.
+          detalle:
+            [
+              r.cliente ? `Cliente: ${r.cliente.alias?.trim() || r.cliente.nombre}` : null,
+              [r.ciudad, r.pais].filter(Boolean).join(', ') || null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || null,
           extra: { idDestino: r.guiaM?.idDestino ?? null, destino: r.guiaM?.destino?.codigo ?? null },
         }));
       }
@@ -83,14 +103,18 @@ export class OpcionesService {
           estado: true,
           ...(t ? { OR: [{ nombreFinca: ins(t) }, { tag: ins(t) }, { rucFinca: ins(t) }] } : {}),
         };
-        const rs = await this.db.finca.findMany({ where, orderBy: { nombreFinca: 'asc' }, take });
-        return rs.map((r) => ({
-          id: r.id,
-          codigo: r.rucFinca,
-          nombre: r.nombreFinca,
-          detalle: r.tag,
-          extra: { largo: r.cajaLargo, ancho: r.cajaAncho, alto: r.cajaAlto },
-        }));
+        const rs = await this.db.finca.findMany({ where, orderBy: [{ tag: 'asc' }, { nombreFinca: 'asc' }], take });
+        // Como en el sistema viejo, la finca se muestra por su alias (plaAlias); la razón social va debajo.
+        return rs.map((r) => {
+          const alias = r.tag?.trim() || r.nombreFinca;
+          return {
+            id: r.id,
+            codigo: r.rucFinca,
+            nombre: alias,
+            detalle: alias.toUpperCase() !== r.nombreFinca.toUpperCase() ? r.nombreFinca : null,
+            extra: { largo: r.cajaLargo, ancho: r.cajaAncho, alto: r.cajaAlto },
+          };
+        });
       }
       case 'productos': {
         const where = porIds ?? {
@@ -110,7 +134,20 @@ export class OpcionesService {
           id: r.id,
           codigo: r.iataCodeCarrier,
           nombre: r.alias || r.nombreShipper,
-          detalle: r.comision !== null ? `comisión ${r.comision} %` : null,
+          detalle: r.alias && r.alias !== r.nombreShipper ? r.nombreShipper : null,
+        }));
+      }
+      case 'aerolineas': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ codigo: ins(t) }, { nombre: ins(t) }, { alias: ins(t) }] } : {}),
+        };
+        const rs = await this.db.aerolinea.findMany({ where, orderBy: { nombre: 'asc' }, take });
+        return rs.map((r) => ({
+          id: r.id,
+          codigo: r.codigo,
+          nombre: r.alias?.trim() || r.nombre,
+          detalle: r.alias?.trim() && r.alias.trim() !== r.nombre ? r.nombre : null,
         }));
       }
       case 'destinos': {
@@ -128,7 +165,7 @@ export class OpcionesService {
       }
       default:
         throw new BadRequestException(
-          `Tipo desconocido: ${tipo}. Opciones: guias, consignatarios, fincas, productos, agencias, destinos, tipos-embarque`,
+          `Tipo desconocido: ${tipo}. Opciones: guias, consignatarios, fincas, productos, agencias, aerolineas, destinos, tipos-embarque`,
         );
     }
   }

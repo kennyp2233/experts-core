@@ -208,7 +208,11 @@ export class CoordinarService {
     if (c.estadoActual !== 'BORRADOR') throw new ConflictException('Solo se corta una coordinación abierta.');
     if (c.guiaHijas.length === 0) throw new BadRequestException('No se puede cortar una guía sin guías hijas.');
     const sinDae = c.guiaHijas.flatMap((g) => g.detalles).filter((d) => !d.dae);
-    if (sinDae.length) throw new BadRequestException(`Hay ${sinDae.length} línea(s) sin DAE: la DAE es obligatoria.`);
+    if (sinDae.length) {
+      throw new BadRequestException(
+        sinDae.length === 1 ? 'Hay una fila sin DAE: la DAE es obligatoria.' : `Hay ${sinDae.length} filas sin DAE: la DAE es obligatoria.`,
+      );
+    }
     const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
     if (!normal?.pesoCobrable || !normal?.tarifa) {
       throw new BadRequestException('Falta el peso cobrable o la tarifa de la guía madre (los da la aerolínea).');
@@ -244,7 +248,11 @@ export class CoordinarService {
     const guia = await this.db.guiaMadre.findUnique({ where: { id }, include: { documentoBase: true } });
     if (!guia) throw new BadRequestException('El campo número de guía es obligatorio.');
     asegurarEditable(guia.documentoBase, `La guía ${guia.numero}`);
-    if (guia.estado !== 'INGRESADA') throw new ConflictException(`La guía ${guia.numero} no está disponible (${guia.estado}).`);
+    if (guia.estado !== 'INGRESADA') throw new ConflictException(
+        guia.estado === 'COORDINADA'
+          ? `La guía ${guia.numero} ya está coordinada.`
+          : `La guía ${guia.numero} está prestada a otra agencia.`,
+      );
     return guia;
   }
 
@@ -271,13 +279,23 @@ export class CoordinarService {
       (await this.db.tipoCaja.findMany()).map((t) => [t.id, t.factorFull]),
     );
     const porProducto = await this.ngHPorProducto();
+    // Nombre corto de la finca (alias del sistema viejo) para los mensajes.
+    const fincas = new Map(
+      (
+        await this.maestros.finca.findMany({
+          where: { id: { in: [...new Set(dto.lineas.map((l) => l.idFinca))] } },
+          select: { id: true, nombreFinca: true, tag: true },
+        })
+      ).map((f) => [f.id, f.tag?.trim() || f.nombreFinca]),
+    );
+    const fila = (i: number, idFinca: number) => `Fila ${i + 1} (${fincas.get(idFinca) ?? 'finca'})`;
 
     const lineas: LineaPreparada[] = dto.lineas.map((l, i) => {
-      if (!productos.has(l.idProducto)) throw new BadRequestException(`Línea ${i + 1}: el producto no existe.`);
+      if (!productos.has(l.idProducto)) throw new BadRequestException(`${fila(i, l.idFinca)}: el producto no existe.`);
       const dae = l.dae?.trim();
-      if (!dae) throw new BadRequestException(`Línea ${i + 1}: Campo FUE (DAE) es obligatorio.`);
-      if (!PATRON_DAE.test(dae)) advertencias.push(`Línea ${i + 1}: la DAE "${dae}" no tiene el formato 055-AAAA-40-XXXXXXXX.`);
-      if (!(l.pesoKg >= 0)) throw new BadRequestException(`Línea ${i + 1}: el peso neto debe ser un valor numérico.`);
+      if (!dae) throw new BadRequestException(`${fila(i, l.idFinca)}: falta la DAE.`);
+      if (!PATRON_DAE.test(dae)) advertencias.push(`${fila(i, l.idFinca)}: la DAE "${dae}" no tiene el formato 055-AAAA-40-XXXXXXXX.`);
+      if (!(l.pesoKg >= 0)) throw new BadRequestException(`${fila(i, l.idFinca)}: el peso (kg) debe ser un número.`);
       const factor = l.idTipoCaja ? tipos.get(l.idTipoCaja) : undefined;
       const fulls = l.fulls ?? (factor !== undefined ? r6(l.cantidadCajas * factor) : 0);
       return {
@@ -296,7 +314,7 @@ export class CoordinarService {
     const guiasHijas = [...grupos.entries()].map(([clave, ls]) => {
       const t = totalesDeLineas(ls);
       const daes = new Set(ls.map((l) => l.dae));
-      if (daes.size > 1) advertencias.push(`La guía hija de la finca ${ls[0].idFinca} tiene ${daes.size} DAE distintas.`);
+      if (daes.size > 1) advertencias.push(`La guía hija de ${fincas.get(ls[0].idFinca) ?? 'una finca'} tiene ${daes.size} DAE distintas.`);
       return {
         clave,
         numeroGuiaHija: numeros.get(clave) ?? null,
@@ -316,7 +334,7 @@ export class CoordinarService {
     if (v.pesoCobrable !== null && v.pesoCobrable < totales.kgs) {
       // Regla del sistema viejo: "El Peso Volumen ingresado NO puede ser menor que el Peso Neto".
       throw new BadRequestException(
-        `El peso cobrable (${v.pesoCobrable}) no puede ser menor que el peso neto (${totales.kgs}).`,
+        `El peso cobrable (${v.pesoCobrable} kg) no puede ser menor que el peso de la carga (${totales.kgs} kg).`,
       );
     }
     if (v.pesoCobrable !== null && !Number.isInteger(v.pesoCobrable)) {
@@ -326,7 +344,7 @@ export class CoordinarService {
     // por encima suele ser un cero de más (coordinación 13003: 8 800 kg cobrables para 880 kg brutos).
     if (v.pesoCobrable !== null && totales.kgs > 0 && v.pesoCobrable > 100 && v.pesoCobrable > totales.kgs * 2) {
       advertencias.push(
-        `El peso cobrable (${v.pesoCobrable} kg) es ${(v.pesoCobrable / totales.kgs).toFixed(1)} veces el peso bruto: revísalo.`,
+        `El peso cobrable (${v.pesoCobrable} kg) es ${(v.pesoCobrable / totales.kgs).toFixed(1)} veces el peso de la carga: revísalo.`,
       );
     }
 
