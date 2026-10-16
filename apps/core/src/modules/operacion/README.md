@@ -59,6 +59,31 @@ Otras reglas: totales = suma de líneas; volumen = Σ round2(L×A×H×fulls/6000
 marca + finca + producto (`parNGHxProducto`); peso cobrable ≥ peso bruto (solo juego normal); DAE obligatoria por
 línea.
 
+## Pantallas: vocabulario y pendientes de UX
+
+Revisión del 16/10/2026 contra los textos del sistema viejo (`legacy-analysis/se2guias/forms`). Se usa el vocabulario
+del sistema viejo: Grabar, Modificar, Corte extra, Recalcular, Detalle por finca, guías Libres, stock Normal/Virtual,
+Ingreso de guías, Generar secuencia; la guía como `369-8469 5461`; fincas y aerolíneas por su alias (`plaAlias`,
+`aerAlias`); el cliente de la marca (el "Embarcador" del viejo) en la lista. "Anular" se queda (el viejo decía
+"Eliminar" pero no borraba). La búsqueda de coordinaciones acepta guía con o sin guion, N° (también de las nuevas),
+marca, cliente o finca.
+
+Pendiente:
+
+- **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
+  - Enter que avance de campo en coordinar, ingreso de guías y préstamo.
+  - Foco inicial en la guía madre (nueva), en el buscador de la lista y del stock, y en la aerolínea del ingreso.
+  - En los buscadores, escribir y salir con Tab borra lo escrito: falta `autoHighlight` + `autoSelect` en `OpcionAutocomplete`.
+  - Atajos: Ctrl+S / Alt+G = Grabar, F3 = Recalcular, F2 en la DAE = copiar la de la fila anterior, Enter en la última
+    fila = agregar finca, y que el Tab salte los valores sugeridos.
+- **Imprimir** guía madre, HAWB y manifiesto al cortar (el viejo lo hacía; faltan los formatos del dueño).
+- **"Ganancia"** = total al cliente − total guía madre: incluye los cargos de agencia (Transport, Fitos, Form A).
+  Confirmar con el dueño si así la mide o si debe ser solo la diferencia de tarifa.
+- Navegación anterior / siguiente entre coordinaciones (el viejo tenía Primero/Anterior/Siguiente/Último).
+- El aviso de "salir sin grabar" cubre los enlaces y cerrar la pestaña, no el botón Atrás del navegador.
+- Datos: MARTINAIR está dos veces en las aerolíneas; hay 3 guías COORDINADAS sin coordinación (salen primero al
+  filtrar Coordinadas).
+
 ## Archivo FlowerCargo
 
 [`documentos/flowercargo.ts`](documentos/flowercargo.ts). Mismas 71 columnas del archivo que manda FlowerCargo; con la

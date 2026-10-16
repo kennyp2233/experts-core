@@ -15,6 +15,8 @@ export interface CoordinacionResumen {
   fechaAsignacion: string;
   aerolinea: RefMaestro | null;
   consignatario: RefMaestro | null;
+  /** Cliente de la marca (en el sistema viejo, "Embarcador"/cliAlias). */
+  cliente: RefMaestro | null;
   destino: RefMaestro | null;
   destinoFinal: RefMaestro | null;
   totalFulls: number | null;
@@ -22,6 +24,7 @@ export interface CoordinacionResumen {
   totalKgs: number | null;
   guiasHijas: number;
   liqTotal: number | null;
+  pesoCobrable: number | null;
   corteExtra: boolean;
 }
 

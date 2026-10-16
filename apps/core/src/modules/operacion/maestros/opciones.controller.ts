@@ -22,7 +22,7 @@ export class OpcionesController {
   }
 
   @Get(':tipo')
-  @ApiOperation({ summary: 'Opciones activas: guias (disponibles), consignatarios, fincas, productos, agencias, destinos, tipos-embarque.' })
+  @ApiOperation({ summary: 'Opciones activas: guias (libres), consignatarios, fincas, productos, agencias, aerolineas, destinos, tipos-embarque.' })
   buscar(
     @Param('tipo') tipo: string,
     @Query('q') q?: string,

@@ -29,6 +29,7 @@ const selectResumen = {
   totalCajas: true,
   totalKgs: true,
   liqTotal: true,
+  liqPesoCobrable: true,
   corteExtra: true,
   _count: { select: { guiaHijas: true } },
 } satisfies Prisma.DocumentoCoordinacionSelect;
@@ -49,7 +50,7 @@ export class CoordinacionesService {
   async listar(f: ListarCoordinacionesDto): Promise<CoordinacionPagina> {
     const page = f.page ?? 1;
     const pageSize = f.pageSize ?? 50;
-    const where = this.filtro(f);
+    const where = await this.filtro(f);
     const [total, filas] = await Promise.all([
       this.db.documentoCoordinacion.count({ where }),
       this.db.documentoCoordinacion.findMany({
@@ -211,7 +212,7 @@ export class CoordinacionesService {
     };
   }
 
-  private filtro(f: ListarCoordinacionesDto): Prisma.DocumentoCoordinacionWhereInput {
+  private async filtro(f: ListarCoordinacionesDto): Promise<Prisma.DocumentoCoordinacionWhereInput> {
     const and: Prisma.DocumentoCoordinacionWhereInput[] = [];
     if (f.estado) and.push({ estadoActual: f.estado });
     if (f.desde) and.push({ fechaVuelo: { gte: new Date(`${f.desde.slice(0, 10)}T00:00:00Z`) } });
@@ -222,13 +223,26 @@ export class CoordinacionesService {
     const q = f.q?.trim();
     if (q) {
       const sinEspacios = q.replace(/\s+/g, '');
+      const digitos = q.replace(/\D/g, '');
       const or: Prisma.DocumentoCoordinacionWhereInput[] = [
         { numeroGuia: { contains: q, mode: 'insensitive' } },
         { guiaMadre: { numero: { contains: sinEspacios, mode: 'insensitive' } } },
         { guiaHijas: { some: { numeroGuiaHija: sinEspacios } } },
         { guiaHijas: { some: { dae: { contains: q } } } },
       ];
-      if (/^\d{1,7}$/.test(q)) or.push({ codigoAccess: Number(q) });
+      // La guía se escribe de muchas formas (369-8469 5461, 8469-5461, 36984695461): se compara por dígitos.
+      if (digitos.length >= 4 && digitos !== sinEspacios) {
+        const numero = digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos;
+        or.push({ guiaMadre: { numero: { contains: numero } } });
+      }
+      // N° de coordinación: el del sistema viejo, o el id en las creadas en el sistema nuevo.
+      if (/^\d{1,7}$/.test(q)) or.push({ codigoAccess: Number(q) }, { codigoAccess: null, id: Number(q) });
+      // Marca, cliente o finca por nombre.
+      if (/[a-zñ]/i.test(q) && q.length >= 3) {
+        const ids = await this.nombres.buscarPorNombre(q);
+        if (ids.consignatarios.length) or.push({ idConsignatario: { in: ids.consignatarios } });
+        if (ids.fincas.length) or.push({ guiaHijas: { some: { idFinca: { in: ids.fincas } } } });
+      }
       and.push({ OR: or });
     }
     return and.length ? { AND: and } : {};
@@ -248,6 +262,7 @@ export class CoordinacionesService {
       fechaAsignacion: dia(c.fechaAsignacion)!,
       aerolinea: ref(refs.aerolineas, c.idAerolinea),
       consignatario: ref(refs.consignatarios, c.idConsignatario),
+      cliente: ref(refs.clientesPorConsignatario, c.idConsignatario),
       destino: ref(refs.destinos, c.idDestinoAwb),
       destinoFinal: ref(refs.destinos, c.idDestinoFinalDocs),
       totalFulls: c.totalFulls,
@@ -255,6 +270,7 @@ export class CoordinacionesService {
       totalKgs: c.totalKgs,
       guiasHijas: c._count.guiaHijas,
       liqTotal: c.liqTotal,
+      pesoCobrable: c.liqPesoCobrable,
       corteExtra: c.corteExtra,
     };
   }

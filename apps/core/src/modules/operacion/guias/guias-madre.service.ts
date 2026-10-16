@@ -50,8 +50,12 @@ export class GuiasMadreService {
     if (f.estado) and.push({ estado: f.estado });
     if (f.idAerolinea) and.push({ idAerolinea: f.idAerolinea });
     if (f.virtual !== undefined) and.push({ virtual: f.virtual === 'true' });
-    const q = f.q?.replace(/\s+/g, '');
-    if (q) and.push({ numero: { contains: q, mode: 'insensitive' } });
+    // La guía se guarda como "020-72828685"; se busca por dígitos para aceptar "7282-8685", "020 7282 8685"...
+    const digitos = f.q?.replace(/\D/g, '') ?? '';
+    if (digitos) {
+      const numero = digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos;
+      and.push({ numero: { contains: numero } });
+    }
     const where: Prisma.GuiaMadreWhereInput = and.length ? { AND: and } : {};
 
     const [total, filas] = await Promise.all([
@@ -62,8 +66,7 @@ export class GuiasMadreService {
           documentoBase: { select: { id: true, codigoAccess: true, fecha: true } },
           documentoCoordinacion: { select: { id: true, codigoAccess: true, fechaVuelo: true } },
         },
-        // Disponibles primero (las que se pueden usar), luego por número.
-        orderBy: [{ estado: 'asc' }, { prefijo: 'asc' }, { secuencial: 'asc' }],
+        orderBy: this.orden(f.estado),
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -92,6 +95,17 @@ export class GuiasMadreService {
         : null,
     }));
     return { items, total, page, pageSize };
+  }
+
+  /**
+   * Libres primero y por número (se usan en orden); las coordinadas y prestadas, de la más nueva a la más vieja.
+   */
+  private orden(estado: ListarGuiasMadreDto['estado']): Prisma.GuiaMadreOrderByWithRelationInput[] {
+    if (estado === 'COORDINADA') {
+      return [{ documentoCoordinacion: { fechaVuelo: 'desc' } }, { prefijo: 'asc' }, { secuencial: 'desc' }];
+    }
+    if (estado === 'PRESTADA') return [{ fechaPrestamo: { sort: 'desc', nulls: 'last' } }, { secuencial: 'desc' }];
+    return [{ estado: 'asc' }, { prefijo: 'asc' }, { secuencial: 'asc' }];
   }
 
   /** Conteo del stock por aerolínea: cuántas guías hay disponibles para coordinar. */

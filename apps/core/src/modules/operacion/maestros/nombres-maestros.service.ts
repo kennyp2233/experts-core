@@ -6,6 +6,8 @@ export interface RefMaestro {
   id: number;
   codigo: string | null;
   nombre: string;
+  /** Nombre corto con el que se conoce en el sistema viejo (aerAlias, plaAlias), si es distinto. */
+  alias?: string | null;
 }
 
 export type MapaRefs = Map<number, RefMaestro>;
@@ -30,7 +32,15 @@ export interface RefsMaestros {
   fincas: MapaRefs;
   productos: MapaRefs;
   tiposEmbarque: MapaRefs;
+  /** Cliente (embarcador auxiliar) de cada consignatario, por id de consignatario. */
+  clientesPorConsignatario: MapaRefs;
 }
+
+/** Alias solo si aporta (en muchas fichas es igual al nombre). */
+const aliasDe = (alias: string | null | undefined, nombre: string) => {
+  const a = alias?.trim();
+  return a && a.toUpperCase() !== nombre.trim().toUpperCase() ? a : null;
+};
 
 const limpio = (ids?: Iterable<number | null | undefined>) =>
   [...new Set([...(ids ?? [])].filter((n): n is number => typeof n === 'number' && n > 0))];
@@ -46,18 +56,47 @@ const mapa = (rows: RefMaestro[]): MapaRefs => new Map(rows.map((r) => [r.id, r]
 export class NombresMaestrosService {
   constructor(@Inject('PrismaClientDatosMaestros') private readonly db: PrismaMaestros) {}
 
+  /**
+   * Para buscar coordinaciones por nombre: consignatarios cuyo nombre o alias
+   * (o el de su cliente) contiene el texto, y fincas por nombre, alias o RUC.
+   */
+  async buscarPorNombre(texto: string, limite = 300): Promise<{ consignatarios: number[]; fincas: number[] }> {
+    const ins = { contains: texto, mode: 'insensitive' as const };
+    const [consignatarios, fincas] = await Promise.all([
+      this.db.consignatario.findMany({
+        where: { OR: [{ nombre: ins }, { alias: ins }, { cliente: { OR: [{ nombre: ins }, { alias: ins }] } }] },
+        select: { id: true },
+        take: limite,
+      }),
+      this.db.finca.findMany({
+        where: { OR: [{ nombreFinca: ins }, { tag: ins }, { rucFinca: ins }] },
+        select: { id: true },
+        take: limite,
+      }),
+    ]);
+    return { consignatarios: consignatarios.map((c) => c.id), fincas: fincas.map((f) => f.id) };
+  }
+
   async resolver(ids: IdsPorEntidad): Promise<RefsMaestros> {
     const [aerolineas, consignatarios, destinos, origenes, agencias, fincas, productos, tiposEmbarque] =
       await Promise.all([
         this.db.aerolinea
-          .findMany({ where: { id: { in: limpio(ids.aerolineas) } }, select: { id: true, codigo: true, nombre: true } })
-          .then(mapa),
+          .findMany({
+            where: { id: { in: limpio(ids.aerolineas) } },
+            select: { id: true, codigo: true, nombre: true, alias: true },
+          })
+          .then((r) => mapa(r.map((a) => ({ id: a.id, codigo: a.codigo, nombre: a.nombre, alias: aliasDe(a.alias, a.nombre) })))),
         this.db.consignatario
           .findMany({
             where: { id: { in: limpio(ids.consignatarios) } },
-            select: { id: true, nombre: true, alias: true, codigoAccess: true },
-          })
-          .then((r) => mapa(r.map((c) => ({ id: c.id, codigo: c.alias, nombre: c.nombre })))),
+            select: {
+              id: true,
+              nombre: true,
+              alias: true,
+              codigoAccess: true,
+              cliente: { select: { id: true, nombre: true, alias: true } },
+            },
+          }),
         this.db.destino
           .findMany({ where: { id: { in: limpio(ids.destinos) } }, select: { id: true, codigo: true, nombre: true } })
           .then((r) => mapa(r.map((d) => ({ id: d.id, codigo: d.codigo, nombre: d.nombre ?? d.codigo ?? '' })))),
@@ -73,9 +112,11 @@ export class NombresMaestrosService {
         this.db.finca
           .findMany({
             where: { id: { in: limpio(ids.fincas) } },
-            select: { id: true, nombreFinca: true, rucFinca: true },
+            select: { id: true, nombreFinca: true, rucFinca: true, tag: true },
           })
-          .then((r) => mapa(r.map((f) => ({ id: f.id, codigo: f.rucFinca, nombre: f.nombreFinca })))),
+          .then((r) =>
+            mapa(r.map((f) => ({ id: f.id, codigo: f.rucFinca, nombre: f.nombreFinca, alias: aliasDe(f.tag, f.nombreFinca) }))),
+          ),
         this.db.producto
           .findMany({ where: { id: { in: limpio(ids.productos) } }, select: { id: true, codigo: true, nombre: true } })
           .then(mapa),
@@ -83,7 +124,21 @@ export class NombresMaestrosService {
           .findMany({ where: { id: { in: limpio(ids.tiposEmbarque) } }, select: { id: true, codigo: true, nombre: true } })
           .then(mapa),
       ]);
-    return { aerolineas, consignatarios, destinos, origenes, agencias, fincas, productos, tiposEmbarque };
+    return {
+      aerolineas,
+      consignatarios: mapa(consignatarios.map((c) => ({ id: c.id, codigo: c.alias, nombre: c.nombre }))),
+      destinos,
+      origenes,
+      agencias,
+      fincas,
+      productos,
+      tiposEmbarque,
+      clientesPorConsignatario: new Map(
+        consignatarios
+          .filter((c) => c.cliente)
+          .map((c) => [c.id, { id: c.cliente!.id, codigo: null, nombre: c.cliente!.alias?.trim() || c.cliente!.nombre }]),
+      ),
+    };
   }
 }
 
