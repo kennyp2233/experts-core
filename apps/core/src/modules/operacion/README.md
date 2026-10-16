@@ -26,6 +26,7 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Defaults para coordinar (parámetros de línea, rótulos de agencia, conceptos de aerolínea) | `GET /operacion/coordinaciones/parametros?idAerolinea=` | — |
 | Buscadores (solo activos) y sugerencias de la marca | `GET /operacion/opciones/:tipo`, `GET /operacion/opciones/consignatarios/:id/sugerencia` | — |
 | Stock de guías AWB: lotes (dígito verificador mod 7), préstamo, devolución | `/operacion/guias-madre/*` | `/operacion/guias` |
+| Archivo de manifiesto para FlowerCargo (txt por tabs, una fila por RUC de finca) | `GET /operacion/coordinaciones/:id/flowercargo[.txt]` | botón "FlowerCargo" en el detalle |
 | Validación contra Access | `GET /operacion/validacion`, `GET /operacion/coordinaciones/:id/validacion` | `/operacion/validacion` |
 | Datos maestros (solo lectura) | `GET /maestros/*` | `/maestros` |
 
@@ -57,3 +58,13 @@ los nombres). El handling de Experts al cliente (`aux3Handling`) **no** suma al 
 Otras reglas: totales = suma de líneas; volumen = Σ round2(L×A×H×fulls/6000); una guía hija por
 marca + finca + producto (`parNGHxProducto`); peso cobrable ≥ peso bruto (solo juego normal); DAE obligatoria por
 línea.
+
+## Archivo FlowerCargo
+
+[`documentos/flowercargo.ts`](documentos/flowercargo.ts). Mismas 71 columnas del archivo que manda FlowerCargo; con la
+guía 369-8469 5461 coinciden 61 columnas en las 15 filas. Las que cambian son a propósito (respuestas del dueño,
+2026-10-16): nuestros números de guía hija (columna T), nuestro peso, el consignee de la marca (datos ECUAPASS de la
+guía hija), la dirección de la finca y el destino final (lo que importa es el país). Fincas con el mismo RUC van en una
+sola fila (Utopía: FYC, Chivan, Santa Marta…), con la guía hija de más piezas; el RUC se compara solo por dígitos
+porque en el sistema viejo lleva puntos al final para no repetirse. Salida en ASCII, tabs y CRLF: editar el txt a mano
+lo rompía. OCE del consolidador: `FLOWERCARGO_OCE` (default 23901050).

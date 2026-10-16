@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/v1/guards/roles.guard';
@@ -8,6 +9,7 @@ import { CoordinacionesService } from './coordinaciones.service';
 import { ListarCoordinacionesDto } from './dto/listar-coordinaciones.dto';
 import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
+import { FlowerCargoService } from '../documentos/flowercargo.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
 const usuario = (req: ConUsuario) => req.user?.username ?? req.user?.email;
@@ -22,6 +24,7 @@ export class CoordinacionesController {
   constructor(
     private readonly service: CoordinacionesService,
     private readonly coordinar: CoordinarService,
+    private readonly archivoFlowerCargo: FlowerCargoService,
   ) {}
 
   @Get()
@@ -41,6 +44,22 @@ export class CoordinacionesController {
   @ApiOperation({ summary: 'Detalle: guías hijas con sus líneas, liquidación, ruta, manifiesto, marcas y medidas.' })
   detalle(@Param('id', ParseIntPipe) id: number) {
     return this.service.detalle(id);
+  }
+
+  @Get(':id/flowercargo')
+  @ApiOperation({ summary: 'Vista previa del archivo de manifiesto para FlowerCargo (filas y advertencias).' })
+  async vistaFlowerCargo(@Param('id', ParseIntPipe) id: number) {
+    const { texto: _t, ...vista } = await this.archivoFlowerCargo.generar(id);
+    return vista;
+  }
+
+  @Get(':id/flowercargo.txt')
+  @ApiOperation({ summary: 'Descarga el archivo de manifiesto para FlowerCargo (tabs, CRLF, ASCII).' })
+  async flowerCargoTxt(@Param('id', ParseIntPipe) id: number, @Res({ passthrough: true }) res: Response) {
+    const a = await this.archivoFlowerCargo.generar(id);
+    res.setHeader('Content-Type', 'text/plain; charset=us-ascii');
+    res.setHeader('Content-Disposition', `attachment; filename="${a.nombreArchivo}"`);
+    return a.texto;
   }
 
   @Post('simular')

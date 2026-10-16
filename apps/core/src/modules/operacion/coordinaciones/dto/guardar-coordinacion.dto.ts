@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
@@ -104,6 +105,26 @@ export class ValoresLiquidacionDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) tarifaAcordada?: number;
 }
 
+/** Vuelo y manifiesto de carga (los da la aerolínea). */
+export class VueloManifiestoDto {
+  @ApiPropertyOptional({ example: '5Y9918' }) @IsOptional() @IsString() @MaxLength(20)
+  vuelo?: string;
+
+  @ApiPropertyOptional({ description: 'Salida del vuelo (ISO)' }) @IsOptional() @IsDateString()
+  salida?: string;
+
+  @ApiPropertyOptional({ description: 'Llegada del vuelo (ISO)' }) @IsOptional() @IsDateString()
+  llegada?: string;
+
+  @ApiPropertyOptional({ example: '052167', description: 'Número de manifiesto' })
+  @IsOptional() @Matches(/^\d{1,6}$/, { message: 'El número de manifiesto son hasta 6 dígitos.' })
+  numeroManifiesto?: string;
+
+  @ApiPropertyOptional({ example: '0026', description: 'Secuencial de la guía en el manifiesto' })
+  @IsOptional() @Matches(/^\d{1,5}$/, { message: 'El secuencial son hasta 5 dígitos.' })
+  secuencial?: string;
+}
+
 export class GuardarCoordinacionDto {
   @ApiProperty({ description: 'Guía madre (AWB) del stock, disponible' }) @IsInt() @Min(1)
   idGuiaMadre: number;
@@ -154,4 +175,8 @@ export class GuardarCoordinacionDto {
   })
   @IsOptional() @ValidateNested() @Type(() => ValoresLiquidacionDto)
   cobroCliente?: ValoresLiquidacionDto;
+
+  @ApiPropertyOptional({ type: VueloManifiestoDto })
+  @IsOptional() @ValidateNested() @Type(() => VueloManifiestoDto)
+  vuelo?: VueloManifiestoDto;
 }

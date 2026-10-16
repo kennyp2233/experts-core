@@ -497,6 +497,7 @@ export class CoordinarService {
       const w = { where: { idDocumentoCoordinacion: id } };
       await tx.guiaHija.deleteMany(w);
       await tx.documentoRuta.deleteMany(w);
+      await tx.documentoManifiesto.deleteMany(w);
       await tx.documentoLiquidacion.deleteMany(w);
     }
 
@@ -508,7 +509,20 @@ export class CoordinarService {
         data: { idDocumentoCoordinacion: coordId, tipo: 'CORTE_EXTRA', ...cliente },
       });
     }
-    const rutas = dto.rutas?.length ? dto.rutas : await this.rutaDeAerolinea(idAerolinea);
+    const rutas = [...(dto.rutas?.length ? dto.rutas : await this.rutaDeAerolinea(idAerolinea))];
+    const vm = dto.vuelo;
+    const codigoAerolinea = idAerolinea
+      ? ((await this.maestros.aerolinea.findUnique({ where: { id: idAerolinea }, select: { codigo: true } }))?.codigo ?? null)
+      : null;
+    if (vm?.vuelo || vm?.salida || vm?.llegada) {
+      // Como el sistema viejo: el vuelo va en el tramo VIA (la aerolínea que lo opera).
+      let via = rutas.findIndex((r) => r.tipoRuta.startsWith('VIA'));
+      if (via < 0) {
+        rutas.push({ tipoRuta: 'VIA1', codigo: codigoAerolinea ?? '' });
+        via = rutas.length - 1;
+      }
+      rutas[via] = { ...rutas[via], vuelo: vm.vuelo, fechaHoraSalida: vm.salida, fechaHoraLlegada: vm.llegada };
+    }
     if (rutas.length) {
       await tx.documentoRuta.createMany({
         data: rutas.map((r, i) => ({
@@ -524,6 +538,27 @@ export class CoordinarService {
     }
 
     const anio = dia(dto.fechaVuelo).getUTCFullYear();
+    if (vm?.numeroManifiesto || vm?.secuencial) {
+      const numero = vm.numeroManifiesto?.padStart(6, '0') ?? null;
+      const secuencial = vm.secuencial?.padStart(4, '0') ?? null;
+      const llegada = vm.llegada ? new Date(vm.llegada) : null;
+      await tx.documentoManifiesto.create({
+        data: {
+          idDocumentoCoordinacion: coordId,
+          origen: rutas.find((r) => r.tipoRuta === 'ORIGEN')?.codigo || 'UIO',
+          aduana: '055',
+          anio: String(anio),
+          tipo: codigoAerolinea,
+          numero,
+          secuencial,
+          vuelo: vm.vuelo ?? null,
+          // Como los guarda el sistema viejo: fecha y hora locales de llegada.
+          fechaArribo: llegada ? horaLocal(llegada).fecha : null,
+          horaArribo: llegada ? horaLocal(llegada).hora : null,
+          referencia: ['CEC', anio, codigoAerolinea ?? '', numero ?? '', secuencial ?? ''].join('-'),
+        },
+      });
+    }
     for (const g of a.guiasHijas) {
       const numero = g.numeroGuiaHija ?? String(await siguiente(tx, 'guiaHija', inicioGuiaHija()));
       await tx.guiaHija.create({
@@ -584,6 +619,24 @@ export class CoordinarService {
       }))
       .filter((r) => r.codigo);
   }
+}
+
+/** Fecha ("2022/09/15") y hora ("10:11") de Ecuador, como el manifiesto del sistema viejo. */
+function horaLocal(d: Date): { fecha: string; hora: string } {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Guayaquil',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  );
+  return { fecha: `${p.year}/${p.month}/${p.day}`, hora: `${p.hour}:${p.minute}` };
 }
 
 /** DTO de valores → todos los conceptos con null cuando faltan. */
