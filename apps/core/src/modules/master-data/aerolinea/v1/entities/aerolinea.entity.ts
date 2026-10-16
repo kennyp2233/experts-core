@@ -95,6 +95,38 @@ export class AerolineaEntity implements Aerolinea {
     codigoCae: string | null;
 
     @ApiPropertyOptional({
+        description: 'Código de la aerolínea en Access (aerCodigo); llave del sync',
+        example: 19,
+    })
+    codigoAccess: number | null;
+
+    @ApiPropertyOptional({
+        description: 'Alias de la aerolínea',
+        example: 'ATLAS AIR',
+    })
+    alias: string | null;
+
+    @ApiPropertyOptional({
+        description: 'Leyenda que se imprime en la guía',
+    })
+    leyenda: string | null;
+
+    @ApiPropertyOptional({
+        description: 'Destinatarios del correo de reservas',
+    })
+    reservasDestinatarios: string | null;
+
+    @ApiPropertyOptional({
+        description: 'Nombre a mostrar del contacto de reservas',
+    })
+    reservasNombreContacto: string | null;
+
+    @ApiPropertyOptional({
+        description: 'Asunto del correo de reservas',
+    })
+    reservasAsunto: string | null;
+
+    @ApiPropertyOptional({
         description: 'Estado activo de la aerolínea',
         example: true,
     })

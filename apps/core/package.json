@@ -9,6 +9,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
     "db:setup": "node scripts/setup-db-schemas.js",
+    "sync:legacy": "node dist/src/modules/sync/legacy-access/legacy-sync.cli.js",
     "prisma:generate": "npm run prisma:generate:usuarios && npm run prisma:generate:datos-maestros && npm run prisma:generate:documentos && npm run prisma:generate:templates && npm run prisma:generate:ebf-portal-sync",
     "prisma:generate:usuarios": "prisma generate --schema=./prisma/usuarios/schema.prisma",
     "prisma:generate:datos-maestros": "prisma generate --schema=./prisma/datos-maestros/schema.prisma",

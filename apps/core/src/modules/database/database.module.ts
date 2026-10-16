@@ -3,8 +3,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaClient as PrismaClientProductos } from '@internal/datos-maestros-client';
 import { PrismaClient as PrismaClientUsuarios } from '@internal/usuarios-client';
 import { PrismaClient as PrismaClientTemplates } from '@internal/templates-client';
+import { PrismaClient as PrismaClientDocumentos } from '@internal/documentos-client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+
+/**
+ * Cliente del schema `documentos` con el schema bien fijado (search_path).
+ * Lo usan el sync con Access y el módulo de operación. (El viejo
+ * `DocumentoBaseModule` crea su propio cliente con otro token.)
+ */
+export const PRISMA_DOCUMENTOS = 'PrismaClientDocumentosDb';
 
 /**
  * Extracts schema name from connection string (e.g., ?schema=usuarios)
@@ -28,7 +36,7 @@ const removeSchemaParam = (connectionString: string): string => {
  * Creates a Prisma client factory for a given database URL environment variable.
  * Handles the schema parameter by setting the search_path via PostgreSQL options.
  */
-const createPrismaFactory = <T>(
+export const createPrismaFactory = <T>(
     envKey: string,
     ClientClass: new (options: { adapter: PrismaPg }) => T,
 ) => {
@@ -70,11 +78,16 @@ const createPrismaFactory = <T>(
             provide: 'PrismaClientTemplates',
             ...createPrismaFactory('DATABASE_URL_TEMPLATES', PrismaClientTemplates),
         },
+        {
+            provide: PRISMA_DOCUMENTOS,
+            ...createPrismaFactory('DATABASE_URL_DOCUMENTOS', PrismaClientDocumentos),
+        },
     ],
     exports: [
         'PrismaClientDatosMaestros',
         'PrismaClientUsuarios',
         'PrismaClientTemplates',
+        PRISMA_DOCUMENTOS,
     ],
 })
 export class DatabaseModule { }

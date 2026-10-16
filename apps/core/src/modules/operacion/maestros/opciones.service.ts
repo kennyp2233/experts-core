@@ -1,0 +1,163 @@
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
+import { PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
+import { PRISMA_DOCUMENTOS } from '../../database/database.module';
+
+/** Opción para los buscadores de la pantalla de coordinar. */
+export interface Opcion {
+  id: number;
+  codigo: string | null;
+  nombre: string;
+  detalle: string | null;
+  extra?: Record<string, unknown>;
+}
+
+const ins = (q: string) => ({ contains: q, mode: 'insensitive' as const });
+/** "369-84695461" → "369-8469 5461". */
+const awb = (n: string) => (n.length === 12 ? `${n.slice(0, 8)} ${n.slice(8)}` : n);
+const s = (v: unknown) => (v === null || v === undefined || v === '' ? null : String(v));
+
+/**
+ * Opciones (solo registros activos) para los selectores de coordinar, con los
+ * datos que la pantalla usa como default (medidas de caja de la finca, destino
+ * de la marca, aerolínea de la guía).
+ */
+@Injectable()
+export class OpcionesService {
+  constructor(
+    @Inject('PrismaClientDatosMaestros') private readonly db: PrismaMaestros,
+    @Inject(PRISMA_DOCUMENTOS) private readonly docs: PrismaDocumentos,
+  ) {}
+
+  async buscar(tipo: string, q = '', limite = 20, ids?: number[]): Promise<Opcion[]> {
+    const t = q.trim();
+    const take = Math.min(Math.max(limite, 1), 100);
+    // `ids` trae opciones puntuales (para mostrar lo ya elegido al editar).
+    const porIds = ids?.length ? { id: { in: ids } } : null;
+    switch (tipo) {
+      case 'guias': {
+        const where = porIds ?? {
+          estado: 'INGRESADA' as const,
+          ...(t ? { numero: { contains: t.replace(/[\s-]/g, '') } } : {}),
+        };
+        const guias = await this.docs.guiaMadre.findMany({ where, orderBy: [{ numero: 'asc' }], take });
+        const aer = await this.db.aerolinea.findMany({
+          where: { id: { in: [...new Set(guias.map((g) => g.idAerolinea).filter((x): x is number => x !== null))] } },
+          select: { id: true, nombre: true, codigo: true },
+        });
+        const a = new Map(aer.map((x) => [x.id, x]));
+        return guias.map((g) => {
+          const al = g.idAerolinea ? a.get(g.idAerolinea) : undefined;
+          return {
+            id: g.id,
+            codigo: g.numero,
+            nombre: g.numero ? awb(g.numero) : `Guía ${g.id}`,
+            detalle: [al?.nombre, g.virtual ? 'virtual' : null, g.estado !== 'INGRESADA' ? g.estado : null]
+              .filter(Boolean)
+              .join(' · '),
+            extra: { idAerolinea: g.idAerolinea, virtual: g.virtual },
+          };
+        });
+      }
+      case 'consignatarios': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ nombre: ins(t) }, { alias: ins(t) }, { ruc: ins(t) }] } : {}),
+        };
+        const rs = await this.db.consignatario.findMany({
+          where,
+          orderBy: { nombre: 'asc' },
+          take,
+          include: { guiaM: { include: { destino: { select: { id: true, codigo: true } } } } },
+        });
+        return rs.map((r) => ({
+          id: r.id,
+          codigo: s(r.codigoAccess),
+          nombre: r.nombre,
+          detalle: [r.ciudad, r.pais].filter(Boolean).join(', ') || null,
+          extra: { idDestino: r.guiaM?.idDestino ?? null, destino: r.guiaM?.destino?.codigo ?? null },
+        }));
+      }
+      case 'fincas': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ nombreFinca: ins(t) }, { tag: ins(t) }, { rucFinca: ins(t) }] } : {}),
+        };
+        const rs = await this.db.finca.findMany({ where, orderBy: { nombreFinca: 'asc' }, take });
+        return rs.map((r) => ({
+          id: r.id,
+          codigo: r.rucFinca,
+          nombre: r.nombreFinca,
+          detalle: r.tag,
+          extra: { largo: r.cajaLargo, ancho: r.cajaAncho, alto: r.cajaAlto },
+        }));
+      }
+      case 'productos': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ nombre: ins(t) }, { codigo: ins(t) }, { nombreBotanico: ins(t) }] } : {}),
+        };
+        const rs = await this.db.producto.findMany({ where, orderBy: { nombre: 'asc' }, take });
+        return rs.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, detalle: r.nombreBotanico }));
+      }
+      case 'agencias': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ nombreShipper: ins(t) }, { alias: ins(t) }, { iataCodeCarrier: ins(t) }] } : {}),
+        };
+        const rs = await this.db.agenciaIata.findMany({ where, orderBy: { nombreShipper: 'asc' }, take });
+        return rs.map((r) => ({
+          id: r.id,
+          codigo: r.iataCodeCarrier,
+          nombre: r.alias || r.nombreShipper,
+          detalle: r.comision !== null ? `comisión ${r.comision} %` : null,
+        }));
+      }
+      case 'destinos': {
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ codigo: ins(t) }, { nombre: ins(t) }, { aeropuerto: ins(t) }] } : {}),
+        };
+        const rs = await this.db.destino.findMany({ where, orderBy: { codigo: 'asc' }, take });
+        return rs.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre ?? r.codigo ?? '', detalle: r.aeropuerto }));
+      }
+      case 'tipos-embarque': {
+        const where = porIds ?? (t ? { OR: [{ nombre: ins(t) }, { codigo: ins(t) }] } : {});
+        const rs = await this.db.tipoEmbarque.findMany({ where, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], take });
+        return rs.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, detalle: r.mercancia }));
+      }
+      default:
+        throw new BadRequestException(
+          `Tipo desconocido: ${tipo}. Opciones: guias, consignatarios, fincas, productos, agencias, destinos, tipos-embarque`,
+        );
+    }
+  }
+
+  /**
+   * Defaults al elegir la marca: destino de sus documentos (coincide con el
+   * destino final en el 96 % de las coordinaciones desde 2022) y lo que se usó
+   * en su última coordinación (agencia, aeropuerto de la guía, embarque, pago).
+   */
+  async sugerenciaConsignatario(idConsignatario: number) {
+    const [guiaM, ultima] = await Promise.all([
+      this.db.consignatarioGuiaM.findUnique({ where: { idConsignatario } }),
+      this.docs.documentoCoordinacion.findFirst({
+        where: { idConsignatario, estadoActual: { not: 'ANULADO' } },
+        orderBy: { fechaVuelo: 'desc' },
+        select: {
+          idAgenciaIata: true,
+          idDestinoAwb: true,
+          idDestinoFinalDocs: true,
+          idTipoEmbarque: true,
+          pago: true,
+          idAerolinea: true,
+          fechaVuelo: true,
+        },
+      }),
+    ]);
+    return {
+      idDestinoFinalDocs: guiaM?.idDestino ?? ultima?.idDestinoFinalDocs ?? null,
+      ultima: ultima ? { ...ultima, fechaVuelo: ultima.fechaVuelo.toISOString().slice(0, 10) } : null,
+    };
+  }
+}
