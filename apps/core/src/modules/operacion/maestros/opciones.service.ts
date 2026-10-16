@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import { PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
+import { modoOperacion } from '../comun/modo-operacion';
 
 /** Opción para los buscadores de la pantalla de coordinar. */
 export interface Opcion {
@@ -45,12 +46,24 @@ export class OpcionesService {
               select: { id: true },
             })
           : null;
+        // Libres y de un ingreso vigente. En modo sombra, solo de ingresos del sistema nuevo:
+        // las del viejo se coordinan allá.
         const where = porIds ?? {
           estado: 'INGRESADA' as const,
+          documentoBase: {
+            OR: [{ estado: null }, { estado: { not: 'ANULADO' as const } }],
+            ...(modoOperacion() === 'sombra' ? { codigoAccess: null } : {}),
+          },
           ...(digitos ? { numero: { contains: digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos } } : {}),
           ...(aerolineas ? { idAerolinea: { in: aerolineas.map((x) => x.id) } } : {}),
         };
-        const guias = await this.docs.guiaMadre.findMany({ where, orderBy: [{ numero: 'asc' }], take });
+        // Como el sistema viejo: virtuales por número; normales por fecha de ingreso y número.
+        const guias = await this.docs.guiaMadre.findMany({
+          where,
+          orderBy: [{ virtual: 'desc' }, { documentoBase: { fecha: 'asc' } }, { numero: 'asc' }],
+          include: { documentoBase: { select: { numero: true, codigoAccess: true } } },
+          take,
+        });
         const aer = await this.db.aerolinea.findMany({
           where: { id: { in: [...new Set(guias.map((g) => g.idAerolinea).filter((x): x is number => x !== null))] } },
           select: { id: true, nombre: true, codigo: true, alias: true },
@@ -62,7 +75,11 @@ export class OpcionesService {
             id: g.id,
             codigo: g.numero,
             nombre: g.numero ? awb(g.numero) : `Guía ${g.id}`,
-            detalle: [al ? `${al.codigo ?? ''} ${al.alias?.trim() || al.nombre}`.trim() : null, g.virtual ? 'virtual' : null]
+            detalle: [
+              al ? `${al.codigo ?? ''} ${al.alias?.trim() || al.nombre}`.trim() : null,
+              g.virtual ? 'virtual' : 'normal',
+              g.documentoBase.numero ? `ingreso CGU-${String(g.documentoBase.numero).padStart(7, '0')}` : null,
+            ]
               .filter(Boolean)
               .join(' · '),
             extra: { idAerolinea: g.idAerolinea, virtual: g.virtual },
@@ -148,6 +165,8 @@ export class OpcionesService {
           codigo: r.codigo,
           nombre: r.alias?.trim() || r.nombre,
           detalle: r.alias?.trim() && r.alias.trim() !== r.nombre ? r.nombre : null,
+          // Prefijo de sus guías y tipo de stock por defecto (aerVirtual), para el ingreso de guías.
+          extra: { prefijoAwb: r.prefijoAwb, guiasVirtuales: r.guiasVirtuales !== false },
         }));
       }
       case 'destinos': {

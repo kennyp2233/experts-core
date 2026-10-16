@@ -4,7 +4,7 @@ import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { NombresMaestrosService, ref, RefMaestro } from '../maestros/nombres-maestros.service';
 import { ListarGuiasMadreDto } from './dto/listar-guias-madre.dto';
 
-export type EstadoGuia = 'INGRESADA' | 'COORDINADA' | 'PRESTADA';
+export type EstadoGuia = 'INGRESADA' | 'COORDINADA' | 'PRESTADA' | 'ANULADA';
 
 export interface GuiaMadreFila {
   id: number;
@@ -17,7 +17,8 @@ export interface GuiaMadreFila {
   fechaPrestamo: string | null;
   fechaDevolucion: string | null;
   observaciones: string | null;
-  lote: { id: number; codigoAccess: number | null; fecha: string | null } | null;
+  /** Ingreso de guías (documento CGU) con el que nació la guía. */
+  lote: { id: number; codigoAccess: number | null; numero: number | null; fecha: string | null } | null;
   coordinacion: { id: number; codigoAccess: number | null; fechaVuelo: string } | null;
 }
 
@@ -47,7 +48,8 @@ export class GuiasMadreService {
     const page = f.page ?? 1;
     const pageSize = f.pageSize ?? 50;
     const and: Prisma.GuiaMadreWhereInput[] = [];
-    if (f.estado) and.push({ estado: f.estado });
+    // Las anuladas (su ingreso se anuló o se modificó) no son parte del stock.
+    and.push(f.estado ? { estado: f.estado } : { OR: [{ estado: null }, { estado: { not: 'ANULADA' } }] });
     if (f.idAerolinea) and.push({ idAerolinea: f.idAerolinea });
     if (f.virtual !== undefined) and.push({ virtual: f.virtual === 'true' });
     // La guía se guarda como "020-72828685"; se busca por dígitos para aceptar "7282-8685", "020 7282 8685"...
@@ -63,7 +65,7 @@ export class GuiasMadreService {
       this.db.guiaMadre.findMany({
         where,
         include: {
-          documentoBase: { select: { id: true, codigoAccess: true, fecha: true } },
+          documentoBase: { select: { id: true, codigoAccess: true, numero: true, fecha: true } },
           documentoCoordinacion: { select: { id: true, codigoAccess: true, fechaVuelo: true } },
         },
         orderBy: this.orden(f.estado),
@@ -84,7 +86,12 @@ export class GuiasMadreService {
       fechaDevolucion: dia(g.fechaDevolucion),
       observaciones: g.observaciones,
       lote: g.documentoBase
-        ? { id: g.documentoBase.id, codigoAccess: g.documentoBase.codigoAccess, fecha: dia(g.documentoBase.fecha) }
+        ? {
+            id: g.documentoBase.id,
+            codigoAccess: g.documentoBase.codigoAccess,
+            numero: g.documentoBase.numero ?? g.documentoBase.codigoAccess,
+            fecha: dia(g.documentoBase.fecha),
+          }
         : null,
       coordinacion: g.documentoCoordinacion
         ? {
@@ -112,6 +119,7 @@ export class GuiasMadreService {
   async resumen(): Promise<ResumenStockAerolinea[]> {
     const grupos = await this.db.guiaMadre.groupBy({
       by: ['idAerolinea', 'estado', 'virtual'],
+      where: { estado: { not: 'ANULADA' }, documentoBase: { OR: [{ estado: null }, { estado: { not: 'ANULADO' } }] } },
       _count: { _all: true },
     });
     const porAerolinea = new Map<number | null, ResumenStockAerolinea>();

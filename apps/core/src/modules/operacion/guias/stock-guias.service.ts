@@ -1,108 +1,76 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
-import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { asegurarEditable } from '../comun/modo-operacion';
-import { awbClave, awbTexto, parsearSerial, rangoAwb } from './awb';
-import { IngresarLoteDto, PrestarGuiaDto } from './dto/stock-guias.dto';
+import { PrestarGuiaDto } from './dto/stock-guias.dto';
+import { recalcularEstadoIngresos } from './estado-ingreso';
 
-const MAX_POR_LOTE = 500;
+const fechaDe = (s?: string) => (s ? new Date(`${s.slice(0, 10)}T00:00:00Z`) : new Date());
 
 /**
- * Movimientos del stock de guías AWB en el sistema nuevo: ingreso de un lote
- * (rango de guías de una aerolínea), préstamo y devolución.
+ * Movimientos de una guía (Administración de guías del sistema viejo,
+ * `frmPIN_ManGuias`): préstamo, quitar préstamo, devolución y "Verificar
+ * estado AWB". Cada cambio recalcula el estado de su ingreso.
  */
 @Injectable()
 export class StockGuiasService {
-  constructor(
-    @Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos,
-    @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
-  ) {}
+  constructor(@Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos) {}
 
-  /** Arma el lote sin guardarlo: números, verificadores y choques con el stock. */
-  async previsualizar(dto: IngresarLoteDto) {
-    const aerolinea = await this.maestros.aerolinea.findUnique({
-      where: { id: dto.idAerolinea },
-      select: { id: true, nombre: true, codigo: true, prefijoAwb: true, estado: true },
-    });
-    if (!aerolinea) throw new NotFoundException('Aerolínea no encontrada');
-    const prefijo = Number(aerolinea.prefijoAwb);
-    if (!/^\d{3}$/.test(aerolinea.prefijoAwb ?? '')) {
-      throw new BadRequestException(`La aerolínea ${aerolinea.nombre} no tiene un prefijo AWB numérico de 3 dígitos.`);
-    }
-    if (dto.cantidad < 1 || dto.cantidad > MAX_POR_LOTE) {
-      throw new BadRequestException(`La cantidad debe estar entre 1 y ${MAX_POR_LOTE}.`);
-    }
-    const { serial, error } = parsearSerial(dto.primeraGuia);
-    if (error) throw new BadRequestException(error);
-    if (serial + dto.cantidad - 1 > 9_999_999) throw new BadRequestException('El rango se pasa del último serial posible.');
-
-    const guias = rangoAwb(prefijo, serial, dto.cantidad);
-    const claves = guias.map(awbClave);
-    const existentes = await this.db.guiaMadre.findMany({ where: { numero: { in: claves } }, select: { numero: true } });
-    return {
-      aerolinea,
-      guias: guias.map((g) => ({ numero: awbClave(g), texto: awbTexto(g) })),
-      repetidas: existentes.map((e) => e.numero),
-    };
-  }
-
-  async ingresarLote(dto: IngresarLoteDto) {
-    const p = await this.previsualizar(dto);
-    if (p.repetidas.length) {
-      throw new ConflictException(`Ya están en el stock: ${p.repetidas.slice(0, 10).join(', ')}${p.repetidas.length > 10 ? '…' : ''}`);
-    }
-    const prefijo = Number(p.aerolinea.prefijoAwb);
-    return this.db.$transaction(async (tx) => {
-      const lote = await tx.documentoBase.create({
-        data: {
-          fecha: dto.fecha ? new Date(`${dto.fecha.slice(0, 10)}T00:00:00Z`) : new Date(new Date().toISOString().slice(0, 10)),
-          idAerolinea: p.aerolinea.id,
-          tipoStock: dto.virtual ? 'VIRTUAL' : 'NORMAL',
-          estado: 'INGRESADO',
-          referencia: dto.referencia ?? null,
-          nota: dto.nota ?? null,
-        },
-      });
-      await tx.guiaMadre.createMany({
-        data: p.guias.map((g) => ({
-          numero: g.numero,
-          prefijo,
-          secuencial: Number(g.numero.slice(4)),
-          idDocumentoBase: lote.id,
-          idAerolinea: p.aerolinea.id,
-          estado: 'INGRESADA' as const,
-          virtual: !!dto.virtual,
-        })),
-      });
-      return { lote: { id: lote.id, fecha: lote.fecha }, guias: p.guias.length };
-    });
-  }
-
+  /** Préstamo: la guía la usó otra agencia (EBF, FlowerCargo) o no se usa. La observación es opcional. */
   async prestar(id: number, dto: PrestarGuiaDto) {
     const g = await this.guiaEditable(id);
-    if (g.estado !== 'INGRESADA') throw new BadRequestException('Solo se puede prestar una guía disponible (ingresada).');
-    return this.db.guiaMadre.update({
-      where: { id },
-      data: {
-        estado: 'PRESTADA',
-        prestada: true,
-        fechaPrestamo: dto.fecha ? new Date(`${dto.fecha.slice(0, 10)}T00:00:00Z`) : new Date(),
-        observaciones: dto.observaciones ?? g.observaciones,
-      },
+    if (g.estado !== 'INGRESADA') throw new BadRequestException('Solo se presta una guía libre.');
+    return this.guardar(g.idDocumentoBase, id, {
+      estado: 'PRESTADA',
+      prestada: true,
+      fechaPrestamo: fechaDe(dto.fecha),
+      observaciones: dto.observaciones?.trim() || g.observaciones,
+    });
+  }
+
+  /** Quitar préstamo: vuelve a libre (en el sistema viejo, desmarcar "Préstamo"). */
+  async quitarPrestamo(id: number) {
+    const g = await this.guiaEditable(id);
+    if (g.estado !== 'PRESTADA') throw new BadRequestException('La guía no está prestada.');
+    return this.guardar(g.idDocumentoBase, id, {
+      estado: 'INGRESADA',
+      prestada: false,
+      fechaPrestamo: null,
+      devolucion: false,
+      fechaDevolucion: null,
     });
   }
 
   async devolver(id: number, dto: PrestarGuiaDto) {
     const g = await this.guiaEditable(id);
-    if (g.estado !== 'PRESTADA') throw new BadRequestException('Solo se puede devolver una guía prestada.');
-    return this.db.guiaMadre.update({
-      where: { id },
-      data: {
-        devolucion: true,
-        fechaDevolucion: dto.fecha ? new Date(`${dto.fecha.slice(0, 10)}T00:00:00Z`) : new Date(),
-        observaciones: dto.observaciones ?? g.observaciones,
-      },
+    if (g.estado !== 'PRESTADA') throw new BadRequestException('Solo se registra la devolución de una guía prestada.');
+    return this.guardar(g.idDocumentoBase, id, {
+      devolucion: true,
+      fechaDevolucion: fechaDe(dto.fecha),
+      observaciones: dto.observaciones?.trim() || g.observaciones,
+    });
+  }
+
+  /**
+   * "Verificar estado AWB": si una coordinación usa la guía queda coordinada;
+   * si no, libre (como el sistema viejo, también si estaba prestada).
+   */
+  async verificar(id: number) {
+    const g = await this.guiaEditable(id);
+    if (g.estado === 'ANULADA') throw new BadRequestException('La guía está anulada.');
+    const usada = await this.db.documentoCoordinacion.findUnique({ where: { idGuiaMadre: id }, select: { id: true } });
+    const estado = usada ? ('COORDINADA' as const) : ('INGRESADA' as const);
+    return this.guardar(g.idDocumentoBase, id, {
+      estado,
+      ...(estado === 'INGRESADA' ? { prestada: false, fechaPrestamo: null, devolucion: false, fechaDevolucion: null } : {}),
+    });
+  }
+
+  private guardar(idDocumentoBase: number, id: number, data: Parameters<PrismaDocumentos['guiaMadre']['update']>[0]['data']) {
+    return this.db.$transaction(async (tx) => {
+      const g = await tx.guiaMadre.update({ where: { id }, data });
+      await recalcularEstadoIngresos(tx, [idDocumentoBase]);
+      return g;
     });
   }
 
