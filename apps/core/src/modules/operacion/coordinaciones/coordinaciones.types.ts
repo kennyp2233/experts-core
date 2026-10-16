@@ -26,10 +26,14 @@ export interface CoordinacionResumen {
   liqTotal: number | null;
   pesoCobrable: number | null;
   corteExtra: boolean;
+  /** Nota de la coordinación (p. ej. el termógrafo). */
+  nota: string | null;
 }
 
 export interface CoordinacionPagina {
   items: CoordinacionResumen[];
+  /** Totales de todo el filtro (no solo de la página), como el pie de la lista vieja. */
+  totales: { fulls: number; cajas: number; kgs: number; pesoCobrable: number };
   total: number;
   page: number;
   pageSize: number;
@@ -90,6 +94,9 @@ export interface LineaGuiaHija {
   ancho: number | null;
   alto: number | null;
   nota: string | null;
+  factura: string | null;
+  /** Quién registró la línea: "E" = la finca por la web, "I" = transferencia interna, null = la oficina. */
+  origen: string | null;
   usuario: string | null;
   fechaRegistro: string | null;
 }

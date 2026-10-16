@@ -30,11 +30,13 @@ enum EstadoLoteGuias {
   CANCELADO
 }
 
-/// Estado de cada guía del stock (PIN_DCoorGuias.guiEstado 1/2/3).
+/// Estado de cada guía del stock (PIN_DCoorGuias.guiEstado 1/2/3). ANULADA: el
+/// sistema viejo borró la fila (anuló o modificó su ingreso) o se anuló aquí.
 enum EstadoGuiaMadre {
   INGRESADA
   COORDINADA
   PRESTADA
+  ANULADA
 }
 
 /// Access: PIN_MCoordina con docTipo = 'CGU' (lote de guías AWB ingresadas al stock).
@@ -42,6 +44,8 @@ model DocumentoBase {
   id                   Int              @id @default(autoincrement())
   /// PIN_MCoordina.docNumero (docTipo CGU)
   codigoAccess         Int?             @unique
+  /// N° del ingreso de guías (CGU-0003871): el de Access, o el del contador propio en las nuevas
+  numero               Int?             @unique
   fecha                DateTime?
   idAerolinea          Int? // FK to Datos Maestros
   idAgenciaIata        Int? // FK to Datos Maestros

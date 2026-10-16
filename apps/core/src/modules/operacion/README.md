@@ -25,7 +25,8 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Coordinar: simular, crear, editar (guía madre + cobro al cliente), cortar, anular | `POST simular`, `POST`, `PUT :id`, `POST :id/corte`, `DELETE :id` | `/operacion/coordinaciones/nueva`, `…/:id/editar` |
 | Defaults para coordinar (parámetros de línea, rótulos de agencia, conceptos de aerolínea) | `GET /operacion/coordinaciones/parametros?idAerolinea=` | — |
 | Buscadores (solo activos) y sugerencias de la marca | `GET /operacion/opciones/:tipo`, `GET /operacion/opciones/consignatarios/:id/sugerencia` | — |
-| Stock de guías AWB: lotes (dígito verificador mod 7), préstamo, devolución | `/operacion/guias-madre/*` | `/operacion/guias` |
+| Ingreso de guías (documento CGU): lista, detalle, grabar, modificar, anular | `/operacion/guias-madre/ingresos[/:id]` | `/operacion/guias/ingresos` |
+| Administración de guías: préstamo, quitar préstamo, devolución, verificar estado | `/operacion/guias-madre[/:id/…]` | `/operacion/guias/administracion` |
 | Archivo de manifiesto para FlowerCargo (txt por tabs, una fila por RUC de finca) | `GET /operacion/coordinaciones/:id/flowercargo[.txt]` | botón "FlowerCargo" en el detalle |
 | Validación contra Access | `GET /operacion/validacion`, `GET /operacion/coordinaciones/:id/validacion` | `/operacion/validacion` |
 | Datos maestros (solo lectura) | `GET /maestros/*` | `/maestros` |
@@ -68,8 +69,24 @@ Ingreso de guías, Generar secuencia; la guía como `369-8469 5461`; fincas y ae
 "Eliminar" pero no borraba). La búsqueda de coordinaciones acepta guía con o sin guion, N° (también de las nuevas),
 marca, cliente o finca.
 
+Segunda revisión (16/10/2026, layout de `frmPIN_Coordina` reconstruido del binario y datos de 2025–2026): el detalle
+es "detalle coordinado", una fila por línea en el orden Fulls → Cajas → Kg → DAE, con nota (una fila en 0 con nota es
+una novedad: "no llegó 1.5", "va a KAM"), factura y quién la registró, que se conserva al modificar; la cabecera va
+Consignatario → Aerolínea → Guía (se propone su primera guía libre) → Fecha; la nota (termógrafo) a la vista; la lista
+es el "día de vuelo" (Todas / Por cortar / Cortadas, un día con Hoy y Mañana, totales del filtro al pie);
+"Ingreso peso neto" reparte el peso de la báscula entre las filas. En Access `docEstado` 1 = no cortada, 2 = cortada,
+0 = anulada: el dueño corta apenas completa la guía, así que "Por cortar" casi siempre está vacía.
+
 Pendiente:
 
+- **Las fincas cargan su detalle por la web** (74 % de las líneas desde 2025, `detOrigen = 'E'`, 56 fincas activas
+  este mes): la web escribe en Access. Antes de `OPERACION_MODO=activo` hay que decidir cómo cargan en el sistema
+  nuevo (portal propio, o leer lo que la web deja en Access y sumarlo como líneas `origen = 'E'`). Mientras tanto,
+  "Nueva coordinación" lo avisa.
+- **DAE desde el registro de DAEs** (F2 del viejo): sincronizar `awbm_auxdaes` (finca, origen, país, vigencia, estado;
+  ~10.000 activas) y proponer la vigente al elegir la finca; ofrecer actualizarlas si cambia la fecha o el destino.
+- Transferir cajas entre guías o marcas (`frmPINTransferWizard`) y "Coordinación múltiple" (cargar una finca en varias
+  guías sin abrirlas). Numeración de las coordinaciones nuevas después de la última del viejo al pasar a modo activo.
 - **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
   - Enter que avance de campo en coordinar, ingreso de guías y préstamo.
   - Foco inicial en la guía madre (nueva), en el buscador de la lista y del stock, y en la aerolínea del ingreso.
@@ -83,6 +100,34 @@ Pendiente:
 - El aviso de "salir sin grabar" cubre los enlaces y cerrar la pestaña, no el botón Atrás del navegador.
 - Datos: MARTINAIR está dos veces en las aerolíneas; hay 3 guías COORDINADAS sin coordinación (salen primero al
   filtrar Coordinadas).
+
+## Guías: Ingreso y Administración
+
+Como el menú Guías del sistema viejo (análisis 16/10/2026 con datos de producción). **Cada guía nace en un Ingreso de
+guías** (documento `CGU`, `frmPIN_CoorGuias`, impreso "INGRESO DE GUIAS"): número (`CGU-0003871`), fecha, aerolínea
+(prefijo y tipo de stock por defecto, `aerVirtual`), referencia = **agencia IATA con que se reservó la guía** (EBF,
+FlowerCargo, Sierra), tipo de stock (normal / virtual) y sus guías. El 100 % de las coordinaciones 2019–2026 toman su
+guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una guía virtual escrita a mano**; 23 % se anulan
+(la aerolínea cambió el número: se ingresa la nueva, se cambia en la coordinación y se anula el ingreso viejo); 1 de cada
+4 guías termina "prestada" (la usó EBF/FlowerCargo o no se usó), casi sin observación; devoluciones: ninguna desde 2015.
+
+- Estado del ingreso (`estado-ingreso.ts`, regla confirmada con los documentos 2019–2026): **Cancelado** = todas sus
+  guías usadas (coordinadas, o prestadas y devueltas) — es "agotado", no "anulado"; **Guías coordinadas** = alguna
+  coordinada sin estar todas usadas; **Ingresado** = ninguna coordinada. Se recalcula al ingresar, modificar,
+  coordinar / cambiar guía / anular coordinación, prestar, quitar préstamo, devolver y verificar. "Stock verificado" =
+  el estado guardado coincide con sus guías (si no, "Corregir").
+- Reglas del viejo: guía de 8 dígitos con verificador serial mod 7; única en todo el stock (también se consulta el
+  sistema viejo en vivo, solo lectura, por lo que el sync aún no trajo); una guía usada no se quita; un ingreso
+  cancelado no se modifica; no se anula con guías usadas; no se cambia la aerolínea con guías usadas.
+- Modo sombra: los ingresos nuevos se numeran desde `CGU-0900000` (`OPERACION_CGU_INICIO`); al coordinar solo se ofrecen
+  guías libres de ingresos nuevos (virtuales primero, por número; normales por fecha de ingreso). Aviso si la agencia
+  IATA de la coordinación no es la del ingreso (regla de la "Asignación" del viejo).
+- Sync: la cabecera trae aerolínea (`docExtra`), tipo de stock (`docCert`) y la agencia IATA (por dígitos de
+  `docRefer`); una guía que el viejo borra (anuló o modificó su ingreso) queda **ANULADA**; si una guía del viejo ya
+  está en un ingreso nuevo no se muda: queda como error del sync (se cargó en los dos).
+- No se migra: Asignación (sin uso), Certificación, Facturación, Pagos y Facturación AWBs (muertos desde 2012–2015).
+- Pendiente (preguntar al dueño): botón "Reemplazar guía" (ingreso nuevo + cambio en la coordinación + anular el viejo,
+  ~70 veces al año); si la referencia (agencia IATA) debe ser obligatoria; impresión del ingreso (no se usa desde 2022).
 
 ## Archivo FlowerCargo
 

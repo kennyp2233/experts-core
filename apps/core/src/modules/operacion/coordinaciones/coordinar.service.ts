@@ -4,6 +4,7 @@ import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client'
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { asegurarEditable } from '../comun/modo-operacion';
 import { inicioGuiaHija, siguiente } from '../comun/contadores';
+import { recalcularEstadoIngresos } from '../guias/estado-ingreso';
 import {
   cargosAgencia,
   CODIGOS_AGENCIA,
@@ -167,6 +168,7 @@ export class CoordinarService {
     return this.db.$transaction(async (tx) => {
       const id = await this.persistir(tx, null, dto, armada, guia.idAerolinea, usuario);
       await tx.guiaMadre.update({ where: { id: guia.id }, data: { estado: 'COORDINADA' } });
+      await recalcularEstadoIngresos(tx, [guia.idDocumentoBase]);
       return { id };
     }, { timeout: 60_000 });
   }
@@ -190,8 +192,9 @@ export class CoordinarService {
     return this.db.$transaction(async (tx) => {
       await this.persistir(tx, id, dto, armada, guia.idAerolinea, usuario);
       if (cambiaGuia) {
-        await tx.guiaMadre.update({ where: { id: actual.idGuiaMadre }, data: { estado: 'INGRESADA' } });
+        const anterior = await tx.guiaMadre.update({ where: { id: actual.idGuiaMadre }, data: { estado: 'INGRESADA' } });
         await tx.guiaMadre.update({ where: { id: guia.id }, data: { estado: 'COORDINADA' } });
+        await recalcularEstadoIngresos(tx, [anterior.idDocumentoBase, guia.idDocumentoBase]);
       }
       return { id };
     }, { timeout: 60_000 });
@@ -235,10 +238,11 @@ export class CoordinarService {
     if (!c) throw new NotFoundException('La coordinación no existe.');
     asegurarEditable(c, `La coordinación ${c.numeroGuia ?? id}`);
     if (c.estadoActual === 'CORTADO') throw new ConflictException('Una guía cortada no se puede anular.');
-    await this.db.$transaction([
-      this.db.documentoCoordinacion.delete({ where: { id } }),
-      this.db.guiaMadre.update({ where: { id: c.idGuiaMadre }, data: { estado: 'INGRESADA' } }),
-    ]);
+    await this.db.$transaction(async (tx) => {
+      await tx.documentoCoordinacion.delete({ where: { id } });
+      const guia = await tx.guiaMadre.update({ where: { id: c.idGuiaMadre }, data: { estado: 'INGRESADA' } });
+      await recalcularEstadoIngresos(tx, [guia.idDocumentoBase]);
+    });
     return { id, anulada: true };
   }
 
@@ -248,6 +252,9 @@ export class CoordinarService {
     const guia = await this.db.guiaMadre.findUnique({ where: { id }, include: { documentoBase: true } });
     if (!guia) throw new BadRequestException('El campo número de guía es obligatorio.');
     asegurarEditable(guia.documentoBase, `La guía ${guia.numero}`);
+    if (guia.estado === 'ANULADA' || guia.documentoBase.estado === 'ANULADO') {
+      throw new ConflictException(`La guía ${guia.numero} está anulada.`);
+    }
     if (guia.estado !== 'INGRESADA') throw new ConflictException(
         guia.estado === 'COORDINADA'
           ? `La guía ${guia.numero} ya está coordinada.`
@@ -264,8 +271,26 @@ export class CoordinarService {
   ): Promise<CoordinacionArmada> {
     if (!dto.fechaVuelo) throw new BadRequestException('El campo fecha es obligatorio.');
     const advertencias: string[] = [];
-    const guia = await this.db.guiaMadre.findUnique({ where: { id: dto.idGuiaMadre }, select: { idAerolinea: true } });
+    const guia = await this.db.guiaMadre.findUnique({
+      where: { id: dto.idGuiaMadre },
+      select: { idAerolinea: true, numero: true, documentoBase: { select: { idAgenciaIata: true } } },
+    });
     if (!guia) throw new BadRequestException('El campo número de guía es obligatorio.');
+    // Regla de la Asignación del sistema viejo: la guía se reservó con una agencia IATA (referencia del ingreso).
+    const agenciaGuia = guia.documentoBase.idAgenciaIata;
+    if (agenciaGuia && dto.idAgenciaIata && agenciaGuia !== dto.idAgenciaIata) {
+      const ags = await this.maestros.agenciaIata.findMany({
+        where: { id: { in: [agenciaGuia, dto.idAgenciaIata] } },
+        select: { id: true, alias: true, nombreShipper: true },
+      });
+      const nombre = (x: number) => {
+        const a = ags.find((y) => y.id === x);
+        return a ? a.alias || a.nombreShipper : 'otra';
+      };
+      advertencias.push(
+        `La guía se ingresó con la agencia IATA ${nombre(agenciaGuia)} y la coordinación tiene ${nombre(dto.idAgenciaIata)}.`,
+      );
+    }
 
     const productos = new Map(
       (
@@ -502,6 +527,8 @@ export class CoordinarService {
       actualizadoPorLegacy: null,
     };
     let coordId: number;
+    const registros = new Map<number, { usuario: string | null; fechaRegistro: Date | null; origen: string | null }>();
+    const ahora = new Date();
     if (id === null) {
       coordId = (
         await tx.documentoCoordinacion.create({
@@ -513,6 +540,13 @@ export class CoordinarService {
       await tx.documentoCoordinacion.update({ where: { id }, data: base });
       coordId = id;
       const w = { where: { idDocumentoCoordinacion: id } };
+      // Quién y cuándo registró cada línea (la finca por la web o la oficina) no cambia al regrabar.
+      for (const d of await tx.guiaHijaDetalle.findMany({
+        where: { guiaHija: { idDocumentoCoordinacion: id } },
+        select: { id: true, usuario: true, fechaRegistro: true, origen: true },
+      })) {
+        registros.set(d.id, d);
+      }
       await tx.guiaHija.deleteMany(w);
       await tx.documentoRuta.deleteMany(w);
       await tx.documentoManifiesto.deleteMany(w);
@@ -611,8 +645,8 @@ export class CoordinarService {
                 ancho: l.ancho ?? null,
                 alto: l.alto ?? null,
                 nota: l.nota ?? null,
-                usuario: usuario ?? null,
-                fechaRegistro: new Date(),
+                factura: l.factura?.trim() || null,
+                ...((l.idLinea && registros.get(l.idLinea)) || { usuario: usuario ?? null, fechaRegistro: ahora, origen: null }),
               })),
             },
           },

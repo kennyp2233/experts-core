@@ -16,6 +16,10 @@ import {
 } from 'class-validator';
 
 export class LineaCoordinacionDto {
+  @ApiPropertyOptional({ description: 'Id de la línea que ya existía (conserva quién y cuándo la registró)' })
+  @IsOptional() @IsInt() @Min(1)
+  idLinea?: number;
+
   @ApiProperty() @IsInt() @Min(1)
   idFinca: number;
 
@@ -60,6 +64,9 @@ export class LineaCoordinacionDto {
 
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(120)
   nota?: string;
+
+  @ApiPropertyOptional({ description: 'Factura de la finca' }) @IsOptional() @IsString() @MaxLength(20)
+  factura?: string;
 }
 
 export class TramoRutaDto {

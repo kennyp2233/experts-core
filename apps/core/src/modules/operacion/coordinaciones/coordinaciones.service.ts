@@ -31,6 +31,7 @@ const selectResumen = {
   liqTotal: true,
   liqPesoCobrable: true,
   corteExtra: true,
+  nota: true,
   _count: { select: { guiaHijas: true } },
 } satisfies Prisma.DocumentoCoordinacionSelect;
 
@@ -51,7 +52,7 @@ export class CoordinacionesService {
     const page = f.page ?? 1;
     const pageSize = f.pageSize ?? 50;
     const where = await this.filtro(f);
-    const [total, filas] = await Promise.all([
+    const [total, filas, suma] = await Promise.all([
       this.db.documentoCoordinacion.count({ where }),
       this.db.documentoCoordinacion.findMany({
         where,
@@ -59,6 +60,10 @@ export class CoordinacionesService {
         orderBy: [{ fechaVuelo: 'desc' }, { codigoAccess: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
+      }),
+      this.db.documentoCoordinacion.aggregate({
+        where,
+        _sum: { totalFulls: true, totalCajas: true, totalKgs: true, liqPesoCobrable: true },
       }),
     ]);
     const refs = await this.nombres.resolver({
@@ -68,6 +73,12 @@ export class CoordinacionesService {
     });
     return {
       items: filas.map((c) => this.resumen(c, refs)),
+      totales: {
+        fulls: suma._sum.totalFulls ?? 0,
+        cajas: suma._sum.totalCajas ?? 0,
+        kgs: suma._sum.totalKgs ?? 0,
+        pesoCobrable: suma._sum.liqPesoCobrable ?? 0,
+      },
       total,
       page,
       pageSize,
@@ -198,6 +209,8 @@ export class CoordinacionesService {
           ancho: d.ancho,
           alto: d.alto,
           nota: d.nota,
+          factura: d.factura,
+          origen: d.origen,
           usuario: d.usuario,
           fechaRegistro: iso(d.fechaRegistro),
         })),
@@ -272,6 +285,7 @@ export class CoordinacionesService {
       liqTotal: c.liqTotal,
       pesoCobrable: c.liqPesoCobrable,
       corteExtra: c.corteExtra,
+      nota: c.nota,
     };
   }
 }
