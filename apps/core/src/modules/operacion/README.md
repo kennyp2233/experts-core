@@ -77,6 +77,26 @@ es el "día de vuelo" (Todas / Por cortar / Cortadas, un día con Hoy y Mañana,
 "Ingreso peso neto" reparte el peso de la báscula entre las filas. En Access `docEstado` 1 = no cortada, 2 = cortada,
 0 = anulada: el dueño corta apenas completa la guía, así que "Por cortar" casi siempre está vacía.
 
+Tercera revisión (16/10/2026, la ventana vieja dibujada con `legacy-analysis/tools/vb6render.py` y comparada con los
+mismos datos, p. ej. la 13909 y el vuelo del 13/10/2026):
+
+- **Detalle = documento viejo**: arriba la cabecera completa como ficha (Consignatario · Embarcador · Aerolínea ·
+  Número guía · Tipo de embarque · Referencia | Agencia IATA · Destino · Fecha de vuelo · Manifiesto · Peso cobrable ·
+  Pago) y la nota al pie; pestañas en el orden del viejo: Detalle de coordinación · Valores · Ruta, vuelos y
+  manifiesto (una sola, como la vieja) · Guías hijas · Más datos. Anterior / siguiente entre las guías del mismo vuelo.
+- **Detalle de coordinación** con las columnas de la grilla vieja en su orden (Finca · Producto · Fulls · Cajas · Kg ·
+  DAE · Fecha · Guía hija · Factura · Valor · Tallos · Nota · Usuario), compacta para que entre en 1366 px; los
+  usuarios web de las fincas en azul; en las novedades no se muestran los "0" que el viejo guarda en DAE y factura.
+- **Lista** con las columnas de la vieja: N° · Guía · Estado · (Fecha) · Aerolínea por su nombre · Consignatario ·
+  Cliente · Manifiesto · Nota · Fulls · Cajas · Kg · Peso cobrable. El peso cobrable es el de la aerolínea (la
+  columna "VOL." = `extCWeight`), no el que se le cobra al cliente.
+- **Reportes del día** (los dos botones de la lista vieja), `GET coordinaciones/reportes/{programacion|antinarcoticos}
+  ?dia=`: "Programación de vuelo" (por guía: fulls, peso, peso cobrable y promedios por full; `repProg.xlt`) y
+  "Reporte antinarcóticos" (una fila por finca de cada guía, para la Policía; `repAntinarcoticosN.xlt`; como el viejo,
+  PIEZAS = cajas y CAJAS = fulls, sin las líneas de novedad; conductor, cédula y placa a mano). Verificado contra
+  Access el 13/10/2026: 43 filas, 89 cajas, 40 fulls, $ 8.263,55.
+- El menú lateral se pliega solo en las pantallas de coordinaciones (lista, ver, coordinar) si el usuario no eligió.
+
 Pendiente:
 
 - **Las fincas cargan su detalle por la web** (74 % de las líneas desde 2025, `detOrigen = 'E'`, 56 fincas activas
@@ -96,7 +116,8 @@ Pendiente:
 - **Imprimir** guía madre, HAWB y manifiesto al cortar (el viejo lo hacía; faltan los formatos del dueño).
 - **"Ganancia"** = total al cliente − total guía madre: incluye los cargos de agencia (Transport, Fitos, Form A).
   Confirmar con el dueño si así la mide o si debe ser solo la diferencia de tarifa.
-- Navegación anterior / siguiente entre coordinaciones (el viejo tenía Primero/Anterior/Siguiente/Último).
+- El viejo abría en el último documento y navegaba Primero/Anterior/Siguiente/Último por N°; el nuevo navega
+  dentro del vuelo. Los combos de aerolínea y cliente de la lista vieja solo ofrecían los del día.
 - El aviso de "salir sin grabar" cubre los enlaces y cerrar la pestaña, no el botón Atrás del navegador.
 - Datos: MARTINAIR está dos veces en las aerolíneas; hay 3 guías COORDINADAS sin coordinación (salen primero al
   filtrar Coordinadas).

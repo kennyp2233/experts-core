@@ -33,6 +33,9 @@ const selectResumen = {
   corteExtra: true,
   nota: true,
   _count: { select: { guiaHijas: true } },
+  manifiesto: { select: { referencia: true } },
+  // El peso cobrable que da la aerolínea (la columna "VOL." de la lista vieja = extCWeight).
+  liquidaciones: { where: { tipo: 'NORMAL' }, select: { pesoCobrable: true } },
 } satisfies Prisma.DocumentoCoordinacionSelect;
 
 type FilaResumen = Prisma.DocumentoCoordinacionGetPayload<{ select: typeof selectResumen }>;
@@ -52,7 +55,7 @@ export class CoordinacionesService {
     const page = f.page ?? 1;
     const pageSize = f.pageSize ?? 50;
     const where = await this.filtro(f);
-    const [total, filas, suma] = await Promise.all([
+    const [total, filas, suma, cobrable] = await Promise.all([
       this.db.documentoCoordinacion.count({ where }),
       this.db.documentoCoordinacion.findMany({
         where,
@@ -63,7 +66,11 @@ export class CoordinacionesService {
       }),
       this.db.documentoCoordinacion.aggregate({
         where,
-        _sum: { totalFulls: true, totalCajas: true, totalKgs: true, liqPesoCobrable: true },
+        _sum: { totalFulls: true, totalCajas: true, totalKgs: true },
+      }),
+      this.db.documentoLiquidacion.aggregate({
+        where: { tipo: 'NORMAL', documentoCoordinacion: where },
+        _sum: { pesoCobrable: true },
       }),
     ]);
     const refs = await this.nombres.resolver({
@@ -77,7 +84,7 @@ export class CoordinacionesService {
         fulls: suma._sum.totalFulls ?? 0,
         cajas: suma._sum.totalCajas ?? 0,
         kgs: suma._sum.totalKgs ?? 0,
-        pesoCobrable: suma._sum.liqPesoCobrable ?? 0,
+        pesoCobrable: cobrable._sum.pesoCobrable ?? 0,
       },
       total,
       page,
@@ -262,7 +269,10 @@ export class CoordinacionesService {
   }
 
   private resumen(
-    c: FilaResumen,
+    c: Omit<FilaResumen, 'manifiesto' | 'liquidaciones'> & {
+      manifiesto: { referencia: string | null } | null;
+      liquidaciones: Array<{ pesoCobrable: number | null; tipo?: string }>;
+    },
     refs: Awaited<ReturnType<NombresMaestrosService['resolver']>>,
   ): CoordinacionResumen {
     return {
@@ -283,7 +293,8 @@ export class CoordinacionesService {
       totalKgs: c.totalKgs,
       guiasHijas: c._count.guiaHijas,
       liqTotal: c.liqTotal,
-      pesoCobrable: c.liqPesoCobrable,
+      pesoCobrable: c.liquidaciones.find((l) => !l.tipo || l.tipo === 'NORMAL')?.pesoCobrable ?? c.liqPesoCobrable,
+      codigoManifiesto: c.manifiesto?.referencia ?? null,
       corteExtra: c.corteExtra,
       nota: c.nota,
     };

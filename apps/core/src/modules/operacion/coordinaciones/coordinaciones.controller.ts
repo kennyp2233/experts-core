@@ -10,6 +10,7 @@ import { ListarCoordinacionesDto } from './dto/listar-coordinaciones.dto';
 import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
 import { FlowerCargoService } from '../documentos/flowercargo.service';
+import { ArchivoReporte, ReportesDiaService } from '../documentos/reportes-dia.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
 const usuario = (req: ConUsuario) => req.user?.username ?? req.user?.email;
@@ -25,6 +26,7 @@ export class CoordinacionesController {
     private readonly service: CoordinacionesService,
     private readonly coordinar: CoordinarService,
     private readonly archivoFlowerCargo: FlowerCargoService,
+    private readonly reportes: ReportesDiaService,
   ) {}
 
   @Get()
@@ -38,6 +40,24 @@ export class CoordinacionesController {
   parametros(@Query('idAerolinea') idAerolinea?: string) {
     const id = Number(idAerolinea);
     return this.coordinar.parametros(Number.isInteger(id) && id > 0 ? id : undefined);
+  }
+
+  @Get('reportes/programacion')
+  @ApiOperation({ summary: 'Excel "Programación de vuelo" de un día (como el botón de la lista vieja). `?dia=AAAA-MM-DD&idAerolinea=`' })
+  async programacion(@Query('dia') dia: string, @Res() res: Response, @Query('idAerolinea') idAerolinea?: string) {
+    this.enviar(res, await this.reportes.programacion(dia, Number(idAerolinea) || undefined));
+  }
+
+  @Get('reportes/antinarcoticos')
+  @ApiOperation({ summary: 'Excel "Reporte Antinarcóticos" de un día: una fila por finca de cada guía. `?dia=AAAA-MM-DD&idAerolinea=`' })
+  async antinarcoticos(@Query('dia') dia: string, @Res() res: Response, @Query('idAerolinea') idAerolinea?: string) {
+    this.enviar(res, await this.reportes.antinarcoticos(dia, Number(idAerolinea) || undefined));
+  }
+
+  private enviar(res: Response, a: ArchivoReporte) {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${a.nombreArchivo}"`);
+    res.send(a.contenido);
   }
 
   @Get(':id')
