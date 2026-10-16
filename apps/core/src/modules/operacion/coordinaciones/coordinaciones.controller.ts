@@ -6,7 +6,7 @@ import { Roles } from '../../auth/v1/decorators/roles.decorator';
 import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 import { CoordinacionesService } from './coordinaciones.service';
 import { ListarCoordinacionesDto } from './dto/listar-coordinaciones.dto';
-import { CortarCoordinacionDto, GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
+import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
@@ -64,8 +64,8 @@ export class CoordinacionesController {
 
   @Post(':id/corte')
   @ApiOperation({ summary: 'Corte de guía (irreversible): la coordinación queda sin edición.' })
-  cortar(@Param('id', ParseIntPipe) id: number, @Body() dto: CortarCoordinacionDto) {
-    return this.coordinar.cortar(id, dto);
+  cortar(@Param('id', ParseIntPipe) id: number) {
+    return this.coordinar.cortar(id);
   }
 
   @Delete(':id')

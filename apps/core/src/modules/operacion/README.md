@@ -22,7 +22,7 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Rebanada | API | Pantalla |
 |---|---|---|
 | Coordinaciones: lista, búsqueda (AWB, guía hija, DAE, N°), detalle | `GET /operacion/coordinaciones[/:id]` | `/operacion/coordinaciones` |
-| Coordinar: simular, crear, editar, cortar (con corte extra), anular | `POST simular`, `POST`, `PUT :id`, `POST :id/corte`, `DELETE :id` | `/operacion/coordinaciones/nueva`, `…/:id/editar` |
+| Coordinar: simular, crear, editar (guía madre + cobro al cliente), cortar, anular | `POST simular`, `POST`, `PUT :id`, `POST :id/corte`, `DELETE :id` | `/operacion/coordinaciones/nueva`, `…/:id/editar` |
 | Defaults para coordinar (parámetros de línea, rótulos de agencia, conceptos de aerolínea) | `GET /operacion/coordinaciones/parametros?idAerolinea=` | — |
 | Buscadores (solo activos) y sugerencias de la marca | `GET /operacion/opciones/:tipo`, `GET /operacion/opciones/consignatarios/:id/sugerencia` | — |
 | Stock de guías AWB: lotes (dígito verificador mod 7), préstamo, devolución | `/operacion/guias-madre/*` | `/operacion/guias` |
@@ -36,10 +36,15 @@ Las fórmulas viven en [`calculos/`](calculos/) y cada una tiene una `ReglaNegoc
 que calcula el sistema nuevo con lo que guardó Access. La ingeniería inversa (con SQL de validación y tasas de
 coincidencia) está en `legacy-analysis/reglas/liquidacion.md` (fuera del repo).
 
-Liquidación (R1–R6):
+Liquidación (R1–R6). Cada guía tiene lo que cobra la aerolínea (va en la **guía madre**, que es su factura;
+Access: juego normal) y, casi siempre, lo que se **cobra al cliente** (Access: "corte extra", campos `*_ex`). Hoy
+no hay comisión: la ganancia es la diferencia (p. ej. la aerolínea da 3,00 el kilo y al cliente se le cobra 3,30).
+El peso cobrable lo da la aerolínea (peso por volumen); el handling al cliente sale de la ficha del cliente.
+El cobro al cliente no tiene fórmula (precios "al ojo"): se propone el de la última guía de la misma marca. Acierto
+medido 2020–2023: Form A 98 %, Fitos 96 %, Mca 94 %, Tax/Termógrafo 98–99 %, tarifa ~80 %, Transport 41 %.
 
 ```
-juego vigente  = corte extra si la guía lo tiene, si no el normal
+juego vigente  = cobro al cliente si la guía lo tiene, si no la guía madre
 flete          = round2(peso cobrable × tarifa)
 due carrier    = guía aérea + combustible + seguridad + otros + aux1 + aux2 + cálculo aux.   (Access: docDA)
 due agent      = Σ 7 códigos de agencia (Form A, Transport, PCA, Termógrafo, MCA, Tax, Fitos) (Access: docDC)

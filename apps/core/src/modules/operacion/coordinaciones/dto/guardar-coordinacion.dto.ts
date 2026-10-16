@@ -144,13 +144,14 @@ export class GuardarCoordinacionDto {
   @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => LineaCoordinacionDto)
   lineas: LineaCoordinacionDto[];
 
-  @ApiPropertyOptional({ type: ValoresLiquidacionDto })
+  @ApiPropertyOptional({ type: ValoresLiquidacionDto, description: 'Lo que cobra la aerolínea (va en la guía madre)' })
   @IsOptional() @ValidateNested() @Type(() => ValoresLiquidacionDto)
   liquidacion?: ValoresLiquidacionDto;
-}
 
-export class CortarCoordinacionDto {
-  @ApiPropertyOptional({ type: ValoresLiquidacionDto, description: 'Valores de "corte extra" (si la facturación cambia al cortar)' })
+  @ApiPropertyOptional({
+    type: ValoresLiquidacionDto,
+    description: 'Lo que se le cobra al cliente, si es distinto de la guía madre (Access: "corte extra", campos *_ex)',
+  })
   @IsOptional() @ValidateNested() @Type(() => ValoresLiquidacionDto)
-  extra?: ValoresLiquidacionDto;
+  cobroCliente?: ValoresLiquidacionDto;
 }

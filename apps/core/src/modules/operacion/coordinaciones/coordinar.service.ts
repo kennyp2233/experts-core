@@ -10,6 +10,7 @@ import {
   ConceptoAerolinea,
   defaultsAerolinea,
   r2,
+  ResumenLiquidacion,
   resumirLiquidacion,
   ValoresLiquidacion,
 } from '../calculos/liquidacion';
@@ -21,7 +22,6 @@ import {
   volumenDeLineas,
 } from '../calculos/reglas/totales';
 import {
-  CortarCoordinacionDto,
   GuardarCoordinacionDto,
   LineaCoordinacionDto,
   TramoRutaDto,
@@ -53,13 +53,31 @@ export interface CoordinacionArmada {
     lineas: LineaPreparada[];
   }>;
   totales: { cajas: number; fulls: number; kgs: number; volumen: number };
-  liquidacion: ReturnType<typeof resumirLiquidacion>;
-  /** Valores por defecto de la aerolínea (tarifa y conceptos) sobre el peso actual. */
+  /** La que vale (la del cliente si se cobra distinto, si no la de la guía madre). */
+  liquidacion: ResumenLiquidacion;
+  /** Lo que cobra la aerolínea (guía madre). */
+  aerolinea: ResumenLiquidacion;
+  /** Lo que se le cobra al cliente, si es distinto. */
+  cliente: ResumenLiquidacion | null;
+  /** Ganancia de la guía: cobro al cliente − guía madre (hoy no hay comisión). */
+  diferencia: { tarifa: number | null; flete: number | null; total: number | null } | null;
+  /** Defaults: tarifa y conceptos de la aerolínea sobre el peso actual; handling del cliente. */
   sugerida: Partial<ValoresLiquidacion>;
-  /** % de comisión de la agencia IATA (docComision). */
-  comision: number | null;
+  /** Cobro al cliente propuesto: lo de la última guía de la misma marca. */
+  sugeridaCliente: {
+    valores: Partial<ValoresLiquidacion>;
+    desde: { id: number; numeroGuia: string | null; fechaVuelo: string };
+  } | null;
   advertencias: string[];
 }
+
+/**
+ * Lo que se propone para el cobro al cliente, tomado de la última guía de la
+ * marca. Son precios que se ponen "al ojo": no hay fórmula. Acierto medido en
+ * 2020–2023: Form A 98 %, Fitos 96 %, Mca 94 %, Tax/Termógrafo 98–99 %,
+ * tarifa ~80 %, Transport 41 % (varía mucho, hay que revisarlo).
+ */
+const CAMPOS_COBRO_CLIENTE = ['tarifa', 'cargoAwa', 'cargoCha', 'cargoTax', 'cargoMma', 'cargoHawb', 'cargoFitos'] as const;
 
 /** Lo que la pantalla de coordinar necesita para proponer valores. */
 export interface ParametrosCoordinacion {
@@ -112,7 +130,7 @@ export class CoordinarService {
       where: { id },
       include: { guiaHijas: { include: { detalles: true } } },
     });
-    return this.armar(dto, actual ? await this.numerosExistentes(actual.guiaHijas) : new Map());
+    return this.armar(dto, actual ? await this.numerosExistentes(actual.guiaHijas) : new Map(), id);
   }
 
   /** Defaults de línea, rótulos de agencia y conceptos de la aerolínea. */
@@ -168,7 +186,7 @@ export class CoordinarService {
     const guia = cambiaGuia
       ? await this.guiaDisponible(dto.idGuiaMadre)
       : await this.db.guiaMadre.findUniqueOrThrow({ where: { id: actual.idGuiaMadre } });
-    const armada = await this.armar(dto, numeros);
+    const armada = await this.armar(dto, numeros, id);
     return this.db.$transaction(async (tx) => {
       await this.persistir(tx, id, dto, armada, guia.idAerolinea, usuario);
       if (cambiaGuia) {
@@ -180,7 +198,7 @@ export class CoordinarService {
   }
 
   /** Corte de guía: irreversible. Deja la coordinación sin edición. */
-  async cortar(id: number, dto: CortarCoordinacionDto) {
+  async cortar(id: number) {
     const c = await this.db.documentoCoordinacion.findUnique({
       where: { id },
       include: { guiaHijas: { include: { detalles: true } }, liquidaciones: true },
@@ -193,26 +211,18 @@ export class CoordinarService {
     if (sinDae.length) throw new BadRequestException(`Hay ${sinDae.length} línea(s) sin DAE: la DAE es obligatoria.`);
     const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
     if (!normal?.pesoCobrable || !normal?.tarifa) {
-      throw new BadRequestException('Falta el peso cobrable o la tarifa de la liquidación.');
+      throw new BadRequestException('Falta el peso cobrable o la tarifa de la guía madre (los da la aerolínea).');
     }
-    // El juego extra no se valida contra el peso bruto (igual que el sistema viejo).
-    const extra = dto.extra ? valores(dto.extra) : null;
-    const resumen = resumirLiquidacion(extra ?? valores(normal));
-    return this.db.$transaction(async (tx) => {
-      if (extra) {
-        await tx.documentoLiquidacion.deleteMany({ where: { idDocumentoCoordinacion: id, tipo: 'CORTE_EXTRA' } });
-        await tx.documentoLiquidacion.create({ data: { idDocumentoCoordinacion: id, tipo: 'CORTE_EXTRA', ...extra } });
-      }
-      await tx.documentoCoordinacion.update({
-        where: { id },
-        data: {
-          estadoActual: 'CORTADO',
-          corteExtra: !!extra,
-          ...camposResumen(resumen),
-        },
-      });
-      return { id, estado: 'CORTADO' as const };
+    const cliente = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
+    if (cliente && (!cliente.pesoCobrable || !cliente.tarifa)) {
+      throw new BadRequestException('Falta el peso cobrable o la tarifa del cobro al cliente.');
+    }
+    const resumen = resumirLiquidacion(valores(cliente ?? normal));
+    await this.db.documentoCoordinacion.update({
+      where: { id },
+      data: { estadoActual: 'CORTADO', ...camposResumen(resumen) },
     });
+    return { id, estado: 'CORTADO' as const };
   }
 
   /** Anular: como el sistema viejo, borra el detalle y libera la guía madre. */
@@ -239,7 +249,11 @@ export class CoordinarService {
   }
 
   /** Valida, agrupa en guías hijas, totaliza y liquida. No escribe nada. */
-  private async armar(dto: GuardarCoordinacionDto, numeros: Map<string, string>): Promise<CoordinacionArmada> {
+  private async armar(
+    dto: GuardarCoordinacionDto,
+    numeros: Map<string, string>,
+    idActual?: number,
+  ): Promise<CoordinacionArmada> {
     if (!dto.fechaVuelo) throw new BadRequestException('El campo fecha es obligatorio.');
     const advertencias: string[] = [];
     const guia = await this.db.guiaMadre.findUnique({ where: { id: dto.idGuiaMadre }, select: { idAerolinea: true } });
@@ -316,7 +330,25 @@ export class CoordinarService {
       );
     }
 
+    // Cobro al cliente: el sistema viejo no lo valida contra el peso bruto.
+    const vc = dto.cobroCliente ? valores(dto.cobroCliente) : null;
     const resumen = resumirLiquidacion(v);
+    const resumenCliente = vc ? resumirLiquidacion(vc) : null;
+    const resta = (a: number | null | undefined, b: number | null | undefined) =>
+      a === null || a === undefined || b === null || b === undefined ? null : r2(a - b);
+    const diferencia = resumenCliente
+      ? {
+          tarifa: resta(resumenCliente.tarifa, resumen.tarifa),
+          flete: resta(resumenCliente.flete, resumen.flete),
+          total: resta(resumenCliente.total, resumen.total),
+        }
+      : null;
+    if (diferencia?.tarifa !== null && diferencia?.tarifa !== undefined && diferencia.tarifa < 0) {
+      advertencias.push(
+        `La tarifa al cliente (${resumenCliente!.tarifa}) es menor que la de la aerolínea (${resumen.tarifa}).`,
+      );
+    }
+
     const aerolinea = guia.idAerolinea ? await this.conceptosAerolinea(guia.idAerolinea) : null;
     let sugerida: Partial<ValoresLiquidacion> = {};
     if (aerolinea) {
@@ -326,11 +358,53 @@ export class CoordinarService {
         sugerida.cargoPca = r2((resumen.flete + resumen.dueCarrier) * aerolinea.pca);
       }
     }
-    const agencia = await this.maestros.agenciaIata.findUnique({
-      where: { id: dto.idAgenciaIata },
-      select: { comision: true },
+    // Handling al cliente = el de la ficha del cliente de la marca (97–100 % de las guías por año).
+    const marca = await this.maestros.consignatario.findUnique({
+      where: { id: dto.idConsignatario },
+      select: { cliente: { select: { handling: true } } },
     });
-    return { guiasHijas, totales, liquidacion: resumen, sugerida, comision: agencia?.comision ?? null, advertencias };
+    if (marca?.cliente?.handling) sugerida.aux3Handling = marca.cliente.handling;
+
+    return {
+      guiasHijas,
+      totales,
+      liquidacion: resumenCliente ?? resumen,
+      aerolinea: resumen,
+      cliente: resumenCliente,
+      diferencia,
+      sugerida,
+      sugeridaCliente: await this.ultimoCobroCliente(dto.idConsignatario, idActual),
+      advertencias,
+    };
+  }
+
+  /** Cobro al cliente de la última guía (con cobro distinto) de la misma marca. */
+  private async ultimoCobroCliente(idConsignatario: number, idActual?: number): Promise<CoordinacionArmada['sugeridaCliente']> {
+    const ultima = await this.db.documentoCoordinacion.findFirst({
+      where: {
+        idConsignatario,
+        corteExtra: true,
+        estadoActual: { not: 'ANULADO' },
+        ...(idActual ? { id: { not: idActual } } : {}),
+      },
+      orderBy: [{ fechaVuelo: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        numeroGuia: true,
+        fechaVuelo: true,
+        liquidaciones: { where: { tipo: 'CORTE_EXTRA' } },
+      },
+    });
+    const l = ultima?.liquidaciones[0];
+    if (!ultima || !l) return null;
+    const valores: Partial<ValoresLiquidacion> = {};
+    for (const k of CAMPOS_COBRO_CLIENTE) {
+      if (l[k] !== null && l[k] !== 0) valores[k] = l[k];
+    }
+    return {
+      valores,
+      desde: { id: ultima.id, numeroGuia: ultima.numeroGuia, fechaVuelo: ultima.fechaVuelo.toISOString().slice(0, 10) },
+    };
   }
 
   private async conceptosAerolinea(idAerolinea: number): Promise<NonNullable<ParametrosCoordinacion['aerolinea']>> {
@@ -405,7 +479,7 @@ export class CoordinarService {
       liqFulls: a.totales.fulls,
       liqPiezas: Math.round(a.totales.cajas),
       liqPesoBruto: a.totales.kgs,
-      comision: a.comision,
+      corteExtra: !!dto.cobroCliente,
       ...camposResumen(a.liquidacion),
       actualizadoPorLegacy: null,
     };
@@ -423,10 +497,17 @@ export class CoordinarService {
       const w = { where: { idDocumentoCoordinacion: id } };
       await tx.guiaHija.deleteMany(w);
       await tx.documentoRuta.deleteMany(w);
-      await tx.documentoLiquidacion.deleteMany({ where: { idDocumentoCoordinacion: id, tipo: 'NORMAL' } });
+      await tx.documentoLiquidacion.deleteMany(w);
     }
 
     await tx.documentoLiquidacion.create({ data: { idDocumentoCoordinacion: coordId, tipo: 'NORMAL', ...v } });
+    if (dto.cobroCliente) {
+      // Access guarda el cobro al cliente como "corte extra" (campos *_ex); el handling al cliente va en el normal.
+      const { aux3Handling: _h, auxOtros: _o, tarifaAcordada: _t, ...cliente } = valores(dto.cobroCliente);
+      await tx.documentoLiquidacion.create({
+        data: { idDocumentoCoordinacion: coordId, tipo: 'CORTE_EXTRA', ...cliente },
+      });
+    }
     const rutas = dto.rutas?.length ? dto.rutas : await this.rutaDeAerolinea(idAerolinea);
     if (rutas.length) {
       await tx.documentoRuta.createMany({
