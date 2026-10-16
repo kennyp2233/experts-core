@@ -30,6 +30,39 @@ export class OpcionesService {
     @Inject(PRISMA_DOCUMENTOS) private readonly docs: PrismaDocumentos,
   ) {}
 
+  /**
+   * DAE vigente de cada finca, como el F2 "Obtiene FUE" del sistema viejo
+   * (ITSSystem.Proc_6733B0): misma finca, origen y país del destino, con la
+   * fecha de vuelo dentro del período, solo activas; si hay varias, la que
+   * empezó antes. Coincide con la DAE de la línea en el 96 % de las líneas con
+   * carga de 2026.
+   */
+  async daesVigentes(
+    idsFinca: number[],
+    idDestino: number,
+    fecha: string,
+    origen = 'UIO',
+  ): Promise<Record<number, { dae: string; desde: string; hasta: string } | null>> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new BadRequestException('Fecha de vuelo inválida (AAAA-MM-DD).');
+    const destino = await this.db.destino.findUnique({ where: { id: idDestino }, select: { pais: { select: { siglasPais: true } } } });
+    const pais = destino?.pais?.siglasPais;
+    const out: Record<number, { dae: string; desde: string; hasta: string } | null> = Object.fromEntries(
+      idsFinca.map((id) => [id, null]),
+    );
+    if (!pais || idsFinca.length === 0) return out;
+    const dia = new Date(`${fecha}T00:00:00Z`);
+    const rs = await this.db.daeFinca.findMany({
+      where: { idFinca: { in: idsFinca }, origen, pais, activa: true, fechaInicio: { lte: dia }, fechaFin: { gte: dia } },
+      orderBy: [{ fechaInicio: 'asc' }, { id: 'asc' }],
+    });
+    for (const r of rs) {
+      if (r.idFinca !== null && out[r.idFinca] === null) {
+        out[r.idFinca] = { dae: r.dae, desde: r.fechaInicio.toISOString().slice(0, 10), hasta: r.fechaFin.toISOString().slice(0, 10) };
+      }
+    }
+    return out;
+  }
+
   /** `idAerolinea` (solo guías): las de esa aerolínea, como el combo del sistema viejo. */
   async buscar(tipo: string, q = '', limite = 20, ids?: number[], idAerolinea?: number): Promise<Opcion[]> {
     const t = q.trim();

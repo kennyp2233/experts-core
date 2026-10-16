@@ -1,5 +1,5 @@
 import { idDe } from '../../engine/sync-engine';
-import { activoPin, agrupar, flag, int, num, txt } from '../../engine/normalize';
+import { activoPin, agrupar, fechaDia, fechaHora, flag, int, num, txt } from '../../engine/normalize';
 import { AccessRow, EntidadSync } from '../../engine/sync.types';
 
 /** PIN_auxPlantaciones → Finca. */
@@ -132,4 +132,50 @@ export const registroAgrocalidad: EntidadSync = {
         select: { id: true },
       })
     ).id,
+};
+
+/**
+ * awbm_auxdaes → DaeFinca: el registro de DAEs (finca, origen, país, período).
+ * Lo usa coordinar para proponer la DAE vigente, como la tecla F2 del viejo.
+ */
+export const daeFinca: EntidadSync = {
+  entidad: 'daeFinca',
+  leer: (ctx) =>
+    ctx.legacy.queryBridge(
+      'SELECT ID, plaCodigo, oriCodigo, paiCodigo, FecIni, FecFin, FecAce, DAE, ZonaPrimaria, Estado, UsuCre, FecCre FROM awbm_auxdaes',
+    ),
+  clave: (r) => txt(r.ID),
+  mapear: (r, ctx) => {
+    const dae = txt(r.DAE);
+    const fechaInicio = fechaDia(r.FecIni);
+    const fechaFin = fechaDia(r.FecFin);
+    if (!dae) return { omitir: 'sin número de DAE' };
+    if (!fechaInicio || !fechaFin) return { omitir: 'sin período de vigencia' };
+    return {
+      codigoAccess: int(r.ID),
+      idFinca: idDe(ctx, 'finca', r.plaCodigo),
+      origen: txt(r.oriCodigo) ?? 'UIO',
+      pais: txt(r.paiCodigo) ?? '',
+      fechaInicio,
+      fechaFin,
+      fechaAceptacion: fechaDia(r.FecAce),
+      dae,
+      zonaPrimaria: flag(r.ZonaPrimaria),
+      activa: int(r.Estado) === 1,
+      registradoPor: txt(r.UsuCre),
+      registradoEn: fechaHora(r.FecCre),
+    };
+  },
+  guardar: async (db, d: any) =>
+    (
+      await db.daeFinca.upsert({
+        where: { codigoAccess: d.codigoAccess },
+        create: d,
+        update: d,
+        select: { id: true },
+      })
+    ).id,
+  desactivar: async (db, id) => {
+    await db.daeFinca.updateMany({ where: { id }, data: { activa: false } });
+  },
 };

@@ -21,6 +21,22 @@ export class OpcionesController {
     return this.service.sugerenciaConsignatario(id);
   }
 
+  @Get('daes')
+  @ApiOperation({ summary: 'DAE vigente por finca para un destino y fecha de vuelo (como el F2 del viejo). `?fincas=1,2&idDestino=&fecha=AAAA-MM-DD&origen=UIO`' })
+  daes(
+    @Query('fincas') fincas: string,
+    @Query('idDestino', ParseIntPipe) idDestino: number,
+    @Query('fecha') fecha: string,
+    @Query('origen') origen?: string,
+  ) {
+    const ids = (fincas ?? '')
+      .split(',')
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .slice(0, 200);
+    return this.service.daesVigentes(ids, idDestino, fecha, origen?.trim().toUpperCase() || 'UIO');
+  }
+
   @Get(':tipo')
   @ApiOperation({ summary: 'Opciones activas: guias (libres), consignatarios, fincas, productos, agencias, aerolineas, destinos, tipos-embarque.' })
   buscar(

@@ -485,6 +485,7 @@ model Finca {
     fincasChoferes       FincaChofer[]
     fincasProductos      FincaProducto[]
     registrosAgrocalidad RegistroAgrocalidad[]
+    daes                 DaeFinca[]
 }
 
 /// Access: pin_auxagrocalidad — registro de sitios de producción de Agrocalidad.
@@ -504,6 +505,35 @@ model RegistroAgrocalidad {
     finca Finca? @relation(fields: [idFinca], references: [id])
 
     @@index([codigo])
+}
+
+/// awbm_auxdaes — registro de DAEs de cada finca (las cargan las fincas por la web
+/// o la oficina en "Administración de DAEs"). Al coordinar se propone la vigente:
+/// misma finca, origen y país del destino final, con la fecha de vuelo dentro del
+/// período (ITSSystem.Proc_6733B0 del sistema viejo).
+model DaeFinca {
+    id              Int       @id @default(autoincrement())
+    /// awbm_auxdaes.ID
+    codigoAccess    Int       @unique
+    idFinca         Int?
+    /// Aeropuerto de origen (oriCodigo), ej. "UIO"
+    origen          String
+    /// Siglas del país de destino (paiCodigo), ej. "KZ"
+    pais            String
+    fechaInicio     DateTime  @productosDb.Date
+    fechaFin        DateTime  @productosDb.Date
+    fechaAceptacion DateTime? @productosDb.Date
+    /// Ej. "055-2026-40-01810554"
+    dae             String
+    zonaPrimaria    Boolean   @default(false)
+    /// Estado = 1
+    activa          Boolean   @default(true)
+    registradoPor   String?
+    registradoEn    DateTime?
+
+    finca Finca? @relation(fields: [idFinca], references: [id])
+
+    @@index([idFinca, origen, pais])
 }
 
 model Chofer {

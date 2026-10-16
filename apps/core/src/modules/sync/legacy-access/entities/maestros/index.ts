@@ -7,7 +7,7 @@ import {
   tipoDocumentoIdentidad,
   tipoEmbalaje,
 } from './catalogos';
-import { finca, fincaProducto, registroAgrocalidad } from './fincas';
+import { daeFinca, finca, fincaProducto, registroAgrocalidad } from './fincas';
 import { destino, origen, otroDestino, pais } from './geografia';
 import {
   agenciaIata,
@@ -45,6 +45,7 @@ export const ENTIDADES_MAESTROS: ReadonlyArray<EntidadSync<any, any>> = [
   finca,
   fincaProducto,
   registroAgrocalidad,
+  daeFinca,
   chofer,
   bodeguero,
   funcionarioAgrocalidad,

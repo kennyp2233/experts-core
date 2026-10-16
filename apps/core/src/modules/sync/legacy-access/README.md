@@ -57,6 +57,7 @@ Por cada registro (en documentos: cada coordinación con todas sus tablas) calcu
 | finca | PIN_auxPlantaciones | Finca |
 | fincaProducto | PIN_auxPlanProductos | FincaProducto |
 | registroAgrocalidad | pin_auxagrocalidad | RegistroAgrocalidad |
+| daeFinca | awbm_auxdaes (registro de DAEs: finca, origen, país, vigencia; ~10.400, las cargan las fincas por la web) | DaeFinca |
 | chofer, bodeguero, funcionarioAgrocalidad, subAgencia | PIN_auxChofers, PIN_auxBodegueros, PIN_auxFuncionarios, PIN_auxSubagencias | Chofer, Bodeguero, FuncionarioAgrocalidad, SubAgencia |
 | agenciaIata | PIN_auxShippers | AgenciaIata |
 | aerolinea | PIN_auxAerolineas | Aerolinea + AerolineasPlantilla + ConceptoCosto |
@@ -87,7 +88,7 @@ Convenciones del sistema viejo que aplica el mapeo (`engine/normalize.ts`):
 ## Lo que NO sincroniza (todavía)
 
 - `PIN_NGH` / `PIN_dCoorNGH` (registro de números de guía hija asignados): va con la lógica de numeración; el contador `eBodega.bodNGH` llega como parámetro `BODEGA.bodNGH`.
-- Guías certificadas (PIN_DCertGuias, PIN_DDocCert, PIN_MDocumento), control de DAEs (awbm_auxdaes), FITOS viejos, facturación, guías de remisión, bodega, cobranzas: pendientes de confirmar si se usan hoy.
+- Guías certificadas (PIN_DCertGuias, PIN_DDocCert, PIN_MDocumento), FITOS viejos, facturación, guías de remisión, bodega, cobranzas: pendientes de confirmar si se usan hoy.
 - `PIN_MCoorMul` (bloqueos de edición del sistema viejo) y `_WEB_RecordsDeleted`: operativos, no datos.
 - Datos de la base `ecuapass - experts.mdb` que el bridge no alcanza (agencias con OCE, historial de envíos).
 

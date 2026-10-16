@@ -103,8 +103,11 @@ Pendiente:
   este mes): la web escribe en Access. Antes de `OPERACION_MODO=activo` hay que decidir cómo cargan en el sistema
   nuevo (portal propio, o leer lo que la web deja en Access y sumarlo como líneas `origen = 'E'`). Mientras tanto,
   "Nueva coordinación" lo avisa.
-- **DAE desde el registro de DAEs** (F2 del viejo): sincronizar `awbm_auxdaes` (finca, origen, país, vigencia, estado;
-  ~10.000 activas) y proponer la vigente al elegir la finca; ofrecer actualizarlas si cambia la fecha o el destino.
+- ~~DAE desde el registro de DAEs~~ (hecho 16/10/2026): `awbm_auxdaes` se sincroniza a `DaeFinca` y al coordinar se
+  propone la vigente al elegir la finca (`GET opciones/daes`, regla de `ITSSystem.Proc_6733B0`: finca + origen + país
+  del destino final + fecha de vuelo dentro del período, activas, la que empezó antes). Coincide con la DAE real en el
+  96 % de las líneas con carga de 2026 (2.332 de 2.424) y en las 28 de la 13909. En cursiva mientras es propuesta;
+  si cambia la fecha o el destino se recalcula, y si no hay vigente la fila avisa "Sin DAE vigente para el vuelo".
 - Transferir cajas entre guías o marcas (`frmPINTransferWizard`) y "Coordinación múltiple" (cargar una finca en varias
   guías sin abrirlas). Numeración de las coordinaciones nuevas después de la última del viejo al pasar a modo activo.
 - **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
