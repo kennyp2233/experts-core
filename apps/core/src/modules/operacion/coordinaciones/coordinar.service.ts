@@ -527,6 +527,8 @@ export class CoordinarService {
       actualizadoPorLegacy: null,
     };
     let coordId: number;
+    const registros = new Map<number, { usuario: string | null; fechaRegistro: Date | null; origen: string | null }>();
+    const ahora = new Date();
     if (id === null) {
       coordId = (
         await tx.documentoCoordinacion.create({
@@ -538,6 +540,13 @@ export class CoordinarService {
       await tx.documentoCoordinacion.update({ where: { id }, data: base });
       coordId = id;
       const w = { where: { idDocumentoCoordinacion: id } };
+      // Quién y cuándo registró cada línea (la finca por la web o la oficina) no cambia al regrabar.
+      for (const d of await tx.guiaHijaDetalle.findMany({
+        where: { guiaHija: { idDocumentoCoordinacion: id } },
+        select: { id: true, usuario: true, fechaRegistro: true, origen: true },
+      })) {
+        registros.set(d.id, d);
+      }
       await tx.guiaHija.deleteMany(w);
       await tx.documentoRuta.deleteMany(w);
       await tx.documentoManifiesto.deleteMany(w);
@@ -636,8 +645,8 @@ export class CoordinarService {
                 ancho: l.ancho ?? null,
                 alto: l.alto ?? null,
                 nota: l.nota ?? null,
-                usuario: usuario ?? null,
-                fechaRegistro: new Date(),
+                factura: l.factura?.trim() || null,
+                ...((l.idLinea && registros.get(l.idLinea)) || { usuario: usuario ?? null, fechaRegistro: ahora, origen: null }),
               })),
             },
           },

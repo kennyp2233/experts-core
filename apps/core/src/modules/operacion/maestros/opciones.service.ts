@@ -30,7 +30,8 @@ export class OpcionesService {
     @Inject(PRISMA_DOCUMENTOS) private readonly docs: PrismaDocumentos,
   ) {}
 
-  async buscar(tipo: string, q = '', limite = 20, ids?: number[]): Promise<Opcion[]> {
+  /** `idAerolinea` (solo guías): las de esa aerolínea, como el combo del sistema viejo. */
+  async buscar(tipo: string, q = '', limite = 20, ids?: number[], idAerolinea?: number): Promise<Opcion[]> {
     const t = q.trim();
     const take = Math.min(Math.max(limite, 1), 100);
     // `ids` trae opciones puntuales (para mostrar lo ya elegido al editar).
@@ -56,6 +57,7 @@ export class OpcionesService {
           },
           ...(digitos ? { numero: { contains: digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos } } : {}),
           ...(aerolineas ? { idAerolinea: { in: aerolineas.map((x) => x.id) } } : {}),
+          ...(idAerolinea ? { AND: [{ idAerolinea }] } : {}),
         };
         // Como el sistema viejo: virtuales por número; normales por fecha de ingreso y número.
         const guias = await this.docs.guiaMadre.findMany({

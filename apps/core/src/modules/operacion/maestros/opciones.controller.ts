@@ -28,11 +28,12 @@ export class OpcionesController {
     @Query('q') q?: string,
     @Query('limite') limite?: string,
     @Query('ids') ids?: string,
+    @Query('idAerolinea') idAerolinea?: string,
   ) {
     const lista = ids
       ?.split(',')
       .map(Number)
       .filter((n) => Number.isInteger(n) && n > 0);
-    return this.service.buscar(tipo, q ?? '', limite ? Number(limite) || 20 : 20, lista);
+    return this.service.buscar(tipo, q ?? '', limite ? Number(limite) || 20 : 20, lista, Number(idAerolinea) || undefined);
   }
 }

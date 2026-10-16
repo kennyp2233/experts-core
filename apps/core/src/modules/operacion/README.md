@@ -69,8 +69,24 @@ Ingreso de guías, Generar secuencia; la guía como `369-8469 5461`; fincas y ae
 "Eliminar" pero no borraba). La búsqueda de coordinaciones acepta guía con o sin guion, N° (también de las nuevas),
 marca, cliente o finca.
 
+Segunda revisión (16/10/2026, layout de `frmPIN_Coordina` reconstruido del binario y datos de 2025–2026): el detalle
+es "detalle coordinado", una fila por línea en el orden Fulls → Cajas → Kg → DAE, con nota (una fila en 0 con nota es
+una novedad: "no llegó 1.5", "va a KAM"), factura y quién la registró, que se conserva al modificar; la cabecera va
+Consignatario → Aerolínea → Guía (se propone su primera guía libre) → Fecha; la nota (termógrafo) a la vista; la lista
+es el "día de vuelo" (Todas / Por cortar / Cortadas, un día con Hoy y Mañana, totales del filtro al pie);
+"Ingreso peso neto" reparte el peso de la báscula entre las filas. En Access `docEstado` 1 = no cortada, 2 = cortada,
+0 = anulada: el dueño corta apenas completa la guía, así que "Por cortar" casi siempre está vacía.
+
 Pendiente:
 
+- **Las fincas cargan su detalle por la web** (74 % de las líneas desde 2025, `detOrigen = 'E'`, 56 fincas activas
+  este mes): la web escribe en Access. Antes de `OPERACION_MODO=activo` hay que decidir cómo cargan en el sistema
+  nuevo (portal propio, o leer lo que la web deja en Access y sumarlo como líneas `origen = 'E'`). Mientras tanto,
+  "Nueva coordinación" lo avisa.
+- **DAE desde el registro de DAEs** (F2 del viejo): sincronizar `awbm_auxdaes` (finca, origen, país, vigencia, estado;
+  ~10.000 activas) y proponer la vigente al elegir la finca; ofrecer actualizarlas si cambia la fecha o el destino.
+- Transferir cajas entre guías o marcas (`frmPINTransferWizard`) y "Coordinación múltiple" (cargar una finca en varias
+  guías sin abrirlas). Numeración de las coordinaciones nuevas después de la última del viejo al pasar a modo activo.
 - **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
   - Enter que avance de campo en coordinar, ingreso de guías y préstamo.
   - Foco inicial en la guía madre (nueva), en el buscador de la lista y del stock, y en la aerolínea del ingreso.
