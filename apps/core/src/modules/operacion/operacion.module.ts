@@ -12,6 +12,7 @@ import { ValidacionController } from './calculos/validacion.controller';
 import { ValidacionService } from './calculos/validacion.service';
 import { ExploradorMaestrosController } from './maestros/explorador-maestros.controller';
 import { ExploradorMaestrosService } from './maestros/explorador-maestros.service';
+import { EdicionMaestrosService } from './maestros/edicion-maestros.service';
 import { OpcionesController } from './maestros/opciones.controller';
 import { OpcionesService } from './maestros/opciones.service';
 import { FlowerCargoService } from './documentos/flowercargo.service';
@@ -48,6 +49,7 @@ import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
     IngresosGuiasService,
     ValidacionService,
     ExploradorMaestrosService,
+    EdicionMaestrosService,
     OpcionesService,
     FlowerCargoService,
     ReportesDiaService,

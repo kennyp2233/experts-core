@@ -25,6 +25,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = null;
+    // Errores por campo de un formulario ({ campo: mensaje }), para marcarlos en pantalla.
+    let errores: Record<string, string> | null = null;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -33,6 +35,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'object') {
         message = (exceptionResponse as any).message || exception.message;
         error = (exceptionResponse as any).error;
+        errores = (exceptionResponse as any).errores ?? null;
       } else {
         message = exceptionResponse;
       }
@@ -47,6 +50,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: (request as any).url,
       message,
       ...(error && { error }),
+      ...(errores && { errores }),
       // En producción no exponer detalles internos
       ...(!this.isProduction &&
         exception instanceof Error && {
