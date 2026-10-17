@@ -117,6 +117,8 @@ export interface GuiaHijaDetalle {
 }
 
 export interface CoordinacionDetalle extends CoordinacionResumen {
+  /** Fecha de la última modificación: se manda al grabar para no pisar cambios de otros (una finca que cargó). */
+  version: string;
   agencia: RefMaestro | null;
   tipoEmbarque: RefMaestro | null;
   pago: 'PREPAID' | 'COLLECT';

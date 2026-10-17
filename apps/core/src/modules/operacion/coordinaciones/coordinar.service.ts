@@ -34,6 +34,16 @@ const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 const dia = (s: string) => new Date(`${s.slice(0, 10)}T00:00:00Z`);
 const r6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
+/**
+ * Alguien grabó la coordinación desde que se leyó (una finca cargó por el
+ * portal u otro usuario grabó): no se pisa su cambio.
+ */
+export class CoordinacionCambiadaException extends ConflictException {
+  constructor() {
+    super('La coordinación cambió mientras la editabas (una finca cargó o alguien más grabó). Ábrela de nuevo para no perder esos cambios.');
+  }
+}
+
 interface LineaPreparada extends LineaCoordinacionDto {
   idConsignatario: number;
   codigoProducto: string | null;
@@ -173,7 +183,12 @@ export class CoordinarService {
     }, { timeout: 60_000 });
   }
 
-  async actualizar(id: number, dto: GuardarCoordinacionDto, usuario?: string) {
+  /**
+   * `origen`: de dónde vienen las líneas nuevas ('E' = la finca por el portal,
+   * como `detOrigen` del viejo). `dto.version`: si la coordinación cambió desde
+   * que se cargó (una finca cargó, otro usuario grabó), no se pisa.
+   */
+  async actualizar(id: number, dto: GuardarCoordinacionDto, usuario?: string, origen?: string) {
     const actual = await this.db.documentoCoordinacion.findUnique({
       where: { id },
       include: { guiaHijas: { include: { detalles: true } } },
@@ -183,14 +198,22 @@ export class CoordinarService {
     if (actual.estadoActual === 'CORTADO') {
       throw new ConflictException('La guía ya fue cortada: no puede modificarse.');
     }
+    if (dto.version && new Date(dto.version).getTime() !== actual.updatedAt.getTime()) {
+      throw new CoordinacionCambiadaException();
+    }
     const numeros = await this.numerosExistentes(actual.guiaHijas);
     const cambiaGuia = dto.idGuiaMadre !== actual.idGuiaMadre;
     const guia = cambiaGuia
       ? await this.guiaDisponible(dto.idGuiaMadre)
       : await this.db.guiaMadre.findUniqueOrThrow({ where: { id: actual.idGuiaMadre } });
-    const armada = await this.armar(dto, numeros, id);
+    const armada = await this.armar(dto, numeros, id, origen);
     return this.db.$transaction(async (tx) => {
-      await this.persistir(tx, id, dto, armada, guia.idAerolinea, usuario);
+      // Dos grabaciones a la vez (dos fincas cargando) no se pisan: se bloquea la
+      // fila hasta el commit y, si otra grabó desde que se leyó, esta falla.
+      const [fila] = await tx.$queryRaw<Array<{ updatedAt: Date }>>`
+        SELECT "updatedAt" FROM "DocumentoCoordinacion" WHERE "id" = ${id} FOR UPDATE`;
+      if (fila.updatedAt.getTime() !== actual.updatedAt.getTime()) throw new CoordinacionCambiadaException();
+      await this.persistir(tx, id, dto, armada, guia.idAerolinea, usuario, origen);
       if (cambiaGuia) {
         const anterior = await tx.guiaMadre.update({ where: { id: actual.idGuiaMadre }, data: { estado: 'INGRESADA' } });
         await tx.guiaMadre.update({ where: { id: guia.id }, data: { estado: 'COORDINADA' } });
@@ -198,6 +221,86 @@ export class CoordinarService {
       }
       return { id };
     }, { timeout: 60_000 });
+  }
+
+  /**
+   * La coordinación grabada, como el DTO de coordinar: para agregarle, cambiar
+   * o quitarle líneas (portal de fincas) sin tocar el resto. Cada línea lleva su
+   * `idLinea`, así conserva quién y cuándo la registró; `version` es la de ese
+   * momento.
+   */
+  async dtoDe(id: number): Promise<{ dto: GuardarCoordinacionDto; estado: string; codigoAccess: number | null }> {
+    const c = await this.db.documentoCoordinacion.findUnique({
+      where: { id },
+      include: {
+        liquidaciones: true,
+        rutas: { orderBy: { orden: 'asc' } },
+        manifiesto: true,
+        guiaHijas: { orderBy: { secuencial: 'asc' }, include: { detalles: { orderBy: { numeroLinea: 'asc' } } } },
+      },
+    });
+    if (!c) throw new NotFoundException('La coordinación no existe.');
+    const sinNulos = (o: object) =>
+      Object.fromEntries(
+        Object.entries(o).filter(([k, v]) => v !== null && !['id', 'idDocumentoCoordinacion', 'tipo', 'calculaPca'].includes(k)),
+      );
+    const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
+    const extra = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
+    const iso = (d: Date | null) => (d ? d.toISOString() : undefined);
+    const via = c.rutas.find((r) => r.tipoRuta.startsWith('VIA') && (r.vuelo || r.fechaHoraSalida || r.fechaHoraLlegada));
+    const dto: GuardarCoordinacionDto = {
+      version: c.updatedAt.toISOString(),
+      idGuiaMadre: c.idGuiaMadre,
+      idConsignatario: c.idConsignatario!,
+      idAgenciaIata: c.idAgenciaIata!,
+      idDestinoAwb: c.idDestinoAwb!,
+      idDestinoFinalDocs: c.idDestinoFinalDocs ?? undefined,
+      idTipoEmbarque: c.idTipoEmbarque ?? undefined,
+      pago: c.pago,
+      fechaVuelo: c.fechaVuelo.toISOString().slice(0, 10),
+      referencia: c.referencia ?? undefined,
+      nota: c.nota ?? undefined,
+      rutas: c.rutas.map((r) => ({
+        tipoRuta: r.tipoRuta as TramoRutaDto['tipoRuta'],
+        codigo: r.codigo ?? '',
+        vuelo: r.vuelo ?? undefined,
+        fechaHoraSalida: iso(r.fechaHoraSalida),
+        fechaHoraLlegada: iso(r.fechaHoraLlegada),
+      })),
+      liquidacion: normal ? sinNulos(normal) : undefined,
+      cobroCliente: extra ? sinNulos(extra) : undefined,
+      vuelo:
+        via || c.manifiesto
+          ? {
+              vuelo: via?.vuelo ?? undefined,
+              salida: iso(via?.fechaHoraSalida ?? null),
+              llegada: iso(via?.fechaHoraLlegada ?? null),
+              numeroManifiesto: c.manifiesto?.numero ?? undefined,
+              secuencial: c.manifiesto?.secuencial ?? undefined,
+            }
+          : undefined,
+      lineas: c.guiaHijas.flatMap((g) =>
+        g.detalles.map((d) => ({
+          idLinea: d.id,
+          idFinca: d.idFinca ?? g.idFinca,
+          idProducto: d.idProducto!,
+          idConsignatario: d.idConsignatario ?? g.idConsignatario ?? undefined,
+          cantidadCajas: d.cantidadCajas,
+          fulls: d.fulls ?? undefined,
+          idTipoCaja: d.idTipoCaja ?? undefined,
+          pesoKg: d.pesoKg ?? 0,
+          tallos: d.tallos ?? undefined,
+          valor: d.valor ?? undefined,
+          dae: d.dae ?? g.dae ?? '',
+          largo: d.largo ?? undefined,
+          ancho: d.ancho ?? undefined,
+          alto: d.alto ?? undefined,
+          nota: d.nota ?? undefined,
+          factura: d.factura ?? undefined,
+        })),
+      ),
+    };
+    return { dto, estado: c.estadoActual, codigoAccess: c.codigoAccess };
   }
 
   /** Corte de guía: irreversible. Deja la coordinación sin edición. */
@@ -219,6 +322,12 @@ export class CoordinarService {
     const normal = c.liquidaciones.find((l) => l.tipo === 'NORMAL');
     if (!normal?.pesoCobrable || !normal?.tarifa) {
       throw new BadRequestException('Falta el peso cobrable o la tarifa de la guía madre (los da la aerolínea).');
+    }
+    if (c.totalKgs !== null && normal.pesoCobrable < c.totalKgs) {
+      // Las fincas pueden haber cargado después de que la oficina puso el peso cobrable.
+      throw new BadRequestException(
+        `El peso cobrable (${normal.pesoCobrable} kg) es menor que el peso de la carga (${c.totalKgs} kg): corrígelo antes de cortar.`,
+      );
     }
     const cliente = c.corteExtra ? c.liquidaciones.find((l) => l.tipo === 'CORTE_EXTRA') : undefined;
     if (cliente && (!cliente.pesoCobrable || !cliente.tarifa)) {
@@ -263,11 +372,17 @@ export class CoordinarService {
     return guia;
   }
 
-  /** Valida, agrupa en guías hijas, totaliza y liquida. No escribe nada. */
+  /**
+   * Valida, agrupa en guías hijas, totaliza y liquida. No escribe nada.
+   * `origen` 'E' (la finca carga por el portal): el peso cobrable de la oficina
+   * no frena su carga, como en la web vieja; se exige al grabar en la oficina y
+   * al cortar.
+   */
   private async armar(
     dto: GuardarCoordinacionDto,
     numeros: Map<string, string>,
     idActual?: number,
+    origen?: string,
   ): Promise<CoordinacionArmada> {
     if (!dto.fechaVuelo) throw new BadRequestException('El campo fecha es obligatorio.');
     const advertencias: string[] = [];
@@ -356,7 +471,7 @@ export class CoordinarService {
     const totales = { ...totalesDeLineas(conFulls), volumen: volumenDeLineas(conFulls) };
 
     const v = valores(dto.liquidacion ?? {});
-    if (v.pesoCobrable !== null && v.pesoCobrable < totales.kgs) {
+    if (v.pesoCobrable !== null && v.pesoCobrable < totales.kgs && origen !== 'E') {
       // Regla del sistema viejo: "El Peso Volumen ingresado NO puede ser menor que el Peso Neto".
       throw new BadRequestException(
         `El peso cobrable (${v.pesoCobrable} kg) no puede ser menor que el peso de la carga (${totales.kgs} kg).`,
@@ -497,6 +612,7 @@ export class CoordinarService {
     a: CoordinacionArmada,
     idAerolinea: number | null,
     usuario?: string,
+    origen?: string,
   ): Promise<number> {
     const guia = await tx.guiaMadre.findUniqueOrThrow({ where: { id: dto.idGuiaMadre } });
     const v = valores(dto.liquidacion ?? {});
@@ -646,7 +762,7 @@ export class CoordinarService {
                 alto: l.alto ?? null,
                 nota: l.nota ?? null,
                 factura: l.factura?.trim() || null,
-                ...((l.idLinea && registros.get(l.idLinea)) || { usuario: usuario ?? null, fechaRegistro: ahora, origen: null }),
+                ...((l.idLinea && registros.get(l.idLinea)) || { usuario: usuario ?? null, fechaRegistro: ahora, origen: origen ?? null }),
               })),
             },
           },

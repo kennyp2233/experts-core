@@ -35,9 +35,24 @@ model User {
 
     // Relaciones
     trustedDevices TrustedDevice[]
+    /// Usuario de finca (rol FINCA): las fincas para las que carga en el portal.
+    fincas         UsuarioFinca[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+}
+
+/// Fincas de un usuario del portal de fincas (como WEB_sisFincas del sistema
+/// viejo: un usuario puede cargar para una o varias fincas). `idFinca` apunta a
+/// datos_maestros."Finca" (otro schema: FK lógica).
+model UsuarioFinca {
+    userId    String
+    idFinca   Int
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    @@id([userId, idFinca])
+    @@index([idFinca])
 }
 
 model TrustedDevice {
