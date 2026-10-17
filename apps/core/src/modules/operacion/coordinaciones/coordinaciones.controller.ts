@@ -74,6 +74,14 @@ export class CoordinacionesController {
     return this.impresion.guiasHijas(id, Number(guiaHija) || undefined);
   }
 
+  @Get(':id/guia-madre/impresion')
+  @ApiOperation({
+    summary: 'Datos para imprimir la guía madre (AWB), ya formateados. `?valores=aerolinea|cliente` (cliente = corte extra).',
+  })
+  impresionGuiaMadre(@Param('id', ParseIntPipe) id: number, @Query('valores') valores?: string) {
+    return this.impresion.guiaMadre(id, valores === 'cliente' ? 'cliente' : 'aerolinea');
+  }
+
   @Get(':id/flowercargo')
   @ApiOperation({ summary: 'Vista previa del archivo de manifiesto para FlowerCargo (filas y advertencias).' })
   async vistaFlowerCargo(@Param('id', ParseIntPipe) id: number) {
