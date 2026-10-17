@@ -11,6 +11,7 @@ import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
 import { FlowerCargoService } from '../documentos/flowercargo.service';
 import { ArchivoReporte, ReportesDiaService } from '../documentos/reportes-dia.service';
+import { ImpresionService } from '../documentos/impresion.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
 const usuario = (req: ConUsuario) => req.user?.username ?? req.user?.email;
@@ -27,6 +28,7 @@ export class CoordinacionesController {
     private readonly coordinar: CoordinarService,
     private readonly archivoFlowerCargo: FlowerCargoService,
     private readonly reportes: ReportesDiaService,
+    private readonly impresion: ImpresionService,
   ) {}
 
   @Get()
@@ -64,6 +66,12 @@ export class CoordinacionesController {
   @ApiOperation({ summary: 'Detalle: guías hijas con sus líneas, liquidación, ruta, manifiesto, marcas y medidas.' })
   detalle(@Param('id', ParseIntPipe) id: number) {
     return this.service.detalle(id);
+  }
+
+  @Get(':id/guias-hijas/impresion')
+  @ApiOperation({ summary: 'Datos para imprimir las guías hijas por finca (House Air Waybill). `?guiaHija=` para una sola.' })
+  impresionGuiasHijas(@Param('id', ParseIntPipe) id: number, @Query('guiaHija') guiaHija?: string) {
+    return this.impresion.guiasHijas(id, Number(guiaHija) || undefined);
   }
 
   @Get(':id/flowercargo')

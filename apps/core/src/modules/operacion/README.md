@@ -28,6 +28,9 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Ingreso de guías (documento CGU): lista, detalle, grabar, modificar, anular | `/operacion/guias-madre/ingresos[/:id]` | `/operacion/guias/ingresos` |
 | Administración de guías: préstamo, quitar préstamo, devolución, verificar estado | `/operacion/guias-madre[/:id/…]` | `/operacion/guias/administracion` |
 | Archivo de manifiesto para FlowerCargo (txt por tabs, una fila por RUC de finca) | `GET /operacion/coordinaciones/:id/flowercargo[.txt]` | botón "FlowerCargo" en el detalle |
+| Portal de fincas: guías abiertas, cargar / corregir / borrar su detalle, sus DAE | `/portal-fincas/*` (rol `FINCA`) | `/portal` |
+| Usuarios de fincas (crear, fincas que ve, desactivar, nueva clave) | `/operacion/usuarios-fincas` (rol `ADMIN`) | `/operacion/usuarios-fincas` |
+| Imprimir guías hijas por finca (HAWB en hoja blanca A4) | `GET /operacion/coordinaciones/:id/guias-hijas/impresion[?guiaHija=]` | `/imprimir/coordinaciones/:id/guias-hijas` |
 | Validación contra Access | `GET /operacion/validacion`, `GET /operacion/coordinaciones/:id/validacion` | `/operacion/validacion` |
 | Datos maestros (solo lectura) | `GET /maestros/*` | `/maestros` |
 
@@ -99,10 +102,8 @@ mismos datos, p. ej. la 13909 y el vuelo del 13/10/2026):
 
 Pendiente:
 
-- **Las fincas cargan su detalle por la web** (74 % de las líneas desde 2025, `detOrigen = 'E'`, 56 fincas activas
-  este mes): la web escribe en Access. Antes de `OPERACION_MODO=activo` hay que decidir cómo cargan en el sistema
-  nuevo (portal propio, o leer lo que la web deja en Access y sumarlo como líneas `origen = 'E'`). Mientras tanto,
-  "Nueva coordinación" lo avisa.
+- ~~Las fincas cargan su detalle por la web~~ (portal propio, 17/10/2026; ver [Portal de fincas](#portal-de-fincas)).
+  Falta confirmar con el dueño usuarios y claves, hora límite, avisos y los kg por caja (22 en la web vieja).
 - ~~DAE desde el registro de DAEs~~ (hecho 16/10/2026): `awbm_auxdaes` se sincroniza a `DaeFinca` y al coordinar se
   propone la vigente al elegir la finca (`GET opciones/daes`, regla de `ITSSystem.Proc_6733B0`: finca + origen + país
   del destino final + fecha de vuelo dentro del período, activas, la que empezó antes). Coincide con la DAE real en el
@@ -116,7 +117,8 @@ Pendiente:
   - En los buscadores, escribir y salir con Tab borra lo escrito: falta `autoHighlight` + `autoSelect` en `OpcionAutocomplete`.
   - Atajos: Ctrl+S / Alt+G = Grabar, F3 = Recalcular, F2 en la DAE = copiar la de la fila anterior, Enter en la última
     fila = agregar finca, y que el Tab salte los valores sugeridos.
-- **Imprimir** guía madre, HAWB y manifiesto al cortar (el viejo lo hacía; faltan los formatos del dueño).
+- **Imprimir** la guía madre (papel preimpreso de cada aerolínea, `GM*.xlt`) y el manifiesto: faltan las respuestas
+  del dueño (papel, impresora, si va la tarifa). La guía hija por finca ya se imprime (ver [Impresión](#impresión)).
 - **"Ganancia"** = total al cliente − total guía madre: incluye los cargos de agencia (Transport, Fitos, Form A).
   Confirmar con el dueño si así la mide o si debe ser solo la diferencia de tarifa.
 - El viejo abría en el último documento y navegaba Primero/Anterior/Siguiente/Último por N°; el nuevo navega
@@ -159,6 +161,35 @@ guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una gu�
 - No se migra: Asignación (sin uso), Certificación, Facturación, Pagos y Facturación AWBs (muertos desde 2012–2015).
 - Pendiente (preguntar al dueño): botón "Reemplazar guía" (ingreso nuevo + cambio en la coordinación + anular el viejo,
   ~70 veces al año); si la referencia (agencia IATA) debe ser obligatoria; impresión del ingreso (no se usa desde 2022).
+
+## Portal de fincas
+
+Reemplazo de la web de fincas del sistema viejo (`WEB_sisUsuarios` / `WEB_sisFincas`; carga el 74 % de las líneas,
+`detOrigen = 'E'`). Análisis: `legacy-analysis/` (web de fincas, 17/10/2026).
+
+- **Usuarios**: rol `FINCA` en la tabla de usuarios, con las fincas que ve en `UsuarioFinca` (n:m, como
+  `WEB_sisFincas`). Los crea un ADMIN en "Usuarios de fincas" con una clave aleatoria de 8 caracteres que se le pasa a la
+  finca (bcrypt; la web vieja guardaba claves de 6 en texto plano, no se migran). Desactivar = no entra más.
+- **Guías abiertas**: coordinaciones en Borrador con fecha de vuelo de hoy en adelante (hora de Ecuador); en modo
+  sombra solo las del sistema nuevo. La oficina puede grabar **solo la cabecera** (sin líneas) mientras está en
+  Borrador para que las fincas carguen; al cortar se exige detalle.
+- **Cargar**: la finca agrega, corrige o borra **solo sus líneas** (`origen = 'E'`; las de la oficina las ve pero no
+  las toca). La DAE se propone del registro (misma regla que al coordinar); el peso por defecto = cajas × `kgPorCaja`.
+  Cada cambio pasa por `CoordinarService.actualizar` (mismos cálculos, guías hijas y validaciones que la oficina).
+- **Concurrencia**: el detalle trae `version` (`updatedAt`) y al grabar la oficina lo devuelve; si una finca cargó
+  entre medio, 409 "La coordinación cambió mientras la editabas" en vez de pisar su carga.
+- **Mis DAE**: la finca registra sus DAE (país, desde, hasta) en `DaeFinca` con `codigoAccess = null`; solo puede
+  quitar las que registró ahí. Las del sistema viejo llegan por el sync y no se tocan.
+- La API de oficina responde 403 al rol `FINCA` (además de `RolesGuard` en los controladores de guía madre y EBF, que
+  no lo tenían) y el front la manda a `/portal`.
+
+## Impresión
+
+Guías hijas por finca (`documentos/impresion.service.ts`), como "Guías Hija por Finca" del viejo (`repCoordina2.rpt`):
+una House Air Waybill por guía hija en hoja blanca A4, con la finca como shipper (RUC, dirección, teléfono, ciudad),
+el consignee y notify de la guía hija de la marca (`ConsignatarioGuiaH`), Experts como agente emisor (parámetros
+`EMPRESA.*`), ruta y aerolínea, pago PP/CC, DAE, fulls y manifiesto en "Handling Information", y "AS AGREED". Se
+imprime desde el navegador (botón "Guías hijas" del detalle; Ctrl+P). Verificado con la 13909: 27 hojas.
 
 ## Archivo FlowerCargo
 

@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  ArrayMinSize,
   IsArray,
   IsDateString,
   IsIn,
@@ -168,9 +167,17 @@ export class GuardarCoordinacionDto {
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => TramoRutaDto)
   rutas?: TramoRutaDto[];
 
+  // Puede ir vacía mientras la guía está abierta: como en el viejo, se crea la
+  // cabecera y las fincas cargan su detalle (portal). El corte exige detalle.
   @ApiProperty({ type: [LineaCoordinacionDto] })
-  @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => LineaCoordinacionDto)
+  @IsArray() @ValidateNested({ each: true }) @Type(() => LineaCoordinacionDto)
   lineas: LineaCoordinacionDto[];
+
+  @ApiPropertyOptional({
+    description: 'Al modificar: la versión que se cargó (fecha de última modificación). Si cambió, no se graba.',
+  })
+  @IsOptional() @IsDateString()
+  version?: string;
 
   @ApiPropertyOptional({ type: ValoresLiquidacionDto, description: 'Lo que cobra la aerolínea (va en la guía madre)' })
   @IsOptional() @ValidateNested() @Type(() => ValoresLiquidacionDto)
