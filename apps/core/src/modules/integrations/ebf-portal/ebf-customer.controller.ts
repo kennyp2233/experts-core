@@ -17,6 +17,9 @@ import {
   parseFreshFlag,
 } from './cache/ebf-list-cache.service';
 import type { BinaryDownload } from './services/customer-awb.service';
+import { RolesGuard } from '../../auth/v1/guards/roles.guard';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
 /**
  * Endpoints del rol cliente del portal EBF. Namespace `/customer/*` —
@@ -33,7 +36,9 @@ import type { BinaryDownload } from './services/customer-awb.service';
   path: 'integrations/ebf-portal/customer',
   version: '1',
 })
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+// Oficina (y clientes en el portal EBF): los usuarios de finca (portal de fincas) no entran.
+@Roles(UserRole.ADMIN, UserRole.USER, UserRole.CLIENTE)
 export class EbfCustomerController {
   constructor(
     private readonly service: EbfPortalService,

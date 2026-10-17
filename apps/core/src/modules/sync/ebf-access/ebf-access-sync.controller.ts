@@ -9,6 +9,9 @@ import {
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
 import { EbfAccessSyncService } from './ebf-access-sync.service';
+import { RolesGuard } from '../../auth/v1/guards/roles.guard';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
 const STATUSES = [
   'SYNCED',
@@ -29,7 +32,9 @@ type StatusFilter = (typeof STATUSES)[number];
  */
 @ApiTags('Sync / EBF-Access')
 @Controller({ path: 'sync/ebf-access', version: '1' })
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+// Oficina: los usuarios de finca (portal de fincas) no entran.
+@Roles(UserRole.ADMIN, UserRole.USER)
 export class EbfAccessSyncController {
   constructor(private readonly service: EbfAccessSyncService) {}
 

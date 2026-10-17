@@ -20,6 +20,9 @@ import {
 import { CreateCoordinacionDto } from './dto/create-coordinacion.dto';
 import { UpdateCoordinacionDto } from './dto/update-coordinacion.dto';
 import { BoxWeightDto } from './dto/box-weight.dto';
+import { RolesGuard } from '../../auth/v1/guards/roles.guard';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
 const FRESH_QUERY_DOC = {
   name: 'fresh',
@@ -32,7 +35,9 @@ const FRESH_QUERY_DOC = {
 /** Requiere sesión (JWT cookie), cualquier rol. */
 @ApiTags('Integrations / EBF Portal')
 @Controller({ path: 'integrations/ebf-portal', version: '1' })
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+// Oficina: los usuarios de finca (portal de fincas) no entran.
+@Roles(UserRole.ADMIN, UserRole.USER)
 export class EbfPortalController {
   constructor(
     private readonly service: EbfPortalService,
