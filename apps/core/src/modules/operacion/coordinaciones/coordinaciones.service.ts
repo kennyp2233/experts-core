@@ -223,6 +223,7 @@ export class CoordinacionesService {
         })),
       })),
       datosLegacy: (c.datosLegacy as Record<string, unknown> | null) ?? null,
+      version: c.updatedAt.toISOString(),
       auditoria: {
         creadoPor: c.creadoPorLegacy,
         creadoEn: iso(c.creadoEnLegacy),

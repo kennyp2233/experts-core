@@ -5,10 +5,9 @@ import { CreateGuiaMadreDto } from './dto/create-guia-madre.dto';
 import { UpdateGuiaMadreDto } from './dto/update-guia-madre.dto';
 import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard'; // Adjust path if needed
 import { RolesGuard } from '../../auth/v1/guards/roles.guard'; // Adjust path if needed
-// import { Roles } from '../../auth/v1/decorators/roles.decorator';
-// import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
+import { Roles } from '../../auth/v1/decorators/roles.decorator';
+import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 
-// Assuming basic auth for now, user can uncomment Roles if specific roles needed
 @ApiTags('documents/guia-madre')
 @ApiBearerAuth()
 @Controller({
@@ -16,6 +15,8 @@ import { RolesGuard } from '../../auth/v1/guards/roles.guard'; // Adjust path if
     version: '1',
 })
 @UseGuards(JwtAuthGuard, RolesGuard)
+// Oficina: los usuarios de finca (portal de fincas) no entran.
+@Roles(UserRole.ADMIN, UserRole.USER)
 export class GuiaMadreController {
     constructor(private readonly guiaMadreService: GuiaMadreService) { }
 

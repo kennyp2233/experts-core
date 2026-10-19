@@ -12,10 +12,15 @@ import { ValidacionController } from './calculos/validacion.controller';
 import { ValidacionService } from './calculos/validacion.service';
 import { ExploradorMaestrosController } from './maestros/explorador-maestros.controller';
 import { ExploradorMaestrosService } from './maestros/explorador-maestros.service';
+import { EdicionMaestrosService } from './maestros/edicion-maestros.service';
 import { OpcionesController } from './maestros/opciones.controller';
 import { OpcionesService } from './maestros/opciones.service';
 import { FlowerCargoService } from './documentos/flowercargo.service';
 import { ReportesDiaService } from './documentos/reportes-dia.service';
+import { ImpresionService } from './documentos/impresion.service';
+import { PortalFincasController, UsuariosFincasController } from './portal-fincas/portal-fincas.controller';
+import { PortalFincasService } from './portal-fincas/portal-fincas.service';
+import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
 
 /**
  * Operación del sistema nuevo (reemplazo del sistema viejo, ADR 0003):
@@ -32,6 +37,8 @@ import { ReportesDiaService } from './documentos/reportes-dia.service';
     ValidacionController,
     ExploradorMaestrosController,
     OpcionesController,
+    PortalFincasController,
+    UsuariosFincasController,
   ],
   providers: [
     NombresMaestrosService,
@@ -42,9 +49,13 @@ import { ReportesDiaService } from './documentos/reportes-dia.service';
     IngresosGuiasService,
     ValidacionService,
     ExploradorMaestrosService,
+    EdicionMaestrosService,
     OpcionesService,
     FlowerCargoService,
     ReportesDiaService,
+    ImpresionService,
+    PortalFincasService,
+    UsuariosFincasService,
   ],
   exports: [NombresMaestrosService, CoordinacionesService],
 })

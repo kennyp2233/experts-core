@@ -1,5 +1,8 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
+import { modoOperacion } from '../comun/modo-operacion';
+import { EdicionMaestrosService } from './edicion-maestros.service';
+import { FORMULARIOS } from './formularios-maestros';
 
 /** Fila de la lista del explorador (igual para todas las entidades). */
 export interface FilaMaestro {
@@ -8,6 +11,8 @@ export interface FilaMaestro {
   nombre: string;
   detalle: string | null;
   activo: boolean | null;
+  /** Creado en el sistema nuevo (no viene del sync). Solo en las entidades que se editan. */
+  nuevo?: boolean;
 }
 
 type Delegate = {
@@ -34,8 +39,8 @@ interface DefEntidad {
 const s = (v: unknown) => (v === null || v === undefined || v === '' ? null : String(v));
 
 /**
- * Explorador de solo lectura de los datos maestros (vienen del sistema viejo
- * por el sync; en PG no se editan mientras Access mande).
+ * Explorador de los datos maestros (vienen del sistema viejo por el sync). Los
+ * que tienen formulario se editan con EdicionMaestrosService.
  */
 const ENTIDADES: Record<string, DefEntidad> = {
   consignatarios: {
@@ -180,7 +185,10 @@ const ENTIDADES: Record<string, DefEntidad> = {
 
 @Injectable()
 export class ExploradorMaestrosService {
-  constructor(@Inject('PrismaClientDatosMaestros') private readonly db: PrismaMaestros) {}
+  constructor(
+    @Inject('PrismaClientDatosMaestros') private readonly db: PrismaMaestros,
+    private readonly edicion: EdicionMaestrosService,
+  ) {}
 
   private def(entidad: string): DefEntidad {
     const d = ENTIDADES[entidad];
@@ -196,6 +204,7 @@ export class ExploradorMaestrosService {
         titulo: d.titulo,
         descripcion: d.descripcion,
         grupo: d.grupo,
+        editable: this.edicion.editable(clave),
         total: await d.delegate(this.db).count({}),
       })),
     );
@@ -212,7 +221,21 @@ export class ExploradorMaestrosService {
       del.count({ where }),
       del.findMany({ where, orderBy: d.orden, skip: (page - 1) * pageSize, take: pageSize }),
     ]);
-    return { titulo: d.titulo, descripcion: d.descripcion, items: filas.map(d.fila), total, page, pageSize };
+    const items = filas.map(d.fila);
+    const f = FORMULARIOS[entidad];
+    if (f) {
+      const viejos = await this.edicion.delViejo(entidad, items.map((i) => i.id));
+      for (const i of items) i.nuevo = !viejos.has(String(i.id));
+    }
+    return {
+      titulo: d.titulo,
+      descripcion: d.descripcion,
+      items,
+      total,
+      page,
+      pageSize,
+      edicion: f ? { singular: f.singular, femenino: !!f.femenino, modo: modoOperacion() } : null,
+    };
   }
 
   async ficha(entidad: string, id: string) {

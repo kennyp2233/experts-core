@@ -28,8 +28,11 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Ingreso de guías (documento CGU): lista, detalle, grabar, modificar, anular | `/operacion/guias-madre/ingresos[/:id]` | `/operacion/guias/ingresos` |
 | Administración de guías: préstamo, quitar préstamo, devolución, verificar estado | `/operacion/guias-madre[/:id/…]` | `/operacion/guias/administracion` |
 | Archivo de manifiesto para FlowerCargo (txt por tabs, una fila por RUC de finca) | `GET /operacion/coordinaciones/:id/flowercargo[.txt]` | botón "FlowerCargo" en el detalle |
+| Portal de fincas: guías abiertas, cargar / corregir / borrar su detalle, sus DAE | `/portal-fincas/*` (rol `FINCA`) | `/portal` |
+| Usuarios de fincas (crear, fincas que ve, desactivar, nueva clave) | `/operacion/usuarios-fincas` (rol `ADMIN`) | `/operacion/usuarios-fincas` |
+| Imprimir guías hijas por finca (HAWB en hoja blanca A4) | `GET /operacion/coordinaciones/:id/guias-hijas/impresion[?guiaHija=]` | `/imprimir/coordinaciones/:id/guias-hijas` |
 | Validación contra Access | `GET /operacion/validacion`, `GET /operacion/coordinaciones/:id/validacion` | `/operacion/validacion` |
-| Datos maestros (solo lectura) | `GET /maestros/*` | `/maestros` |
+| Datos maestros: lista, ficha, alta y cambios (fincas, consignatarios, embarcadores, clientes, productos, aerolíneas, agencias, subagencias, destinos, países, tipos de embarque, choferes) | `GET /maestros[/:entidad[/:id[/edicion]]]`, `GET /maestros/:entidad/formulario`, `POST /maestros/:entidad`, `PUT /maestros/:entidad/:id` | `/maestros` |
 
 ## Reglas y validación
 
@@ -99,10 +102,8 @@ mismos datos, p. ej. la 13909 y el vuelo del 13/10/2026):
 
 Pendiente:
 
-- **Las fincas cargan su detalle por la web** (74 % de las líneas desde 2025, `detOrigen = 'E'`, 56 fincas activas
-  este mes): la web escribe en Access. Antes de `OPERACION_MODO=activo` hay que decidir cómo cargan en el sistema
-  nuevo (portal propio, o leer lo que la web deja en Access y sumarlo como líneas `origen = 'E'`). Mientras tanto,
-  "Nueva coordinación" lo avisa.
+- ~~Las fincas cargan su detalle por la web~~ (portal propio, 17/10/2026; ver [Portal de fincas](#portal-de-fincas)).
+  Falta confirmar con el dueño usuarios y claves, hora límite, avisos y los kg por caja (22 en la web vieja).
 - ~~DAE desde el registro de DAEs~~ (hecho 16/10/2026): `awbm_auxdaes` se sincroniza a `DaeFinca` y al coordinar se
   propone la vigente al elegir la finca (`GET opciones/daes`, regla de `ITSSystem.Proc_6733B0`: finca + origen + país
   del destino final + fecha de vuelo dentro del período, activas, la que empezó antes). Coincide con la DAE real en el
@@ -116,7 +117,8 @@ Pendiente:
   - En los buscadores, escribir y salir con Tab borra lo escrito: falta `autoHighlight` + `autoSelect` en `OpcionAutocomplete`.
   - Atajos: Ctrl+S / Alt+G = Grabar, F3 = Recalcular, F2 en la DAE = copiar la de la fila anterior, Enter en la última
     fila = agregar finca, y que el Tab salte los valores sugeridos.
-- **Imprimir** guía madre, HAWB y manifiesto al cortar (el viejo lo hacía; faltan los formatos del dueño).
+- **Imprimir**: guía madre (hoja blanca o papel de guía calibrable), guías hijas por finca y manifiesto ya se imprimen
+  (ver [Impresión](#impresión)); faltan las respuestas del dueño (papel, impresora, qué tarifa va, quién firma).
 - **"Ganancia"** = total al cliente − total guía madre: incluye los cargos de agencia (Transport, Fitos, Form A).
   Confirmar con el dueño si así la mide o si debe ser solo la diferencia de tarifa.
 - El viejo abría en el último documento y navegaba Primero/Anterior/Siguiente/Último por N°; el nuevo navega
@@ -159,6 +161,84 @@ guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una gu�
 - No se migra: Asignación (sin uso), Certificación, Facturación, Pagos y Facturación AWBs (muertos desde 2012–2015).
 - Pendiente (preguntar al dueño): botón "Reemplazar guía" (ingreso nuevo + cambio en la coordinación + anular el viejo,
   ~70 veces al año); si la referencia (agencia IATA) debe ser obligatoria; impresión del ingreso (no se usa desde 2022).
+
+## Datos maestros
+
+Se editan en `/maestros` (17/10/2026), para poder apagar el sistema viejo: en el último año aparecieron 31 fincas nuevas
+y las aerolíneas cambian tarifas y cargos.
+
+- **Un formulario por entidad** en [`maestros/formularios-maestros.ts`](maestros/formularios-maestros.ts): secciones,
+  campos (texto, párrafo, número, sí/no, opciones, tabla hija), obligatorios, ayudas y de dónde salen las opciones. El
+  front dibuja con él la ficha de lectura y el formulario; un campo nuevo se agrega solo ahí. Lo que no está en el
+  formulario no se toca (p. ej. los datos de transmisión LAN del consignatario, muertos desde 2009).
+- [`EdicionMaestrosService`](maestros/edicion-maestros.service.ts) valida igual que el front (obligatorios, números con
+  coma, largos, que lo elegido exista) y devuelve los errores por campo (`errores` en la respuesta 400); guarda en
+  mayúsculas lo que se imprime, una línea por renglón en direcciones y consignee, subtablas 1:1 con upsert
+  (`guiaM.guiaMNotify`) y tablas hijas reemplazadas enteras (productos de la finca, cargos de la aerolínea).
+- **Modo sombra**: lo que vino del sistema viejo (registrado en `SyncLegacyRegistro`, o con `codigoAccess`) se ve pero no
+  se cambia (403): se cambia allá y llega por el sync. Lo creado aquí sí, y la lista lo marca "Creado aquí". Los
+  códigos que también son llave del sync (producto, destino, país, tipo de embarque) se ponen al crear y no se cambian
+  después. Ojo: si en el sistema viejo se crea después el mismo código, el sync toma el registro de aquí.
+- Nada se borra: se desactiva (deja de ofrecerse al coordinar), como en el sistema viejo y en el sync.
+- No se editan todavía: parámetros, medidas, orígenes, aranceles y productos compuestos, DAEs desde la oficina (las
+  fincas registran las suyas en el portal), choferes por finca.
+
+## Portal de fincas
+
+Reemplazo de la web de fincas del sistema viejo (`WEB_sisUsuarios` / `WEB_sisFincas`; carga el 74 % de las líneas,
+`detOrigen = 'E'`). Análisis: `legacy-analysis/` (web de fincas, 17/10/2026).
+
+- **Usuarios**: rol `FINCA` en la tabla de usuarios, con las fincas que ve en `UsuarioFinca` (n:m, como
+  `WEB_sisFincas`). Los crea un ADMIN en "Usuarios de fincas" con una clave aleatoria de 8 caracteres que se le pasa a la
+  finca (bcrypt; la web vieja guardaba claves de 6 en texto plano, no se migran). Desactivar = no entra más.
+- **Guías abiertas**: coordinaciones en Borrador con fecha de vuelo de hoy en adelante (hora de Ecuador); en modo
+  sombra solo las del sistema nuevo. La oficina puede grabar **solo la cabecera** (sin líneas) mientras está en
+  Borrador para que las fincas carguen; al cortar se exige detalle.
+- **Cargar**: la finca agrega, corrige o borra **solo sus líneas** (`origen = 'E'`; las de la oficina las ve pero no
+  las toca). La DAE se propone del registro (misma regla que al coordinar); el peso por defecto = cajas × `kgPorCaja`.
+  Cada cambio pasa por `CoordinarService.actualizar` (mismos cálculos, guías hijas y validaciones que la oficina).
+- **Concurrencia**: el detalle trae `version` (`updatedAt`) y al grabar la oficina lo devuelve; si una finca cargó
+  entre medio, 409 "La coordinación cambió mientras la editabas" en vez de pisar su carga.
+- **Mis DAE**: la finca registra sus DAE (país, desde, hasta) en `DaeFinca` con `codigoAccess = null`; solo puede
+  quitar las que registró ahí. Las del sistema viejo llegan por el sync y no se tocan.
+- La API de oficina responde 403 al rol `FINCA` (además de `RolesGuard` en los controladores de guía madre y EBF, que
+  no lo tenían) y el front la manda a `/portal`.
+
+## Impresión
+
+Guías hijas por finca (`documentos/impresion.service.ts`), como "Guías Hija por Finca" del viejo (`repCoordina2.rpt`):
+una House Air Waybill por guía hija en hoja blanca A4, con la finca como shipper (RUC, dirección, teléfono, ciudad),
+el consignee y notify de la guía hija de la marca (`ConsignatarioGuiaH`), Experts como agente emisor (parámetros
+`EMPRESA.*`), ruta y aerolínea, pago PP/CC, DAE, fulls y manifiesto en "Handling Information", y "AS AGREED". Se
+imprime desde el navegador (botón "Imprimir" del detalle → "Guías hijas por finca"; Ctrl+P). Verificado con la 13909:
+27 hojas.
+
+**Guía madre** (`GET coordinaciones/:id/guia-madre/impresion?valores=aerolinea|cliente`, `ImpresionService.guiaMadre`),
+como "Guía Madre" del viejo (`Proc_732F70` llenando la `GM*.xlt` de la aerolínea). El back arma todo formateado:
+número (prefijo / resto como `MID(1,3)` / `MID(4,10)`), shipper = cliente de la marca (`Embarcador`), consignee y
+notify de la guía madre (`ConsignatarioGuiaM`), agente IATA (`AgenciaIata.*Carrier`), aeropuertos, ruta `UIO/AMS//`,
+piezas/kilos/fulls, peso cobrable × tarifa, naturaleza (`TipoEmbarque.descripcionGuia`), fincas `"1,50=ALIAS"` (fulls
+por finca de toda la guía, por alias), cargos de aerolínea con sus rótulos (`ConceptoCosto.abreviatura`), códigos de
+agencia (`PARAMETROS.CODAGE*`) y totales (`resumirLiquidacion`). `valores=cliente` usa el juego CORTE_EXTRA (lo que se
+le cobra al cliente) si la coordinación tiene cobro al cliente. Se imprime antes del corte ("Pre-corte") y después.
+El front (`/imprimir/coordinaciones/:id/guia-madre`) tiene dos formatos:
+- **Hoja blanca**: formulario IATA completo dibujado (cabe en A4 y carta).
+- **Papel de guía**: solo los datos, en las posiciones en mm sacadas de `GMATLAS VIRTUAL.xlt` (la geometría de casi
+  todas) o de `GMTurkishVirtual.xlt` (si la plantilla dice "Turkish"), con los textos fijos de la plantilla y el
+  cuadro de la aerolínea de las plantillas "Virtual" (guía neutra). Papel, corrimiento X/Y, firma y cuadro se
+  **calibran por aerolínea en el navegador** (`localStorage`, clave = `plantillaGuiaMadre`), con cuadrícula de 10 mm.
+
+Pendiente de confirmar con el dueño: si imprime en papel preimpreso o en hoja blanca, qué papel trae cada aerolínea y
+en qué impresora; qué tarifa va en la guía madre (la de la aerolínea o la del cliente); quién firma hoy (las
+plantillas traen MAURICIO PINCHAO o JAVIER BUSTOS); si el total debe llevar los cargos de agencia (como el viejo, por
+defecto no: total = flete + cargos de aerolínea + IVA, 3.973,00 en la 13909; con "Códigos de agencia" se imprimen los
+códigos, "Total Other Charges Due Agent" y el total con ellos). Si el papel de guía se usa en varias PC, pasar la
+calibración a PG (side-car por aerolínea).
+
+**Manifiesto** (`/imprimir/coordinaciones/:id/manifiesto`, con los datos de `guias-hijas/impresion`): "CONSOLIDATED
+CARGO MANIFEST" en A4 horizontal, cabecera (MAWB, aerolínea, vuelo/fecha, ruta, consolidador, consignee de la guía
+madre, manifiesto CAE) y una fila por guía hija (HAWB, finca + RUC, consignee, piezas, kilos, fulls, DAE, productos)
+con totales; el encabezado de la tabla se repite en cada hoja.
 
 ## Archivo FlowerCargo
 

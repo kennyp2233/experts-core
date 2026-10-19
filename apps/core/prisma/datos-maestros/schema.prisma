@@ -513,8 +513,8 @@ model RegistroAgrocalidad {
 /// período (ITSSystem.Proc_6733B0 del sistema viejo).
 model DaeFinca {
     id              Int       @id @default(autoincrement())
-    /// awbm_auxdaes.ID
-    codigoAccess    Int       @unique
+    /// awbm_auxdaes.ID; null = la registró la finca en el portal del sistema nuevo
+    codigoAccess    Int?      @unique
     idFinca         Int?
     /// Aeropuerto de origen (oriCodigo), ej. "UIO"
     origen          String
