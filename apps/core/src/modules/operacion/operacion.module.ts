@@ -18,6 +18,7 @@ import { OpcionesService } from './maestros/opciones.service';
 import { FlowerCargoService } from './documentos/flowercargo.service';
 import { ReportesDiaService } from './documentos/reportes-dia.service';
 import { ImpresionService } from './documentos/impresion.service';
+import { DocumentosGuiaService } from './documentos/documentos-guia.service';
 import { PortalFincasController, UsuariosFincasController } from './portal-fincas/portal-fincas.controller';
 import { PortalFincasService } from './portal-fincas/portal-fincas.service';
 import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
@@ -69,6 +70,7 @@ import { CorteDefinitivoService } from './comun/corte-definitivo.service';
     FlowerCargoService,
     ReportesDiaService,
     ImpresionService,
+    DocumentosGuiaService,
     PortalFincasService,
     UsuariosFincasService,
     CorteDefinitivoService,

@@ -12,6 +12,7 @@ import { CoordinarService } from './coordinar.service';
 import { FlowerCargoService } from '../documentos/flowercargo.service';
 import { ArchivoReporte, ReportesDiaService } from '../documentos/reportes-dia.service';
 import { ImpresionService } from '../documentos/impresion.service';
+import { DocumentosGuiaService } from '../documentos/documentos-guia.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
 const usuario = (req: ConUsuario) => req.user?.username ?? req.user?.email;
@@ -29,6 +30,7 @@ export class CoordinacionesController {
     private readonly archivoFlowerCargo: FlowerCargoService,
     private readonly reportes: ReportesDiaService,
     private readonly impresion: ImpresionService,
+    private readonly documentos: DocumentosGuiaService,
   ) {}
 
   @Get()
@@ -54,6 +56,12 @@ export class CoordinacionesController {
   @ApiOperation({ summary: 'Excel "Reporte Antinarcóticos" de un día: una fila por finca de cada guía. `?dia=AAAA-MM-DD&idAerolinea=`' })
   async antinarcoticos(@Query('dia') dia: string, @Res() res: Response, @Query('idAerolinea') idAerolinea?: string) {
     this.enviar(res, await this.reportes.antinarcoticos(dia, Number(idAerolinea) || undefined));
+  }
+
+  @Get('reportes/reservas')
+  @ApiOperation({ summary: 'Excel "Reservas" de un día: una hoja por aerolínea, una fila por guía. `?dia=AAAA-MM-DD&idAerolinea=`' })
+  async reservas(@Query('dia') dia: string, @Res() res: Response, @Query('idAerolinea') idAerolinea?: string) {
+    this.enviar(res, await this.reportes.reservas(dia, Number(idAerolinea) || undefined));
   }
 
   private enviar(res: Response, a: ArchivoReporte) {
@@ -86,6 +94,28 @@ export class CoordinacionesController {
   })
   impresionGuiaMadre(@Param('id', ParseIntPipe) id: number, @Query('valores') valores?: string) {
     return this.impresion.guiaMadre(id, valores === 'cliente' ? 'cliente' : 'aerolinea');
+  }
+
+  @Get(':id/export-list')
+  @ApiOperation({ summary: 'Export List de la guía (ExportList.xlt del viejo): una fila por finca, guía hija, DAE, factura y producto.' })
+  exportList(@Param('id', ParseIntPipe) id: number) {
+    return this.documentos.exportList(id);
+  }
+
+  @Get(':id/etiquetas')
+  @ApiOperation({ summary: 'Datos para las etiquetas (tv_Etiquetas del viejo): la guía madre y una entrada por guía hija.' })
+  etiquetas(@Param('id', ParseIntPipe) id: number) {
+    return this.documentos.etiquetas(id);
+  }
+
+  @Get(':id/forma-a')
+  @ApiOperation({ summary: 'Form A (certificado de origen GSP). `?exportador=cliente|agencia&cantidad=piezas|fulls`' })
+  formaA(@Param('id', ParseIntPipe) id: number, @Query('exportador') exportador?: string, @Query('cantidad') cantidad?: string) {
+    return this.documentos.formaA(
+      id,
+      exportador === 'agencia' ? 'agencia' : 'cliente',
+      cantidad === 'fulls' || cantidad === 'piezas' ? cantidad : undefined,
+    );
   }
 
   @Get(':id/flowercargo')

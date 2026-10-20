@@ -131,10 +131,16 @@ Pendiente:
   finca + producto); factura vacía = número de guía hija; comisión = la de la agencia IATA; quién y cuándo creó /
   modificó; ruta editable por guía (5 % de las guías vuela distinto de la ruta del maestro) y el manifiesto es del
   transportista del tramo VIA (MSC/CP volado por 5Y).
+- Documentos del viejo hechos (20/10/2026, "por si acaso"; `DocumentosGuiaService` + hojas en
+  `/imprimir/coordinaciones/:id/…`): **Export List** (ExportList.xlt: una fila por finca + guía hija + DAE + factura +
+  fecha + producto con fulls, totales), **Form A** (repFormaA.xlt en hoja blanca Legal; exportador cliente o agencia,
+  piezas o fulls, general o por producto; hoy lo emiten EBF y FlowerCargo por ECUAPASS), **Etiquetas** (datos de
+  tv_Etiquetas; diseño provisional 10×15 cm o A4, una por guía hija o por caja, hasta tener el formato de la
+  impresora de EBF/FlowerCargo) y **Reservas** (Excel del día, una hoja por aerolínea, campos de
+  frmPINRepGen.Proc_83CAE0; faltan las plantillas `aerPlantillaReservas` de cada aerolínea para imitar su formulario).
 - Sin migrar, a confirmar con el dueño si se usan: envío del manifiesto a ECUAPASS (XML 029/034 y respuestas; hoy
-  manifiesto y secuencial se escriben a mano), impresos de FITO y Forma A, Reservas por aerolínea, Export List,
-  Etiquetas, Programación detallada por finca, Guías hijas por cliente, Factura comercial, ETD/ATD y confirmación de
-  vuelos.
+  manifiesto y secuencial se escriben a mano), impreso de FITO, Programación detallada por finca, Guías hijas por
+  cliente, Factura comercial, ETD/ATD y confirmación de vuelos.
 - **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
   - Enter que avance de campo en coordinar, ingreso de guías y préstamo.
   - Foco inicial en la guía madre (nueva), en el buscador de la lista y del stock, y en la aerolínea del ingreso.

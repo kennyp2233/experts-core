@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
+import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import * as XLSX from 'xlsx';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { NombresMaestrosService, ref, RefMaestro } from '../maestros/nombres-maestros.service';
@@ -18,22 +19,44 @@ const fechaTexto = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}/${di
 const redondeo = (v: number) => Math.round(v * 100) / 100;
 
 function libro(nombreHoja: string, filas: unknown[][], anchos: number[]): Buffer {
-  const hoja = XLSX.utils.aoa_to_sheet(filas);
-  hoja['!cols'] = anchos.map((wch) => ({ wch }));
+  return libroHojas([{ nombre: nombreHoja, filas, anchos }]);
+}
+
+function libroHojas(hojas: Array<{ nombre: string; filas: unknown[][]; anchos: number[] }>): Buffer {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, hoja, nombreHoja);
+  const usados = new Set<string>();
+  for (const h of hojas) {
+    const hoja = XLSX.utils.aoa_to_sheet(h.filas);
+    hoja['!cols'] = h.anchos.map((wch) => ({ wch }));
+    // Excel: hasta 31 caracteres, sin : \ / ? * [ ] y sin repetir.
+    let nombre = h.nombre.replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 31) || 'Hoja';
+    for (let i = 2; usados.has(nombre); i++) nombre = `${nombre.slice(0, 28)} ${i}`;
+    usados.add(nombre);
+    XLSX.utils.book_append_sheet(wb, hoja, nombre);
+  }
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 }
 
+/** Varios renglones (ConsignatarioGuiaM guarda saltos de línea) en una sola celda. */
+const enCelda = (t: string | null | undefined) =>
+  (t ?? '')
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join('\n');
+
 /**
- * Los dos reportes del día de vuelo que estaban en la lista de coordinaciones
- * del sistema viejo (frmPIN_Coordina): "Programación de Vuelo" (repProg.xlt)
- * y "Reporte Antinarcóticos" (repAntinarcoticosN.xlt). Mismas columnas y orden.
+ * Los reportes del día de vuelo que estaban en la lista de coordinaciones del
+ * sistema viejo (frmPIN_Coordina): "Programación de Vuelo" (repProg.xlt) y
+ * "Reporte Antinarcóticos" (repAntinarcoticosN.xlt), con las mismas columnas y
+ * orden; y "Reservas" por aerolínea (Reportes Consolidados / Cierre de
+ * operaciones del viejo).
  */
 @Injectable()
 export class ReportesDiaService {
   constructor(
     @Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos,
+    @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
     private readonly nombres: NombresMaestrosService,
   ) {}
 
@@ -48,6 +71,7 @@ export class ReportesDiaService {
       where,
       include: {
         liquidaciones: { where: { tipo: 'NORMAL' }, select: { pesoCobrable: true } },
+        rutas: { select: { tipoRuta: true, codigo: true } },
         guiaHijas: { include: { detalles: { orderBy: { numeroLinea: 'asc' } } } },
       },
     });
@@ -164,5 +188,83 @@ export class ReportesDiaService {
       nombreArchivo: `antinarcoticos-${dia}.xlsx`,
       contenido: libro('Antinarcóticos', datos, [6, 16, 14, 16, 14, 28, 15, 9, 30, 8, 8, 18, 22, 14, 22, 12, 12]),
     };
+  }
+
+  /**
+   * Reservas: lo que se le pide a la aerolínea por cada guía del día, con los
+   * datos de la consulta del viejo (frmPINRepGen.Proc_83CAE0) en su orden: marca,
+   * consignee, país, origen, guía, pago, destino, tipo de embarque, datos del
+   * consignee, notify y fecha; más el código de la aerolínea, la reserva (cupo de
+   * fulls) y lo estimado (fulls, piezas, kg, volumen) como el Cierre de operaciones.
+   * En el viejo cada aerolínea tenía su plantilla (aerPlantillaReservas): aquí va
+   * una hoja por aerolínea con esas columnas.
+   */
+  async reservas(dia: string, idAerolinea?: number): Promise<ArchivoReporte> {
+    const { coords, refs } = await this.delDia(dia, idAerolinea);
+    const idsMarca = [...new Set(coords.map((c) => c.idConsignatario).filter((x): x is number => x !== null))];
+    const idsEmbarque = [...new Set(coords.map((c) => c.idTipoEmbarque).filter((x): x is number => x !== null))];
+    const [marcas, guiasM, embarques] = await Promise.all([
+      this.maestros.consignatario.findMany({ where: { id: { in: idsMarca } }, select: { id: true, paisSigla: true } }),
+      this.maestros.consignatarioGuiaM.findMany({ where: { idConsignatario: { in: idsMarca } } }),
+      this.maestros.tipoEmbarque.findMany({ where: { id: { in: idsEmbarque } }, select: { id: true, nombre: true, descripcionGuia: true } }),
+    ]);
+    const pais = new Map(marcas.map((m) => [m.id, m.paisSigla ?? '']));
+    const gm = new Map(guiasM.map((g) => [g.idConsignatario, g]));
+    const emb = new Map(embarques.map((e) => [e.id, enCelda(e.descripcionGuia) || e.nombre]));
+
+    const porAerolinea = new Map<string, typeof coords>();
+    for (const c of coords) {
+      const k = corto(ref(refs.aerolineas, c.idAerolinea)) || 'Sin aerolínea';
+      porAerolinea.set(k, [...(porAerolinea.get(k) ?? []), c]);
+    }
+    const encabezado = [
+      'N°', 'MARCA', 'CONSIGNEE', 'PAÍS', 'ORIGEN', 'AWB', 'PAGO', 'DESTINO', 'TIPO DE EMBARQUE',
+      'CONSIGNEE (DATOS)', 'NOTIFY', 'FECHA DE VUELO', 'AEROLÍNEA', 'RESERVA (FULLS)', 'FULLS', 'PIEZAS', 'KG', 'VOLUMEN',
+    ];
+    const hojas = [...porAerolinea.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([nombre, cs]) => {
+        const filas = cs
+          .map((c) => {
+            const marca = ref(refs.consignatarios, c.idConsignatario);
+            const g = c.idConsignatario !== null ? gm.get(c.idConsignatario) : undefined;
+            return [
+              marca?.codigo || marca?.nombre || '',
+              g?.guiaMConsignee ?? marca?.nombre ?? '',
+              c.idConsignatario !== null ? (pais.get(c.idConsignatario) ?? '') : '',
+              c.rutas.find((r) => r.tipoRuta === 'ORIGEN')?.codigo || 'UIO',
+              c.numeroGuia ?? '',
+              c.pago === 'COLLECT' ? 'CC' : 'PP',
+              ref(refs.destinos, c.idDestinoAwb)?.codigo ?? '',
+              c.idTipoEmbarque !== null ? (emb.get(c.idTipoEmbarque) ?? '') : '',
+              enCelda(g?.guiaMNameAddress),
+              enCelda(g?.guiaMNotify),
+              fechaTexto(dia),
+              ref(refs.aerolineas, c.idAerolinea)?.codigo ?? '',
+              c.cupoFulls ?? '',
+              c.totalFulls ?? 0,
+              c.totalCajas ?? 0,
+              c.totalKgs ?? 0,
+              c.totalVolumen ?? '',
+            ];
+          })
+          .sort((a, b) => String(a[0]).localeCompare(String(b[0])) || String(a[4]).localeCompare(String(b[4])));
+        const suma = (i: number) => redondeo(filas.reduce((s, f) => s + (Number(f[i]) || 0), 0));
+        return {
+          nombre,
+          filas: [
+            ['EMPRESA:', AGENCIA()],
+            ['AEROLÍNEA:', nombre],
+            ['FECHA:', fechaTexto(dia)],
+            ['REPORTE:', 'RESERVAS'],
+            [],
+            encabezado,
+            ...filas.map((f, i) => [i + 1, ...f]),
+            ['', 'TOTAL', '', '', '', `${filas.length} ${filas.length === 1 ? 'guía' : 'guías'}`, '', '', '', '', '', '', '', suma(12), suma(13), suma(14), suma(15)],
+          ],
+          anchos: [5, 22, 28, 6, 7, 15, 6, 8, 18, 36, 30, 12, 9, 10, 8, 8, 9, 9],
+        };
+      });
+    return { nombreArchivo: `reservas-${dia}.xlsx`, contenido: libroHojas(hojas) };
   }
 }
