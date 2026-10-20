@@ -105,6 +105,8 @@ export interface ParametrosCoordinacion {
     tarifa: number | null;
     pca: number | null;
     conceptos: Array<ConceptoAerolinea & { abreviatura: string | null }>;
+    /** Ruta por defecto (tramos del maestro): la de la coordinación si no se cambia. */
+    ruta: TramoRutaDto[];
   } | null;
 }
 
@@ -170,7 +172,7 @@ export class CoordinarService {
         factorFull: t.factorFull,
       })),
       etiquetasAgencia,
-      aerolinea: idAerolinea ? await this.conceptosAerolinea(idAerolinea) : null,
+      aerolinea: idAerolinea ? { ...(await this.conceptosAerolinea(idAerolinea)), ruta: await this.rutaDeAerolinea(idAerolinea) } : null,
     };
   }
 
@@ -373,7 +375,7 @@ export class CoordinarService {
           totalFulls: c.totalFulls,
           totalCajas: c.totalCajas,
           totalKgs: c.totalKgs,
-          motivo: motivo?.trim() || null,
+          motivo: motivo?.trim().slice(0, 200) || null,
           anuladoPor: usuario ?? null,
           datos: JSON.parse(JSON.stringify(c)) as Prisma.InputJsonValue,
         },
@@ -697,7 +699,7 @@ export class CoordinarService {
     };
   }
 
-  private async conceptosAerolinea(idAerolinea: number): Promise<NonNullable<ParametrosCoordinacion['aerolinea']>> {
+  private async conceptosAerolinea(idAerolinea: number): Promise<Omit<NonNullable<ParametrosCoordinacion['aerolinea']>, 'ruta'>> {
     const pl = await this.maestros.aerolineasPlantilla.findUnique({
       where: { idAerolinea },
       include: { conceptos: true },
