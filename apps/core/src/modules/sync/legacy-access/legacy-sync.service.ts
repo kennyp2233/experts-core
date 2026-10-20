@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import { modoOperacion } from '../../operacion/comun/modo-operacion';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -107,6 +108,10 @@ export class LegacySyncService {
     const grupo = opts.grupo ?? 'maestros';
     const dryRun = opts.dryRun ?? false;
     const forzado = opts.forzar ?? false;
+    if (modoOperacion() === 'activo' && !dryRun) {
+      // Desde el corte manda el sistema nuevo: traer datos de Access pisaría lo que se cambió aquí.
+      throw new ConflictException('OPERACION_MODO=activo: el sync Access → PG está apagado (solo dry-run).');
+    }
     const t0 = Date.now();
     const { entidades, cliente } = this.definicion(grupo);
 

@@ -194,3 +194,36 @@ export class GuardarCoordinacionDto {
   @IsOptional() @ValidateNested() @Type(() => VueloManifiestoDto)
   vuelo?: VueloManifiestoDto;
 }
+
+/** Factura o nota de una línea, corregible también después del corte. */
+export class CorreccionLineaDto {
+  @ApiProperty() @IsInt() @Min(1)
+  idLinea: number;
+
+  @ApiPropertyOptional({ description: 'Vacía = el número de guía hija (como el viejo)' })
+  @IsOptional() @IsString() @MaxLength(20)
+  factura?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(120)
+  nota?: string;
+}
+
+export class CorregirCoordinacionDto {
+  @ApiPropertyOptional({ description: 'Nota de la guía (p. ej. el termógrafo)' })
+  @IsOptional() @IsString() @MaxLength(2000)
+  nota?: string;
+
+  @ApiPropertyOptional({ type: [CorreccionLineaDto] })
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => CorreccionLineaDto)
+  lineas?: CorreccionLineaDto[];
+}
+
+export class TransferirLineasDto {
+  @ApiProperty({ description: 'Coordinación (abierta) a la que pasan las líneas' })
+  @IsInt() @Min(1)
+  idDestino: number;
+
+  @ApiProperty({ type: [Number], description: 'Líneas de la coordinación de origen que pasan' })
+  @IsArray() @IsInt({ each: true })
+  idsLinea: number[];
+}

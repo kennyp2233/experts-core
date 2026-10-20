@@ -137,8 +137,9 @@ guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una gu�
 (la aerolínea cambió el número: se ingresa la nueva, se cambia en la coordinación y se anula el ingreso viejo); 1 de cada
 4 guías termina "prestada" (la usó EBF/FlowerCargo o no se usó), casi sin observación; devoluciones: ninguna desde 2015.
 
-- Estado del ingreso (`estado-ingreso.ts`, regla confirmada con los documentos 2019–2026): **Cancelado** = todas sus
-  guías usadas (coordinadas, o prestadas y devueltas) — es "agotado", no "anulado"; **Guías coordinadas** = alguna
+- Estado del ingreso (`estado-ingreso.ts`, regla confirmada con los documentos 2019–2026): **Usado** (en el viejo y en
+  la base, `CANCELADO`; el dueño pidió "usada", 19/10/2026) = todas sus guías usadas (coordinadas, o prestadas y
+  devueltas) — es "agotado", no "anulado"; **Guías coordinadas** = alguna
   coordinada sin estar todas usadas; **Ingresado** = ninguna coordinada. Se recalcula al ingresar, modificar,
   coordinar / cambiar guía / anular coordinación, prestar, quitar préstamo, devolver y verificar. "Stock verificado" =
   el estado guardado coincide con sus guías (si no, "Corregir").

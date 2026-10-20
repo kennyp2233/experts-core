@@ -84,7 +84,7 @@ export function inicioIngreso(): number {
 const includeGuias = {
   guiasMadre: {
     orderBy: [{ prefijo: 'asc' as const }, { secuencial: 'asc' as const }],
-    include: { documentoCoordinacion: { select: { id: true, codigoAccess: true, fechaVuelo: true } } },
+    include: { documentoCoordinacion: { select: { id: true, codigoAccess: true, numero: true, fechaVuelo: true } } },
   },
 } satisfies Prisma.DocumentoBaseInclude;
 
@@ -319,7 +319,7 @@ export class IngresosGuiasService {
       const coo = quitarUsada.documentoCoordinacion;
       throw new ConflictException(
         quitarUsada.estado === 'COORDINADA'
-          ? `La guía ${quitarUsada.numero} no se puede quitar: ya la usa la coordinación N° ${coo?.codigoAccess ?? coo?.id ?? quitarUsada.coordinacionAccess ?? '?'}.`
+          ? `La guía ${quitarUsada.numero} no se puede quitar: ya la usa la coordinación N° ${coo?.codigoAccess ?? coo?.numero ?? coo?.id ?? quitarUsada.coordinacionAccess ?? '?'}.`
           : `La guía ${quitarUsada.numero} no se puede quitar: está prestada.`,
       );
     }
@@ -446,7 +446,7 @@ export class IngresosGuiasService {
         coordinacion: g.documentoCoordinacion
           ? {
               id: g.documentoCoordinacion.id,
-              numero: g.documentoCoordinacion.codigoAccess ?? g.documentoCoordinacion.id,
+              numero: g.documentoCoordinacion.codigoAccess ?? g.documentoCoordinacion.numero ?? g.documentoCoordinacion.id,
               fechaVuelo: dia(g.documentoCoordinacion.fechaVuelo),
             }
           : g.coordinacionAccess

@@ -21,6 +21,8 @@ import { ImpresionService } from './documentos/impresion.service';
 import { PortalFincasController, UsuariosFincasController } from './portal-fincas/portal-fincas.controller';
 import { PortalFincasService } from './portal-fincas/portal-fincas.service';
 import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
+import { CorteDefinitivoController } from './comun/corte-definitivo.controller';
+import { CorteDefinitivoService } from './comun/corte-definitivo.service';
 
 /**
  * Operación del sistema nuevo (reemplazo del sistema viejo, ADR 0003):
@@ -39,6 +41,7 @@ import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
     OpcionesController,
     PortalFincasController,
     UsuariosFincasController,
+    CorteDefinitivoController,
   ],
   providers: [
     NombresMaestrosService,
@@ -56,6 +59,7 @@ import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
     ImpresionService,
     PortalFincasService,
     UsuariosFincasService,
+    CorteDefinitivoService,
   ],
   exports: [NombresMaestrosService, CoordinacionesService],
 })

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
@@ -7,7 +7,7 @@ import { Roles } from '../../auth/v1/decorators/roles.decorator';
 import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 import { CoordinacionesService } from './coordinaciones.service';
 import { ListarCoordinacionesDto } from './dto/listar-coordinaciones.dto';
-import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
+import { CorregirCoordinacionDto, GuardarCoordinacionDto, TransferirLineasDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
 import { FlowerCargoService } from '../documentos/flowercargo.service';
 import { ArchivoReporte, ReportesDiaService } from '../documentos/reportes-dia.service';
@@ -60,6 +60,12 @@ export class CoordinacionesController {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${a.nombreArchivo}"`);
     res.send(a.contenido);
+  }
+
+  @Get('anuladas')
+  @ApiOperation({ summary: 'Coordinaciones anuladas en el sistema nuevo: qué se anuló, quién y cuándo. `?desde=&hasta=`' })
+  anuladas(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
+    return this.service.anuladas(desde, hasta);
   }
 
   @Get(':id')
@@ -123,9 +129,21 @@ export class CoordinacionesController {
     return this.coordinar.cortar(id);
   }
 
+  @Patch(':id')
+  @ApiOperation({ summary: 'Corrige la factura / nota de las líneas y la nota de la guía (también después del corte).' })
+  corregir(@Param('id', ParseIntPipe) id: number, @Body() dto: CorregirCoordinacionDto, @Req() req: ConUsuario) {
+    return this.coordinar.corregir(id, dto, usuario(req));
+  }
+
+  @Post(':id/transferir')
+  @ApiOperation({ summary: 'Pasa líneas (cajas de una finca) a otra coordinación abierta, recalculando las dos.' })
+  transferir(@Param('id', ParseIntPipe) id: number, @Body() dto: TransferirLineasDto, @Req() req: ConUsuario) {
+    return this.coordinar.transferir(id, dto, usuario(req));
+  }
+
   @Delete(':id')
-  @ApiOperation({ summary: 'Anula una coordinación abierta: borra el detalle y libera la guía madre.' })
-  anular(@Param('id', ParseIntPipe) id: number) {
-    return this.coordinar.anular(id);
+  @ApiOperation({ summary: 'Anula una coordinación abierta: libera la guía madre y deja constancia (quién, cuándo, `?motivo=`).' })
+  anular(@Param('id', ParseIntPipe) id: number, @Req() req: ConUsuario, @Query('motivo') motivo?: string) {
+    return this.coordinar.anular(id, usuario(req), motivo);
   }
 }

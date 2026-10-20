@@ -8,6 +8,8 @@ export type OrigenDocumento = 'ACCESS' | 'SISTEMA';
 export interface CoordinacionResumen {
   id: number;
   codigoAccess: number | null;
+  /** N° que se muestra: el de Access o el del sistema nuevo. */
+  numero: number;
   origen: OrigenDocumento;
   numeroGuia: string | null;
   estado: EstadoCoordinacion;

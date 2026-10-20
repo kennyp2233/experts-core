@@ -37,8 +37,9 @@ import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
   version: '1',
 })
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Oficina (y clientes en el portal EBF): los usuarios de finca (portal de fincas) no entran.
-@Roles(UserRole.ADMIN, UserRole.USER, UserRole.CLIENTE)
+// Solo la oficina: es la cuenta de Experts en el portal de EBF (todas sus guías). Ni las fincas
+// (portal de fincas) ni los clientes (portal de clientes, rol CLIENTE) entran.
+@Roles(UserRole.ADMIN, UserRole.USER)
 export class EbfCustomerController {
   constructor(
     private readonly service: EbfPortalService,
