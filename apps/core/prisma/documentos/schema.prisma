@@ -143,6 +143,8 @@ model DocumentoCoordinacion {
   id           Int       @id @default(autoincrement())
   /// PIN_MCoordina.docNumero (docTipo COO) — llave del sync
   codigoAccess Int?      @unique
+  /// N° de las coordinaciones creadas en el sistema nuevo (contador "coordinacion"); las de Access usan codigoAccess
+  numero       Int?      @unique
   idGuiaMadre  Int       @unique
   guiaMadre    GuiaMadre @relation(fields: [idGuiaMadre], references: [id])
   /// PIN_dDocCoor.docNumGuia tal cual (ej. "369-8469 5461")
@@ -437,6 +439,29 @@ model GuiaHijaDetalle {
   usuario          String?
   fechaRegistro    DateTime?
   secuencialLegacy Int?
+}
+
+/// Coordinación anulada en el sistema nuevo. Como el viejo (que deja la cabecera
+/// con docEstado = 0 y docFecEli / docUsuEli en dDocUsuario), queda constancia de
+/// qué se anuló, quién y cuándo; la coordinación se borra para liberar la guía
+/// madre. `datos` es el detalle tal como estaba al anular.
+model CoordinacionAnulada {
+  id                      Int      @id @default(autoincrement())
+  idDocumentoCoordinacion Int
+  numero                  Int?
+  numeroGuia              String?
+  idConsignatario         Int?
+  idAerolinea             Int?
+  fechaVuelo              DateTime
+  totalFulls              Float?
+  totalCajas              Float?
+  totalKgs                Float?
+  motivo                  String?
+  anuladoPor              String?
+  anuladoEn               DateTime @default(now())
+  datos                   Json
+
+  @@index([fechaVuelo])
 }
 
 // ===== SYNC ACCESS → PG =====

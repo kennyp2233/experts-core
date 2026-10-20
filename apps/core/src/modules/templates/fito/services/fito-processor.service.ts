@@ -3,6 +3,7 @@ import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { PrismaClient } from '@internal/templates-client';
 import { FitoLegacyService } from './fito-legacy.service';
+import { FitoSistemaService } from './fito-sistema.service';
 import { XmlGeneratorService } from './xml-generator.service';
 import { XmlValidatorService } from './xml-validator.service';
 import { GenerateXmlDto } from '../dto/generate-xml.dto';
@@ -13,6 +14,7 @@ export class FitoProcessor {
 
     constructor(
         private legacyDb: FitoLegacyService,
+        private sistema: FitoSistemaService,
         private xmlGenerator: XmlGeneratorService,
         private xmlValidator: XmlValidatorService,
         @Inject('PrismaClientTemplates') private prisma: PrismaClient, // Correct injection token from TemplatesModule
@@ -26,8 +28,11 @@ export class FitoProcessor {
         try {
             await this.updateJobProgress(jobId, 'processing');
 
-            // 1. Get Data
-            const guiaData = await this.legacyDb.getGuiaCompleta(docNumero);
+            // 1. Datos de la guía (respaldo junto al XML): del sistema nuevo, o de Access (deprecado).
+            const guiaData =
+                (config as GenerateXmlDto)?.fuente === 'sistema'
+                    ? await this.sistema.getGuiaCompleta(docNumero)
+                    : await this.legacyDb.getGuiaCompleta(docNumero);
 
             // 2. Generate
             const xmlContent = await this.xmlGenerator.generateXML(guiaData, config);
@@ -39,7 +44,7 @@ export class FitoProcessor {
             }
 
             // 4. Save Result (FitoXml)
-            const filename = `CFE_${docNumero}_${Date.now()}.xml`;
+            const filename = `CFE_${guiaData.guia.numero ?? docNumero}_${Date.now()}.xml`;
             await this.prisma.fitoXml.create({
                 data: {
                     docNumero,

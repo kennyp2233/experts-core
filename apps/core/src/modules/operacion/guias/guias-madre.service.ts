@@ -19,7 +19,7 @@ export interface GuiaMadreFila {
   observaciones: string | null;
   /** Ingreso de guías (documento CGU) con el que nació la guía. */
   lote: { id: number; codigoAccess: number | null; numero: number | null; fecha: string | null } | null;
-  coordinacion: { id: number; codigoAccess: number | null; fechaVuelo: string } | null;
+  coordinacion: { id: number; codigoAccess: number | null; numero: number; fechaVuelo: string } | null;
 }
 
 export interface ResumenStockAerolinea {
@@ -66,7 +66,7 @@ export class GuiasMadreService {
         where,
         include: {
           documentoBase: { select: { id: true, codigoAccess: true, numero: true, fecha: true } },
-          documentoCoordinacion: { select: { id: true, codigoAccess: true, fechaVuelo: true } },
+          documentoCoordinacion: { select: { id: true, codigoAccess: true, numero: true, fechaVuelo: true } },
         },
         orderBy: this.orden(f.estado),
         skip: (page - 1) * pageSize,
@@ -97,6 +97,7 @@ export class GuiasMadreService {
         ? {
             id: g.documentoCoordinacion.id,
             codigoAccess: g.documentoCoordinacion.codigoAccess,
+            numero: g.documentoCoordinacion.codigoAccess ?? g.documentoCoordinacion.numero ?? g.documentoCoordinacion.id,
             fechaVuelo: dia(g.documentoCoordinacion.fechaVuelo)!,
           }
         : null,

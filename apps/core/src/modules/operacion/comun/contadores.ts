@@ -1,16 +1,29 @@
 import type { Prisma } from '@internal/documentos-client';
 import { modoOperacion } from './modo-operacion';
 
+const entero = (v: string | undefined): number | null => {
+  const n = parseInt(v || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
 /**
  * Primer número de guía hija del sistema nuevo. En modo sombra se usa un
  * rango propio (90.000.000) para no chocar nunca con los números del sistema
- * viejo; al pasar a modo activo el contador se iguala al del sistema viejo
- * (`BODEGA.bodNGH`) con OPERACION_NGH_INICIO.
+ * viejo. Solo vale la primera vez (cuando no existe la fila del contador): para
+ * seguir la serie del sistema viejo al pasar a modo activo se alinea el
+ * contador con `PrepararCorteService` (lee `eBodega.bodNGH` de Access).
  */
 export function inicioGuiaHija(): number {
-  const n = parseInt(process.env.OPERACION_NGH_INICIO || '', 10);
-  if (Number.isFinite(n) && n > 0) return n;
-  return modoOperacion() === 'sombra' ? 90_000_000 : 1;
+  return entero(process.env.OPERACION_NGH_INICIO) ?? 90_000_000;
+}
+
+/**
+ * Primer N° de coordinación del sistema nuevo: en modo sombra 900.000 (como
+ * los ingresos CGU-0900000), lejos del 13.9xx de Access. Igual que el de guías
+ * hijas, al corte se alinea con el último N° de Access.
+ */
+export function inicioCoordinacion(): number {
+  return entero(process.env.OPERACION_COO_INICIO) ?? (modoOperacion() === 'sombra' ? 900_000 : 1);
 }
 
 /**

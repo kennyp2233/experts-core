@@ -18,13 +18,24 @@ import { OpcionesService } from './maestros/opciones.service';
 import { FlowerCargoService } from './documentos/flowercargo.service';
 import { ReportesDiaService } from './documentos/reportes-dia.service';
 import { ImpresionService } from './documentos/impresion.service';
+import { DocumentosGuiaService } from './documentos/documentos-guia.service';
 import { PortalFincasController, UsuariosFincasController } from './portal-fincas/portal-fincas.controller';
 import { PortalFincasService } from './portal-fincas/portal-fincas.service';
 import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
+import { CorteDefinitivoController } from './comun/corte-definitivo.controller';
+import { CuentasController } from './documentos/cuentas.controller';
+import { CuentasService } from './documentos/cuentas.service';
+import { DaesController } from './maestros/daes.controller';
+import { DaesService } from './maestros/daes.service';
+import { PortalClientesController, UsuariosClientesController } from './portal-clientes/portal-clientes.controller';
+import { PortalClientesService } from './portal-clientes/portal-clientes.service';
+import { UsuariosClientesService } from './portal-clientes/usuarios-clientes.service';
+import { CorteDefinitivoService } from './comun/corte-definitivo.service';
 
 /**
  * Operación del sistema nuevo (reemplazo del sistema viejo, ADR 0003):
- * coordinaciones, guías (ingreso y administración), cálculos de liquidación.
+ * coordinaciones, guías (ingreso y administración), cálculos de liquidación,
+ * cobro al cliente, portales de fincas y de clientes.
  * Trabaja sobre el schema `documentos` (sincronizado desde Access mientras
  * Access mande) y resuelve nombres en `datos_maestros`. Al sistema viejo solo
  * lo consulta (bridge, solo lectura) para no ingresar guías repetidas.
@@ -39,6 +50,11 @@ import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
     OpcionesController,
     PortalFincasController,
     UsuariosFincasController,
+    CorteDefinitivoController,
+    CuentasController,
+    DaesController,
+    PortalClientesController,
+    UsuariosClientesController,
   ],
   providers: [
     NombresMaestrosService,
@@ -54,8 +70,14 @@ import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
     FlowerCargoService,
     ReportesDiaService,
     ImpresionService,
+    DocumentosGuiaService,
     PortalFincasService,
     UsuariosFincasService,
+    CorteDefinitivoService,
+    CuentasService,
+    DaesService,
+    PortalClientesService,
+    UsuariosClientesService,
   ],
   exports: [NombresMaestrosService, CoordinacionesService],
 })

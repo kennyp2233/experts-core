@@ -3,6 +3,7 @@ import { Logger, OnModuleInit } from '@nestjs/common';
 import { Job, JobOptions, Queue } from 'bull';
 import { GrupoSync, LegacySyncService } from '../legacy-sync.service';
 import { ModoSync } from '../engine/sync.types';
+import { modoOperacion } from '../../../operacion/comun/modo-operacion';
 
 export const LEGACY_SYNC_QUEUE = 'legacy-access-sync';
 const CYCLE_JOB = 'cycle';
@@ -27,7 +28,9 @@ const minutos = (env: string | undefined, def: number, min: number) => {
  *                completo diario LEGACY_SYNC_DOCS_COMPLETO_CRON ("30 3 * * *");
  *  - al arrancar: maestros al minuto y documentos a los 3 minutos.
  * Los cron son hora de Ecuador. Si el bridge no responde la corrida queda
- * OMITIDO. `LEGACY_SYNC_AUTOSTART=false` lo apaga (dev / tests).
+ * OMITIDO. `LEGACY_SYNC_AUTOSTART=false` lo apaga (dev / tests), y no corre en
+ * `OPERACION_MODO=activo`: desde el corte manda el sistema nuevo y el sync
+ * pisaría con datos de Access lo que se cambió aquí.
  */
 @Processor(LEGACY_SYNC_QUEUE)
 export class LegacySyncProcessor implements OnModuleInit {
@@ -41,6 +44,12 @@ export class LegacySyncProcessor implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    if (modoOperacion() === 'activo') {
+      // Quita los repeatables que hayan quedado registrados en Redis de antes del corte.
+      for (const j of await this.queue.getRepeatableJobs()) await this.queue.removeRepeatableByKey(j.key);
+      this.logger.warn('[sync] OPERACION_MODO=activo: el sistema nuevo manda, el sync Access → PG no corre.');
+      return;
+    }
     if (!this.autostart) {
       this.logger.warn('[sync] autostart desactivado (LEGACY_SYNC_AUTOSTART=false) — solo corre a mano.');
       return;
@@ -91,6 +100,7 @@ export class LegacySyncProcessor implements OnModuleInit {
   @Process(CYCLE_JOB)
   async handleCycle(job: Job<CycleData>): Promise<unknown> {
     const { grupo = 'maestros', modo, forzar } = job.data ?? ({} as CycleData);
+    if (modoOperacion() === 'activo') return { omitido: 'OPERACION_MODO=activo' };
     this.logger.log(`[sync/${grupo}] corrida programada${modo ? ` ${modo}` : ''}${forzar ? ' (forzada)' : ''} (jobId=${job.id})`);
     const r = await this.service.ejecutar({ origen: 'cron', grupo, modo, forzar });
     return { ejecucionId: r.ejecucionId, estado: r.estado, modo: r.modo, ms: r.ms };

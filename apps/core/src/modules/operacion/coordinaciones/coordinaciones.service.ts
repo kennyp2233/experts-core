@@ -17,6 +17,7 @@ const iso = (d: Date | null | undefined): string | null => (d ? d.toISOString() 
 const selectResumen = {
   id: true,
   codigoAccess: true,
+  numero: true,
   numeroGuia: true,
   estadoActual: true,
   fechaVuelo: true,
@@ -233,6 +234,36 @@ export class CoordinacionesService {
     };
   }
 
+  /** Anuladas en el sistema nuevo (las del viejo no tienen datos: Access borra su detalle). */
+  async anuladas(desde?: string, hasta?: string) {
+    const fecha: Prisma.DateTimeFilter = {};
+    if (desde) fecha.gte = new Date(`${desde.slice(0, 10)}T00:00:00Z`);
+    if (hasta) fecha.lte = new Date(`${hasta.slice(0, 10)}T00:00:00Z`);
+    const filas = await this.db.coordinacionAnulada.findMany({
+      where: desde || hasta ? { fechaVuelo: fecha } : {},
+      orderBy: { anuladoEn: 'desc' },
+      take: 200,
+    });
+    const refs = await this.nombres.resolver({
+      aerolineas: filas.map((a) => a.idAerolinea),
+      consignatarios: filas.map((a) => a.idConsignatario),
+    });
+    return filas.map((a) => ({
+      id: a.id,
+      numero: a.numero,
+      numeroGuia: a.numeroGuia,
+      fechaVuelo: dia(a.fechaVuelo),
+      aerolinea: ref(refs.aerolineas, a.idAerolinea),
+      consignatario: ref(refs.consignatarios, a.idConsignatario),
+      totalFulls: a.totalFulls,
+      totalCajas: a.totalCajas,
+      totalKgs: a.totalKgs,
+      motivo: a.motivo,
+      anuladoPor: a.anuladoPor,
+      anuladoEn: iso(a.anuladoEn),
+    }));
+  }
+
   private async filtro(f: ListarCoordinacionesDto): Promise<Prisma.DocumentoCoordinacionWhereInput> {
     const and: Prisma.DocumentoCoordinacionWhereInput[] = [];
     if (f.estado) and.push({ estadoActual: f.estado });
@@ -256,8 +287,8 @@ export class CoordinacionesService {
         const numero = digitos.length === 11 ? `${digitos.slice(0, 3)}-${digitos.slice(3)}` : digitos;
         or.push({ guiaMadre: { numero: { contains: numero } } });
       }
-      // N° de coordinación: el del sistema viejo, o el id en las creadas en el sistema nuevo.
-      if (/^\d{1,7}$/.test(q)) or.push({ codigoAccess: Number(q) }, { codigoAccess: null, id: Number(q) });
+      // N° de coordinación: el del sistema viejo o el del sistema nuevo (contador propio).
+      if (/^\d{1,7}$/.test(q)) or.push({ codigoAccess: Number(q) }, { codigoAccess: null, numero: Number(q) });
       // Marca, cliente o finca por nombre.
       if (/[a-zñ]/i.test(q) && q.length >= 3) {
         const ids = await this.nombres.buscarPorNombre(q);
@@ -279,6 +310,7 @@ export class CoordinacionesService {
     return {
       id: c.id,
       codigoAccess: c.codigoAccess,
+      numero: c.codigoAccess ?? c.numero ?? c.id,
       origen: c.codigoAccess !== null ? 'ACCESS' : 'SISTEMA',
       numeroGuia: c.numeroGuia,
       estado: c.estadoActual,

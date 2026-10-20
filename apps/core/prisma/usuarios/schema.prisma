@@ -37,6 +37,8 @@ model User {
     trustedDevices TrustedDevice[]
     /// Usuario de finca (rol FINCA): las fincas para las que carga en el portal.
     fincas         UsuarioFinca[]
+    /// Usuario de cliente (rol CLIENTE): los clientes cuyas guías ve en el portal de clientes.
+    clientes       UsuarioCliente[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -53,6 +55,18 @@ model UsuarioFinca {
 
     @@id([userId, idFinca])
     @@index([idFinca])
+}
+
+/// Clientes de un usuario del portal de clientes (rol CLIENTE). `idCliente` apunta a
+/// datos_maestros."Cliente" (el cliente de la marca: ve las guías de sus marcas).
+model UsuarioCliente {
+    userId    String
+    idCliente Int
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    @@id([userId, idCliente])
+    @@index([idCliente])
 }
 
 model TrustedDevice {

@@ -1,9 +1,9 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
 import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { asegurarEditable } from '../comun/modo-operacion';
-import { inicioGuiaHija, siguiente } from '../comun/contadores';
+import { inicioCoordinacion, inicioGuiaHija, siguiente } from '../comun/contadores';
 import { recalcularEstadoIngresos } from '../guias/estado-ingreso';
 import {
   cargosAgencia,
@@ -23,9 +23,11 @@ import {
   volumenDeLineas,
 } from '../calculos/reglas/totales';
 import {
+  CorregirCoordinacionDto,
   GuardarCoordinacionDto,
   LineaCoordinacionDto,
   TramoRutaDto,
+  TransferirLineasDto,
   ValoresLiquidacionDto,
 } from './dto/guardar-coordinacion.dto';
 
@@ -103,6 +105,8 @@ export interface ParametrosCoordinacion {
     tarifa: number | null;
     pca: number | null;
     conceptos: Array<ConceptoAerolinea & { abreviatura: string | null }>;
+    /** Ruta por defecto (tramos del maestro): la de la coordinación si no se cambia. */
+    ruta: TramoRutaDto[];
   } | null;
 }
 
@@ -126,6 +130,8 @@ const CAMPO_CONCEPTO: Record<string, ConceptoAerolinea['campo']> = {
  */
 @Injectable()
 export class CoordinarService {
+  private readonly logger = new Logger(CoordinarService.name);
+
   constructor(
     @Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos,
     @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
@@ -168,7 +174,7 @@ export class CoordinarService {
         factorFull: t.factorFull,
       })),
       etiquetasAgencia,
-      aerolinea: idAerolinea ? await this.conceptosAerolinea(idAerolinea) : null,
+      aerolinea: idAerolinea ? { ...(await this.conceptosAerolinea(idAerolinea)), ruta: await this.rutaDeAerolinea(idAerolinea) } : null,
     };
   }
 
@@ -179,7 +185,8 @@ export class CoordinarService {
       const id = await this.persistir(tx, null, dto, armada, guia.idAerolinea, usuario);
       await tx.guiaMadre.update({ where: { id: guia.id }, data: { estado: 'COORDINADA' } });
       await recalcularEstadoIngresos(tx, [guia.idDocumentoBase]);
-      return { id };
+      const { numero } = await tx.documentoCoordinacion.findUniqueOrThrow({ where: { id }, select: { numero: true } });
+      return { id, numero };
     }, { timeout: 60_000 });
   }
 
@@ -303,7 +310,11 @@ export class CoordinarService {
     return { dto, estado: c.estadoActual, codigoAccess: c.codigoAccess };
   }
 
-  /** Corte de guía: irreversible. Deja la coordinación sin edición. */
+  /**
+   * Corte de guía: deja la coordinación sin edición (y sale del portal de
+   * fincas, entra al estado de cuenta). El viejo lo avisaba como "no
+   * reversible"; aquí se puede deshacer con `reabrir` por si algo salió mal.
+   */
   async cortar(id: number) {
     const c = await this.db.documentoCoordinacion.findUnique({
       where: { id },
@@ -341,18 +352,146 @@ export class CoordinarService {
     return { id, estado: 'CORTADO' as const };
   }
 
-  /** Anular: como el sistema viejo, borra el detalle y libera la guía madre. */
-  async anular(id: number) {
+  /**
+   * Deshace el corte: la guía vuelve a quedar abierta, como antes de cortar.
+   * No se borra nada: las líneas que cargaron las fincas y los valores quedan
+   * igual; mientras esté abierta la ve otra vez la finca en su portal (si el
+   * vuelo es de hoy en adelante) y sale del estado de cuenta hasta el nuevo corte.
+   */
+  async reabrir(id: number, usuario?: string, motivo?: string) {
     const c = await this.db.documentoCoordinacion.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException('La coordinación no existe.');
+    asegurarEditable(c, `La coordinación ${c.numeroGuia ?? id}`);
+    if (c.estadoActual !== 'CORTADO') throw new ConflictException('Solo se reabre una guía cortada.');
+    await this.db.documentoCoordinacion.update({
+      where: { id },
+      data: { estadoActual: 'BORRADOR', actualizadoPorLegacy: usuario ?? null, actualizadoEnLegacy: new Date() },
+    });
+    this.logger.log(`Guía ${c.numeroGuia ?? id} reabierta por ${usuario ?? '?'}${motivo?.trim() ? `: ${motivo.trim().slice(0, 200)}` : ''}`);
+    return { id, estado: 'BORRADOR' as const };
+  }
+
+  /**
+   * Anular: como el sistema viejo, quita el detalle y libera la guía madre. El
+   * viejo deja la cabecera con docEstado = 0 y quién / cuándo en dDocUsuario;
+   * aquí queda en `CoordinacionAnulada` con el detalle tal como estaba.
+   */
+  async anular(id: number, usuario?: string, motivo?: string) {
+    const c = await this.db.documentoCoordinacion.findUnique({
+      where: { id },
+      include: {
+        liquidaciones: true,
+        rutas: true,
+        manifiesto: true,
+        guiaHijas: { include: { detalles: true } },
+      },
+    });
     if (!c) throw new NotFoundException('La coordinación no existe.');
     asegurarEditable(c, `La coordinación ${c.numeroGuia ?? id}`);
     if (c.estadoActual === 'CORTADO') throw new ConflictException('Una guía cortada no se puede anular.');
     await this.db.$transaction(async (tx) => {
+      await tx.coordinacionAnulada.create({
+        data: {
+          idDocumentoCoordinacion: c.id,
+          numero: c.codigoAccess ?? c.numero,
+          numeroGuia: c.numeroGuia,
+          idConsignatario: c.idConsignatario,
+          idAerolinea: c.idAerolinea,
+          fechaVuelo: c.fechaVuelo,
+          totalFulls: c.totalFulls,
+          totalCajas: c.totalCajas,
+          totalKgs: c.totalKgs,
+          motivo: motivo?.trim().slice(0, 200) || null,
+          anuladoPor: usuario ?? null,
+          datos: JSON.parse(JSON.stringify(c)) as Prisma.InputJsonValue,
+        },
+      });
       await tx.documentoCoordinacion.delete({ where: { id } });
       const guia = await tx.guiaMadre.update({ where: { id: c.idGuiaMadre }, data: { estado: 'INGRESADA' } });
       await recalcularEstadoIngresos(tx, [guia.idDocumentoBase]);
     });
     return { id, anulada: true };
+  }
+
+  /**
+   * Correcciones que se pueden hacer también después del corte (el corte fija
+   * pesos y valores, no los datos de papeles): la factura y la nota de cada
+   * línea y la nota de la guía. En el viejo la factura de la finca se escribía
+   * en la grilla; las fincas a veces la mandan después de que la guía se cortó.
+   */
+  async corregir(id: number, dto: CorregirCoordinacionDto, usuario?: string) {
+    const c = await this.db.documentoCoordinacion.findUnique({
+      where: { id },
+      include: { guiaHijas: { select: { numeroGuiaHija: true, detalles: { select: { id: true } } } } },
+    });
+    if (!c) throw new NotFoundException('La coordinación no existe.');
+    asegurarEditable(c, `La coordinación ${c.numeroGuia ?? id}`);
+    const propias = new Map(c.guiaHijas.flatMap((g) => g.detalles.map((d) => [d.id, g.numeroGuiaHija] as const)));
+    for (const l of dto.lineas ?? []) {
+      if (!propias.has(l.idLinea)) throw new BadRequestException(`La línea ${l.idLinea} no es de esta coordinación.`);
+    }
+    await this.db.$transaction(async (tx) => {
+      for (const l of dto.lineas ?? []) {
+        await tx.guiaHijaDetalle.update({
+          where: { id: l.idLinea },
+          data: {
+            ...(l.factura !== undefined ? { factura: l.factura.trim() || propias.get(l.idLinea)! } : {}),
+            ...(l.nota !== undefined ? { nota: l.nota.trim() || null } : {}),
+          },
+        });
+      }
+      await tx.documentoCoordinacion.update({
+        where: { id },
+        data: {
+          ...(dto.nota !== undefined ? { nota: dto.nota.trim() || null } : {}),
+          actualizadoPorLegacy: usuario ?? null,
+          actualizadoEnLegacy: new Date(),
+        },
+      });
+    });
+    return { id };
+  }
+
+  /**
+   * Pasar líneas (cajas de una finca) de una guía abierta a otra abierta, como
+   * el asistente de transferencia del viejo (frmPINTransferWizard: "va a KAM").
+   * Las dos guías se regraban en una sola transacción con sus guías hijas,
+   * totales y liquidación recalculados; en la de destino las líneas quedan con
+   * origen 'I' (como `detOrigen` de las transferidas en el viejo).
+   */
+  async transferir(idOrigen: number, dto: TransferirLineasDto, usuario?: string) {
+    if (idOrigen === dto.idDestino) throw new BadRequestException('La guía de destino es la misma.');
+    const [o, d] = await Promise.all([this.dtoDe(idOrigen), this.dtoDe(dto.idDestino)]);
+    for (const [x, que] of [[o, 'origen'], [d, 'destino']] as const) {
+      if (x.estado !== 'BORRADOR') throw new ConflictException(`La guía de ${que} ya fue cortada o anulada: no se le pueden pasar cajas.`);
+      asegurarEditable({ codigoAccess: x.codigoAccess }, `La guía de ${que}`);
+    }
+    const ids = new Set(dto.idsLinea);
+    const mover = o.dto.lineas.filter((l) => l.idLinea && ids.has(l.idLinea));
+    if (mover.length !== ids.size) throw new BadRequestException('Alguna línea no es de la guía de origen.');
+    const dtoOrigen: GuardarCoordinacionDto = { ...o.dto, lineas: o.dto.lineas.filter((l) => !l.idLinea || !ids.has(l.idLinea)) };
+    const dtoDestino: GuardarCoordinacionDto = {
+      ...d.dto,
+      // Las cajas pasan a la marca de la guía de destino (como el viejo con InsertaMarcasAsociadas).
+      lineas: [...d.dto.lineas, ...mover.map(({ idLinea: _id, idConsignatario: _c, ...l }) => l)],
+    };
+    const [actO, actD] = await Promise.all(
+      [idOrigen, dto.idDestino].map((id) =>
+        this.db.documentoCoordinacion.findUniqueOrThrow({ where: { id }, include: { guiaHijas: { include: { detalles: true } } } }),
+      ),
+    );
+    const armadaO = await this.armar(dtoOrigen, await this.numerosExistentes(actO.guiaHijas), idOrigen, 'I');
+    const armadaD = await this.armar(dtoDestino, await this.numerosExistentes(actD.guiaHijas), dto.idDestino, 'I');
+    await this.db.$transaction(async (tx) => {
+      for (const a of [actO, actD]) {
+        const [fila] = await tx.$queryRaw<Array<{ updatedAt: Date }>>`
+          SELECT "updatedAt" FROM "DocumentoCoordinacion" WHERE "id" = ${a.id} FOR UPDATE`;
+        if (fila.updatedAt.getTime() !== a.updatedAt.getTime()) throw new CoordinacionCambiadaException();
+      }
+      await this.persistir(tx, idOrigen, dtoOrigen, armadaO, actO.idAerolinea, usuario);
+      await this.persistir(tx, dto.idDestino, dtoDestino, armadaD, actD.idAerolinea, usuario, 'I');
+    }, { timeout: 60_000 });
+    return { idOrigen, idDestino: dto.idDestino, lineas: mover.length };
   }
 
   // ---------------------------------------------------------------------------
@@ -451,13 +590,32 @@ export class CoordinarService {
       lineas.map((l) => ({ ...l, fulls: l.fullsCalculados })),
       porProducto,
     );
+    // Número de cada guía hija: el que ya tenía (misma marca + finca + producto); si cambió la marca de
+    // la guía, el de la misma finca + producto (el viejo conserva los HAWB: InsertaMarcasAsociadas).
+    const asignados = new Map<string, string>();
+    const usados = new Set<string>();
+    for (const clave of grupos.keys()) {
+      const n = numeros.get(clave);
+      if (n) {
+        asignados.set(clave, n);
+        usados.add(n);
+      }
+    }
+    for (const [clave, ls] of grupos) {
+      if (asignados.has(clave)) continue;
+      const n = numeros.get(claveSinMarca(ls[0], porProducto));
+      if (n && !usados.has(n)) {
+        asignados.set(clave, n);
+        usados.add(n);
+      }
+    }
     const guiasHijas = [...grupos.entries()].map(([clave, ls]) => {
       const t = totalesDeLineas(ls);
       const daes = new Set(ls.map((l) => l.dae));
       if (daes.size > 1) advertencias.push(`La guía hija de ${fincas.get(ls[0].idFinca) ?? 'una finca'} tiene ${daes.size} DAE distintas.`);
       return {
         clave,
-        numeroGuiaHija: numeros.get(clave) ?? null,
+        numeroGuiaHija: asignados.get(clave) ?? null,
         idFinca: ls[0].idFinca,
         idConsignatario: ls[0].idConsignatario,
         dae: ls[0].dae,
@@ -471,7 +629,9 @@ export class CoordinarService {
     const totales = { ...totalesDeLineas(conFulls), volumen: volumenDeLineas(conFulls) };
 
     const v = valores(dto.liquidacion ?? {});
-    if (v.pesoCobrable !== null && v.pesoCobrable < totales.kgs && origen !== 'E') {
+    // La finca por el portal ('E') y las transferencias ('I') no se frenan: el peso cobrable se exige al
+    // grabar en la oficina y al cortar.
+    if (v.pesoCobrable !== null && v.pesoCobrable < totales.kgs && origen !== 'E' && origen !== 'I') {
       // Regla del sistema viejo: "El Peso Volumen ingresado NO puede ser menor que el Peso Neto".
       throw new BadRequestException(
         `El peso cobrable (${v.pesoCobrable} kg) no puede ser menor que el peso de la carga (${totales.kgs} kg).`,
@@ -565,7 +725,7 @@ export class CoordinarService {
     };
   }
 
-  private async conceptosAerolinea(idAerolinea: number): Promise<NonNullable<ParametrosCoordinacion['aerolinea']>> {
+  private async conceptosAerolinea(idAerolinea: number): Promise<Omit<NonNullable<ParametrosCoordinacion['aerolinea']>, 'ruta'>> {
     const pl = await this.maestros.aerolineasPlantilla.findUnique({
       where: { idAerolinea },
       include: { conceptos: true },
@@ -586,15 +746,24 @@ export class CoordinarService {
     };
   }
 
-  /** Se conserva el número de cada guía hija que sigue existiendo (misma marca + finca + producto). */
+  /**
+   * Números de guía hija que ya tiene la coordinación, por su clave (marca +
+   * finca + producto) y por finca + producto sin la marca (para conservarlos si
+   * cambia la marca; solo si esa finca + producto tenía una sola guía hija).
+   */
   private async numerosExistentes(
     guias: Array<{ numeroGuiaHija: string; detalles: LineaCalculo[] }>,
   ): Promise<Map<string, string>> {
     const porProducto = await this.ngHPorProducto();
     const numeros = new Map<string, string>();
+    const sinMarca = new Map<string, string[]>();
     for (const g of guias) {
-      if (g.detalles[0]) numeros.set(claveGuiaHija(g.detalles[0], porProducto), g.numeroGuiaHija);
+      if (!g.detalles[0]) continue;
+      numeros.set(claveGuiaHija(g.detalles[0], porProducto), g.numeroGuiaHija);
+      const k = claveSinMarca(g.detalles[0], porProducto);
+      sinMarca.set(k, [...(sinMarca.get(k) ?? []), g.numeroGuiaHija]);
     }
+    for (const [k, ns] of sinMarca) if (ns.length === 1) numeros.set(k, ns[0]);
     return numeros;
   }
 
@@ -616,6 +785,8 @@ export class CoordinarService {
   ): Promise<number> {
     const guia = await tx.guiaMadre.findUniqueOrThrow({ where: { id: dto.idGuiaMadre } });
     const v = valores(dto.liquidacion ?? {});
+    const agencia = await this.maestros.agenciaIata.findUnique({ where: { id: dto.idAgenciaIata }, select: { comision: true } });
+    const ahora = new Date();
     const base = {
       idGuiaMadre: dto.idGuiaMadre,
       numeroGuia: guia.numero ? `${guia.numero.slice(0, 8)} ${guia.numero.slice(8)}` : null,
@@ -640,15 +811,25 @@ export class CoordinarService {
       liqPesoBruto: a.totales.kgs,
       corteExtra: !!dto.cobroCliente,
       ...camposResumen(a.liquidacion),
-      actualizadoPorLegacy: null,
+      // R14: la comisión es la de la agencia IATA (shiComision); hoy no se usa, pero el viejo la guarda siempre.
+      comision: agencia?.comision ?? null,
+      // Quién y cuándo modificó (dDocUsuario.docUsuAct / docFecAct del viejo).
+      actualizadoPorLegacy: usuario ?? null,
+      actualizadoEnLegacy: ahora,
     };
     let coordId: number;
     const registros = new Map<number, { usuario: string | null; fechaRegistro: Date | null; origen: string | null }>();
-    const ahora = new Date();
     if (id === null) {
       coordId = (
         await tx.documentoCoordinacion.create({
-          data: { ...base, estadoActual: 'BORRADOR', fechaAsignacion: new Date(), creadoPorLegacy: usuario ?? null },
+          data: {
+            ...base,
+            numero: await siguiente(tx, 'coordinacion', inicioCoordinacion()),
+            estadoActual: 'BORRADOR',
+            fechaAsignacion: ahora,
+            creadoPorLegacy: usuario ?? null,
+            creadoEnLegacy: ahora,
+          },
           select: { id: true },
         })
       ).id;
@@ -691,6 +872,12 @@ export class CoordinarService {
       }
       rutas[via] = { ...rutas[via], vuelo: vm.vuelo, fechaHoraSalida: vm.salida, fechaHoraLlegada: vm.llegada };
     }
+    // El manifiesto es del transportista que opera el vuelo (tramo VIA), que puede no ser la aerolínea de la
+    // guía: las de MSC (CP) vuelan con Atlas (5Y).
+    const transportista =
+      rutas.find((r) => r.tipoRuta.startsWith('VIA') && r.vuelo)?.codigo?.trim() ||
+      rutas.find((r) => r.tipoRuta.startsWith('VIA'))?.codigo?.trim() ||
+      codigoAerolinea;
     if (rutas.length) {
       await tx.documentoRuta.createMany({
         data: rutas.map((r, i) => ({
@@ -716,14 +903,14 @@ export class CoordinarService {
           origen: rutas.find((r) => r.tipoRuta === 'ORIGEN')?.codigo || 'UIO',
           aduana: '055',
           anio: String(anio),
-          tipo: codigoAerolinea,
+          tipo: transportista,
           numero,
           secuencial,
           vuelo: vm.vuelo ?? null,
           // Como los guarda el sistema viejo: fecha y hora locales de llegada.
           fechaArribo: llegada ? horaLocal(llegada).fecha : null,
           horaArribo: llegada ? horaLocal(llegada).hora : null,
-          referencia: ['CEC', anio, codigoAerolinea ?? '', numero ?? '', secuencial ?? ''].join('-'),
+          referencia: ['CEC', anio, transportista ?? '', numero ?? '', secuencial ?? ''].join('-'),
         },
       });
     }
@@ -761,7 +948,9 @@ export class CoordinarService {
                 ancho: l.ancho ?? null,
                 alto: l.alto ?? null,
                 nota: l.nota ?? null,
-                factura: l.factura?.trim() || null,
+                // Sin factura de la finca, la factura es el número de guía hija (así queda en el 80 % de
+                // las líneas del viejo hasta 2026-05).
+                factura: l.factura?.trim() || numero,
                 ...((l.idLinea && registros.get(l.idLinea)) || { usuario: usuario ?? null, fechaRegistro: ahora, origen: origen ?? null }),
               })),
             },
@@ -787,6 +976,11 @@ export class CoordinarService {
       }))
       .filter((r) => r.codigo);
   }
+}
+
+/** Finca + producto, sin la marca: para conservar el número de guía hija si cambia la marca. */
+function claveSinMarca(l: LineaCalculo, porProducto: boolean): string {
+  return ['sinMarca', l.idFinca ?? '-', porProducto ? (l.codigoProducto ?? '-') : ''].join('|');
 }
 
 /** Fecha ("2022/09/15") y hora ("10:11") de Ecuador, como el manifiesto del sistema viejo. */

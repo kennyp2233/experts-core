@@ -176,7 +176,8 @@ export class ImpresionService {
     @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
   ) {}
 
-  private async empresa() {
+  /** Datos de Experts como emisor (parámetros EMPRESA.*), para cualquier documento. */
+  async empresa() {
     const params = await this.maestros.parametro.findMany({ where: { clave: { startsWith: 'EMPRESA.' } } });
     const p = (k: string) => params.find((x) => x.clave === `EMPRESA.${k}`)?.valorTexto?.trim() ?? '';
     return {

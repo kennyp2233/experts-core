@@ -9,6 +9,7 @@ import { XmlGeneratorService } from './services/xml-generator.service';
 import { XmlValidatorService } from './services/xml-validator.service';
 import { FitoProcessor } from './services/fito-processor.service';
 import { FitoMapeoService } from './services/fito-mapeo.service';
+import { FitoSistemaService } from './services/fito-sistema.service';
 
 @Module({
     imports: [
@@ -23,7 +24,9 @@ import { FitoMapeoService } from './services/fito-mapeo.service';
     providers: [
         FitoService,
         FitoMapeoService,
-        FitoLegacyService,
+        FitoSistemaService, // fuente normal: Postgres
+        FitoLegacyService, // deprecado: Access directo, de respaldo
+
         XmlGeneratorService,
         XmlValidatorService,
         FitoProcessor

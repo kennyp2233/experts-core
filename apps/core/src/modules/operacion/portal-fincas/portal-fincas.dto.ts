@@ -17,7 +17,11 @@ import {
 
 const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 
-/** Lo que carga la finca en una guía (como la web vieja: producto, fulls, cajas, kg, DAE, factura, valor, tallos). */
+/**
+ * Lo que carga la finca en una guía: producto, cajas (el portal las pide por tipo,
+ * como EBF, y manda fulls y piezas), kg y DAE. Factura, valor y tallos son
+ * opcionales: normalmente no los sube y se completan con los parámetros.
+ */
 export class LineaFincaDto {
   @ApiProperty() @IsInt() @Min(1)
   idFinca: number;
@@ -31,7 +35,11 @@ export class LineaFincaDto {
   @ApiProperty({ example: 3 }) @IsInt() @Min(0)
   cantidadCajas: number;
 
-  @ApiPropertyOptional({ description: 'Si no viene: cajas × kg por caja (parámetro, 22 en el viejo)' })
+  @ApiPropertyOptional({ description: 'Tipo de caja (FB/HB/QB/EB) si todas las cajas son de un tipo; mezcladas, sin tipo' })
+  @IsOptional() @IsInt() @Min(1)
+  idTipoCaja?: number;
+
+  @ApiPropertyOptional({ description: 'Si no viene: fulls × cajas por full × kg por caja (lo mismo que sugiere la oficina)' })
   @IsOptional() @IsNumber() @Min(0)
   pesoKg?: number;
 

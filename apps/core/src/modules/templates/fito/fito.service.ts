@@ -5,6 +5,7 @@ import { PrismaClient } from '@internal/templates-client';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
 import { FitoLegacyService } from './services/fito-legacy.service';
 import { FitoMapeoService } from './services/fito-mapeo.service';
+import { FitoSistemaService } from './services/fito-sistema.service';
 
 @Injectable()
 export class FitoService {
@@ -14,6 +15,7 @@ export class FitoService {
         @InjectQueue('fito-xml') private fitoQueue: Queue,
         @Inject('PrismaClientTemplates') private prisma: PrismaClient,
         private legacyDb: FitoLegacyService,
+        private sistema: FitoSistemaService,
         private mapeos: FitoMapeoService
     ) { }
 
@@ -64,27 +66,45 @@ export class FitoService {
 
         const docNumeros = job.guiaIds.split(',').map(n => parseInt(n, 10));
 
-        // Get XMLs generated for these docNumeros (most recent ones)
+        // XML de este job: mismos números y generados desde que se creó el job
+        // (un id del sistema nuevo puede coincidir con un docNumero de Access).
         return this.prisma.fitoXml.findMany({
             where: {
                 docNumero: { in: docNumeros },
-                status: 'success'
+                status: 'success',
+                createdAt: { gte: job.createdAt }
             },
             orderBy: { createdAt: 'desc' },
             take: docNumeros.length
         });
     }
 
+    /** @deprecated Access directo; usar `listGuias` (sistema nuevo). */
     async listGuiasInAccess() {
         return this.legacyDb.listGuias();
     }
 
+    /** @deprecated Access directo; usar `getGuiasHijasSistema`. */
     async getGuiasHijas(docNumero: number) {
         return this.legacyDb.getGuiasHijas(docNumero);
     }
 
+    /** @deprecated Access directo; usar `getDestinoSistema`. */
     async getDestinoByCode(desCodigo: string) {
         return this.legacyDb.getDestinoByCode(desCodigo);
+    }
+
+    /** Coordinaciones del sistema nuevo (Postgres), más recientes por fecha de vuelo. */
+    async listGuias(limit?: number) {
+        return this.sistema.listGuias(limit);
+    }
+
+    async getGuiasHijasSistema(id: number) {
+        return this.sistema.getGuiasHijas(id);
+    }
+
+    async getDestinoSistema(codigo: string) {
+        return this.sistema.getDestinoByCode(codigo);
     }
 
     async getMapeos(codigos?: string | string[]) {

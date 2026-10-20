@@ -12,10 +12,15 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 
 - El sistema nuevo **solo modifica lo que creó** (`codigoAccess = null`); lo que viene de Access se ve pero no se
   toca (403).
-- Las guías hijas nuevas se numeran desde 90.000.000 (`OPERACION_NGH_INICIO`) para no chocar con el contador de
-  Access. Contadores en la tabla `Contador` (atómicos).
+- Las guías hijas nuevas se numeran desde 90.000.000 (`OPERACION_NGH_INICIO`), las coordinaciones desde 900.000
+  (`OPERACION_COO_INICIO`, campo `numero`; las de Access usan `codigoAccess`) y los ingresos desde CGU-0900000, para no
+  chocar con los contadores de Access. Contadores en la tabla `Contador` (atómicos).
 
-`OPERACION_MODO=activo` el día del corte definitivo.
+`OPERACION_MODO=activo` el día del corte definitivo. **Corte definitivo** (`GET /operacion/corte-definitivo`, ADMIN,
+pantalla `/operacion/corte-definitivo`): muestra los contadores contra los últimos números de Access y los pasos. En
+modo activo, `POST …/alinear-contadores` deja cada contador en el último número de Access (coordinación
+`MAX(docNumero)` COO, CGU, y guía hija = `eBodega.bodNGH` / mayor `detGuiaHija` reciente), así la numeración sigue la
+del viejo. En modo activo el sync Access → PG no corre (ni el cron ni a mano, salvo dry-run).
 
 ## Rebanadas
 
@@ -23,6 +28,7 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 |---|---|---|
 | Coordinaciones: lista, búsqueda (AWB, guía hija, DAE, N°), detalle | `GET /operacion/coordinaciones[/:id]` | `/operacion/coordinaciones` |
 | Coordinar: simular, crear, editar (guía madre + cobro al cliente), cortar, anular | `POST simular`, `POST`, `PUT :id`, `POST :id/corte`, `DELETE :id` | `/operacion/coordinaciones/nueva`, `…/:id/editar` |
+| Reabrir una guía cortada (deshacer el corte; no borra nada, vuelve al portal de fincas) | `DELETE /operacion/coordinaciones/:id/corte?motivo=` | detalle → ⋯ → "Reabrir guía" |
 | Defaults para coordinar (parámetros de línea, rótulos de agencia, conceptos de aerolínea) | `GET /operacion/coordinaciones/parametros?idAerolinea=` | — |
 | Buscadores (solo activos) y sugerencias de la marca | `GET /operacion/opciones/:tipo`, `GET /operacion/opciones/consignatarios/:id/sugerencia` | — |
 | Ingreso de guías (documento CGU): lista, detalle, grabar, modificar, anular | `/operacion/guias-madre/ingresos[/:id]` | `/operacion/guias/ingresos` |
@@ -32,6 +38,16 @@ Mientras se usen los dos sistemas, `OPERACION_MODO=sombra` (default):
 | Usuarios de fincas (crear, fincas que ve, desactivar, nueva clave) | `/operacion/usuarios-fincas` (rol `ADMIN`) | `/operacion/usuarios-fincas` |
 | Imprimir guías hijas por finca (HAWB en hoja blanca A4) | `GET /operacion/coordinaciones/:id/guias-hijas/impresion[?guiaHija=]` | `/imprimir/coordinaciones/:id/guias-hijas` |
 | Validación contra Access | `GET /operacion/validacion`, `GET /operacion/coordinaciones/:id/validacion` | `/operacion/validacion` |
+| Correcciones después del corte: factura y nota de cada línea, nota de la guía | `PATCH /operacion/coordinaciones/:id` | detalle → "Facturas y notas" |
+| Pasar cajas (líneas) a otra guía abierta, las dos se recalculan | `POST /operacion/coordinaciones/:id/transferir` | detalle → ⋯ → "Pasar cajas a otra guía" |
+| Anuladas: qué, quién, cuándo y motivo | `DELETE /operacion/coordinaciones/:id?motivo=`, `GET …/anuladas` | lista → pestaña "Anuladas" |
+| Estado de cuenta por cliente (quincena / rango), Excel | `GET /operacion/cuentas/estado-cuenta[.xlsx]` | `/operacion/cuentas/estado-cuenta` |
+| Ventas y liquidación: costo aerolínea vs. cobrado, ganancia, por aerolínea y cliente | `GET /operacion/cuentas/ventas[.xlsx]` | `/operacion/cuentas/ventas` |
+| Liquidación de una guía al cliente (reemplaza al Shipment-Invoice) | `GET /operacion/cuentas/guias/:id` | Imprimir → "Liquidación al cliente" |
+| DAEs desde la oficina (F4 "Actualizar FUE" del viejo) | `GET/POST/DELETE /operacion/daes` | `/operacion/daes` |
+| Portal de clientes: sus guías, guías hijas, liquidación y estado de cuenta | `/portal-clientes/*` (rol `CLIENTE`) | `/portal-clientes` |
+| Usuarios de clientes | `/operacion/usuarios-clientes` (rol `ADMIN`) | `/operacion/usuarios-clientes` |
+| Corte definitivo: contadores vs. Access y pasos | `/operacion/corte-definitivo` (rol `ADMIN`) | `/operacion/corte-definitivo` |
 | Datos maestros: lista, ficha, alta y cambios (fincas, consignatarios, embarcadores, clientes, productos, aerolíneas, agencias, subagencias, destinos, países, tipos de embarque, choferes) | `GET /maestros[/:entidad[/:id[/edicion]]]`, `GET /maestros/:entidad/formulario`, `POST /maestros/:entidad`, `PUT /maestros/:entidad/:id` | `/maestros` |
 
 ## Reglas y validación
@@ -109,8 +125,22 @@ Pendiente:
   del destino final + fecha de vuelo dentro del período, activas, la que empezó antes). Coincide con la DAE real en el
   96 % de las líneas con carga de 2026 (2.332 de 2.424) y en las 28 de la 13909. En cursiva mientras es propuesta;
   si cambia la fecha o el destino se recalcula, y si no hay vigente la fila avisa "Sin DAE vigente para el vuelo".
-- Transferir cajas entre guías o marcas (`frmPINTransferWizard`) y "Coordinación múltiple" (cargar una finca en varias
-  guías sin abrirlas). Numeración de las coordinaciones nuevas después de la última del viejo al pasar a modo activo.
+- ~~Transferir cajas entre guías~~ (hecho 20/10/2026, solo entre guías abiertas). "Coordinación múltiple" no se
+  migra (sin uso). ~~Numeración al pasar a modo activo~~ (corte definitivo, 20/10/2026).
+- Otras reglas del viejo agregadas el 20/10/2026: al cambiar la marca se conservan los números de guía hija (misma
+  finca + producto); factura vacía = número de guía hija; comisión = la de la agencia IATA; quién y cuándo creó /
+  modificó; ruta editable por guía (5 % de las guías vuela distinto de la ruta del maestro) y el manifiesto es del
+  transportista del tramo VIA (MSC/CP volado por 5Y).
+- Documentos del viejo hechos (20/10/2026, "por si acaso"; `DocumentosGuiaService` + hojas en
+  `/imprimir/coordinaciones/:id/…`): **Export List** (ExportList.xlt: una fila por finca + guía hija + DAE + factura +
+  fecha + producto con fulls, totales), **Form A** (repFormaA.xlt en hoja blanca Legal; exportador cliente o agencia,
+  piezas o fulls, general o por producto; hoy lo emiten EBF y FlowerCargo por ECUAPASS), **Etiquetas** (datos de
+  tv_Etiquetas; diseño provisional 10×15 cm o A4, una por guía hija o por caja, hasta tener el formato de la
+  impresora de EBF/FlowerCargo) y **Reservas** (Excel del día, una hoja por aerolínea, campos de
+  frmPINRepGen.Proc_83CAE0; faltan las plantillas `aerPlantillaReservas` de cada aerolínea para imitar su formulario).
+- Sin migrar, a confirmar con el dueño si se usan: envío del manifiesto a ECUAPASS (XML 029/034 y respuestas; hoy
+  manifiesto y secuencial se escriben a mano), impreso de FITO, Programación detallada por finca, Guías hijas por
+  cliente, Factura comercial, ETD/ATD y confirmación de vuelos.
 - **Teclado** (en el viejo, Enter = siguiente campo en todas las pantallas: `SAC2inv.Proc_64FB10` → `SendKeys "{TAB}"`):
   - Enter que avance de campo en coordinar, ingreso de guías y préstamo.
   - Foco inicial en la guía madre (nueva), en el buscador de la lista y del stock, y en la aerolínea del ingreso.
@@ -127,6 +157,32 @@ Pendiente:
 - Datos: MARTINAIR está dos veces en las aerolíneas; hay 3 guías COORDINADAS sin coordinación (salen primero al
   filtrar Coordinadas).
 
+## Cobro al cliente (estado de cuenta, ventas, liquidación)
+
+[`documentos/cuentas.service.ts`](documentos/cuentas.service.ts). Análisis del 20/10/2026 (`legacy-analysis`, vistas
+`tv_*` de Access y plantillas): los documentos de cobro del viejo salían incompletos y se corregían a mano en Excel.
+
+- Los "valores extra" son dos cosas: el **corte extra** (`*_ex`, lo que se cobra al cliente: tarifa, peso y los 7
+  códigos de agencia; 99,5 % de las guías 2024–2026) y el **handling de Experts** (`extAux3Handling`, 60 u 85 por
+  guía), que el viejo guarda **solo en el juego normal** (`_ex` = 0 en el 100 % de 2025+).
+- Viejo: el estado de cuenta (`tv_repEstadoCuentaCliente`) usaba el corte extra pero ponía `0 AS extAux3Handling` y el
+  peso cobrable del juego normal; la liquidación general, las ventas, el estado de cuenta "antiguo" y el
+  Shipment-Invoice usaban el juego normal (costos); la guía madre y las guías hijas por cliente dependían de marcar
+  "Imprimir CORTE EXTRA". En 2026 un documento con el juego normal queda 17 % por debajo, sin contar el handling.
+- Nuevo: el cobro al cliente sale siempre del juego vigente (corte extra si lo hay) con su propio peso cobrable, y el
+  handling va como renglón aparte: total a cobrar = total de la guía + handling. Solo guías cortadas (salvo
+  `incluirAbiertas`). Ventas: ganancia = total cobrado − total de la guía madre. Verificado con la 13910: 1.325,20 +
+  60 = 1.385,20 (costo 1.026,50, ganancia 358,70).
+- La guía madre sigue con los valores de la aerolínea por defecto (es su factura); "cliente" a pedido.
+
+## Portal de clientes
+
+Rol `CLIENTE` (antes solo podía entrar a la cuenta de Experts en el portal de EBF: se le quitó). Usuarios en
+`UsuarioCliente` (n:m con `Cliente` de datos maestros: el cliente de la marca). Ve las guías de sus marcas (también las
+del sistema viejo, solo lectura), el vuelo, sus guías hijas por finca (con DAE y facturas) e imprimirlas, la
+liquidación de cada guía cortada y su estado de cuenta (Excel). Nunca ve los valores de la aerolínea ni guías de otros
+clientes; la API de oficina le responde 403.
+
 ## Guías: Ingreso y Administración
 
 Como el menú Guías del sistema viejo (análisis 16/10/2026 con datos de producción). **Cada guía nace en un Ingreso de
@@ -137,8 +193,9 @@ guía de un CGU. Uso real del último año: 367 ingresos, casi siempre **una gu�
 (la aerolínea cambió el número: se ingresa la nueva, se cambia en la coordinación y se anula el ingreso viejo); 1 de cada
 4 guías termina "prestada" (la usó EBF/FlowerCargo o no se usó), casi sin observación; devoluciones: ninguna desde 2015.
 
-- Estado del ingreso (`estado-ingreso.ts`, regla confirmada con los documentos 2019–2026): **Cancelado** = todas sus
-  guías usadas (coordinadas, o prestadas y devueltas) — es "agotado", no "anulado"; **Guías coordinadas** = alguna
+- Estado del ingreso (`estado-ingreso.ts`, regla confirmada con los documentos 2019–2026): **Usado** (en el viejo y en
+  la base, `CANCELADO`; el dueño pidió "usada", 19/10/2026) = todas sus guías usadas (coordinadas, o prestadas y
+  devueltas) — es "agotado", no "anulado"; **Guías coordinadas** = alguna
   coordinada sin estar todas usadas; **Ingresado** = ninguna coordinada. Se recalcula al ingresar, modificar,
   coordinar / cambiar guía / anular coordinación, prestar, quitar préstamo, devolver y verificar. "Stock verificado" =
   el estado guardado coincide con sus guías (si no, "Corregir").

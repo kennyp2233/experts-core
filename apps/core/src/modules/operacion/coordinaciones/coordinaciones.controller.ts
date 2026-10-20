@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/v1/guards/jwt-auth.guard';
@@ -7,11 +7,12 @@ import { Roles } from '../../auth/v1/decorators/roles.decorator';
 import { UserRole } from '../../auth/v1/dto/update-user-role.dto';
 import { CoordinacionesService } from './coordinaciones.service';
 import { ListarCoordinacionesDto } from './dto/listar-coordinaciones.dto';
-import { GuardarCoordinacionDto } from './dto/guardar-coordinacion.dto';
+import { CorregirCoordinacionDto, GuardarCoordinacionDto, TransferirLineasDto } from './dto/guardar-coordinacion.dto';
 import { CoordinarService } from './coordinar.service';
 import { FlowerCargoService } from '../documentos/flowercargo.service';
 import { ArchivoReporte, ReportesDiaService } from '../documentos/reportes-dia.service';
 import { ImpresionService } from '../documentos/impresion.service';
+import { DocumentosGuiaService } from '../documentos/documentos-guia.service';
 
 type ConUsuario = { user?: { username?: string; email?: string } };
 const usuario = (req: ConUsuario) => req.user?.username ?? req.user?.email;
@@ -29,6 +30,7 @@ export class CoordinacionesController {
     private readonly archivoFlowerCargo: FlowerCargoService,
     private readonly reportes: ReportesDiaService,
     private readonly impresion: ImpresionService,
+    private readonly documentos: DocumentosGuiaService,
   ) {}
 
   @Get()
@@ -56,10 +58,22 @@ export class CoordinacionesController {
     this.enviar(res, await this.reportes.antinarcoticos(dia, Number(idAerolinea) || undefined));
   }
 
+  @Get('reportes/reservas')
+  @ApiOperation({ summary: 'Excel "Reservas" de un día: una hoja por aerolínea, una fila por guía. `?dia=AAAA-MM-DD&idAerolinea=`' })
+  async reservas(@Query('dia') dia: string, @Res() res: Response, @Query('idAerolinea') idAerolinea?: string) {
+    this.enviar(res, await this.reportes.reservas(dia, Number(idAerolinea) || undefined));
+  }
+
   private enviar(res: Response, a: ArchivoReporte) {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${a.nombreArchivo}"`);
     res.send(a.contenido);
+  }
+
+  @Get('anuladas')
+  @ApiOperation({ summary: 'Coordinaciones anuladas en el sistema nuevo: qué se anuló, quién y cuándo. `?desde=&hasta=`' })
+  anuladas(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
+    return this.service.anuladas(desde, hasta);
   }
 
   @Get(':id')
@@ -80,6 +94,28 @@ export class CoordinacionesController {
   })
   impresionGuiaMadre(@Param('id', ParseIntPipe) id: number, @Query('valores') valores?: string) {
     return this.impresion.guiaMadre(id, valores === 'cliente' ? 'cliente' : 'aerolinea');
+  }
+
+  @Get(':id/export-list')
+  @ApiOperation({ summary: 'Export List de la guía (ExportList.xlt del viejo): una fila por finca, guía hija, DAE, factura y producto.' })
+  exportList(@Param('id', ParseIntPipe) id: number) {
+    return this.documentos.exportList(id);
+  }
+
+  @Get(':id/etiquetas')
+  @ApiOperation({ summary: 'Datos para las etiquetas (tv_Etiquetas del viejo): la guía madre y una entrada por guía hija.' })
+  etiquetas(@Param('id', ParseIntPipe) id: number) {
+    return this.documentos.etiquetas(id);
+  }
+
+  @Get(':id/forma-a')
+  @ApiOperation({ summary: 'Form A (certificado de origen GSP). `?exportador=cliente|agencia&cantidad=piezas|fulls`' })
+  formaA(@Param('id', ParseIntPipe) id: number, @Query('exportador') exportador?: string, @Query('cantidad') cantidad?: string) {
+    return this.documentos.formaA(
+      id,
+      exportador === 'agencia' ? 'agencia' : 'cliente',
+      cantidad === 'fulls' || cantidad === 'piezas' ? cantidad : undefined,
+    );
   }
 
   @Get(':id/flowercargo')
@@ -118,14 +154,32 @@ export class CoordinacionesController {
   }
 
   @Post(':id/corte')
-  @ApiOperation({ summary: 'Corte de guía (irreversible): la coordinación queda sin edición.' })
+  @ApiOperation({ summary: 'Corte de guía: la coordinación queda sin edición (se deshace con DELETE :id/corte).' })
   cortar(@Param('id', ParseIntPipe) id: number) {
     return this.coordinar.cortar(id);
   }
 
+  @Delete(':id/corte')
+  @ApiOperation({ summary: 'Deshace el corte: la guía vuelve a quedar abierta, sin borrar nada (quién, cuándo, `?motivo=`).' })
+  reabrir(@Param('id', ParseIntPipe) id: number, @Req() req: ConUsuario, @Query('motivo') motivo?: string) {
+    return this.coordinar.reabrir(id, usuario(req), motivo);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Corrige la factura / nota de las líneas y la nota de la guía (también después del corte).' })
+  corregir(@Param('id', ParseIntPipe) id: number, @Body() dto: CorregirCoordinacionDto, @Req() req: ConUsuario) {
+    return this.coordinar.corregir(id, dto, usuario(req));
+  }
+
+  @Post(':id/transferir')
+  @ApiOperation({ summary: 'Pasa líneas (cajas de una finca) a otra coordinación abierta, recalculando las dos.' })
+  transferir(@Param('id', ParseIntPipe) id: number, @Body() dto: TransferirLineasDto, @Req() req: ConUsuario) {
+    return this.coordinar.transferir(id, dto, usuario(req));
+  }
+
   @Delete(':id')
-  @ApiOperation({ summary: 'Anula una coordinación abierta: borra el detalle y libera la guía madre.' })
-  anular(@Param('id', ParseIntPipe) id: number) {
-    return this.coordinar.anular(id);
+  @ApiOperation({ summary: 'Anula una coordinación abierta: libera la guía madre y deja constancia (quién, cuándo, `?motivo=`).' })
+  anular(@Param('id', ParseIntPipe) id: number, @Req() req: ConUsuario, @Query('motivo') motivo?: string) {
+    return this.coordinar.anular(id, usuario(req), motivo);
   }
 }
