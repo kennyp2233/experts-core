@@ -40,9 +40,9 @@ export class PortalClientesController {
   }
 
   @Get('guias/:id/guias-hijas/impresion')
-  @ApiOperation({ summary: 'Datos para imprimir sus guías hijas (House Air Waybill por finca).' })
-  impresion(@Req() req: ConUsuario, @Param('id', ParseIntPipe) id: number) {
-    return this.service.impresionGuiasHijas(req.user, id);
+  @ApiOperation({ summary: 'Datos para imprimir sus guías hijas (House Air Waybill por finca). `?guiaHija=` para una sola.' })
+  impresion(@Req() req: ConUsuario, @Param('id', ParseIntPipe) id: number, @Query('guiaHija') guiaHija?: string) {
+    return this.service.impresionGuiasHijas(req.user, id, Number(guiaHija) || undefined);
   }
 
   @Get('estado-cuenta')

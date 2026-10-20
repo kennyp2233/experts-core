@@ -90,8 +90,9 @@ export class PortalClientesService {
     const page = Math.max(1, f.page ?? 1);
     const pageSize = 30;
     const where = { AND: and };
-    const [total, filas] = await Promise.all([
+    const [total, suma, filas] = await Promise.all([
       this.docs.documentoCoordinacion.count({ where }),
+      this.docs.documentoCoordinacion.aggregate({ where, _sum: { totalFulls: true, totalCajas: true, totalKgs: true } }),
       this.docs.documentoCoordinacion.findMany({
         where,
         orderBy: [{ fechaVuelo: 'desc' }, { id: 'desc' }],
@@ -112,6 +113,7 @@ export class PortalClientesService {
       total,
       page,
       pageSize,
+      totales: { fulls: suma._sum.totalFulls ?? 0, cajas: suma._sum.totalCajas ?? 0, kgs: suma._sum.totalKgs ?? 0 },
       items: filas.map((c) => ({
         id: c.id,
         numeroGuia: c.numeroGuia,
@@ -187,9 +189,9 @@ export class PortalClientesService {
   }
 
   /** Datos para imprimir sus guías hijas (House Air Waybill por finca). */
-  async impresionGuiasHijas(u: UsuarioCliente, id: number) {
+  async impresionGuiasHijas(u: UsuarioCliente, id: number, idGuiaHija?: number) {
     await this.propia(u, id);
-    return this.impresion.guiasHijas(id);
+    return this.impresion.guiasHijas(id, idGuiaHija);
   }
 
   async estadoCuenta(u: UsuarioCliente, f: { desde?: string; hasta?: string; idCliente?: number }) {

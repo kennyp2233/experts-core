@@ -12,6 +12,7 @@ import {
   ValoresLiquidacion,
 } from '../calculos/liquidacion';
 import { ArchivoReporte } from './reportes-dia.service';
+import { ImpresionService } from './impresion.service';
 
 type CodigoAgencia = (typeof CODIGOS_AGENCIA)[number];
 
@@ -97,6 +98,7 @@ export class CuentasService {
     @Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos,
     @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
     private readonly nombres: NombresMaestrosService,
+    private readonly impresion: ImpresionService,
   ) {}
 
   /** Rótulos de los 7 códigos de agencia (_PARAMETROS CODAGE0..6), p. ej. "FORM A", "TRANSPORT". */
@@ -197,6 +199,7 @@ export class CuentasService {
       },
       desde: f.desde,
       hasta: f.hasta,
+      empresa: await this.impresion.empresa(),
       etiquetasAgencia: await this.etiquetasAgencia(),
       filas: filas.map(({ costoAerolinea: _c, ganancia: _g, ...x }) => x),
       totales: {
@@ -211,6 +214,7 @@ export class CuentasService {
         totalGuia: suma('totalGuia'),
         handling: suma('handling'),
         totalCobrar: suma('totalCobrar'),
+        pesoCobrable: suma('pesoCobrable'),
       },
     };
   }
@@ -277,6 +281,7 @@ export class CuentasService {
             pais: cl.pais,
           }
         : null,
+      empresa: await this.impresion.empresa(),
       etiquetasAgencia: await this.etiquetasAgencia(),
     };
   }
