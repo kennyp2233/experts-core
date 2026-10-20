@@ -4,6 +4,8 @@ import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client'
 import * as XLSX from 'xlsx';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
 import { NombresMaestrosService, ref, RefMaestro } from '../maestros/nombres-maestros.service';
+import { contactoExperts } from './contacto';
+import { GuiaReserva, hojaReserva } from './reservas-formatos';
 
 /** Nombre de la agencia y de la paletizadora como salen en el reporte del sistema viejo. */
 const AGENCIA = () => process.env.REPORTE_AGENCIA || 'EXPERTS HANDLING CARGO S. A.';
@@ -22,12 +24,24 @@ function libro(nombreHoja: string, filas: unknown[][], anchos: number[]): Buffer
   return libroHojas([{ nombre: nombreHoja, filas, anchos }]);
 }
 
-function libroHojas(hojas: Array<{ nombre: string; filas: unknown[][]; anchos: number[] }>): Buffer {
+interface HojaLibro {
+  nombre: string;
+  /** Una celda puede ser `{ t, v, f }` para dejar una fórmula. */
+  filas: unknown[][];
+  /** null = columna oculta. */
+  anchos: Array<number | null>;
+  uniones?: string[];
+  margenes?: XLSX.MarginInfo;
+}
+
+function libroHojas(hojas: HojaLibro[]): Buffer {
   const wb = XLSX.utils.book_new();
   const usados = new Set<string>();
   for (const h of hojas) {
     const hoja = XLSX.utils.aoa_to_sheet(h.filas);
-    hoja['!cols'] = h.anchos.map((wch) => ({ wch }));
+    hoja['!cols'] = h.anchos.map((wch) => (wch === null ? { wch: 0, hidden: true } : { wch }));
+    if (h.uniones?.length) hoja['!merges'] = h.uniones.map((u) => XLSX.utils.decode_range(u));
+    if (h.margenes) hoja['!margins'] = h.margenes;
     // Excel: hasta 31 caracteres, sin : \ / ? * [ ] y sin repetir.
     let nombre = h.nombre.replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 31) || 'Hoja';
     for (let i = 2; usados.has(nombre); i++) nombre = `${nombre.slice(0, 28)} ${i}`;
@@ -49,8 +63,8 @@ const enCelda = (t: string | null | undefined) =>
  * Los reportes del día de vuelo que estaban en la lista de coordinaciones del
  * sistema viejo (frmPIN_Coordina): "Programación de Vuelo" (repProg.xlt) y
  * "Reporte Antinarcóticos" (repAntinarcoticosN.xlt), con las mismas columnas y
- * orden; y "Reservas" por aerolínea (Reportes Consolidados / Cierre de
- * operaciones del viejo).
+ * orden; y "Reservas" con la plantilla de cada aerolínea (Reportes Consolidados
+ * del viejo).
  */
 @Injectable()
 export class ReportesDiaService {
@@ -71,7 +85,7 @@ export class ReportesDiaService {
       where,
       include: {
         liquidaciones: { where: { tipo: 'NORMAL' }, select: { pesoCobrable: true } },
-        rutas: { select: { tipoRuta: true, codigo: true } },
+        rutas: { select: { tipoRuta: true, codigo: true, vuelo: true } },
         guiaHijas: { include: { detalles: { orderBy: { numeroLinea: 'asc' } } } },
       },
     });
@@ -191,80 +205,71 @@ export class ReportesDiaService {
   }
 
   /**
-   * Reservas: lo que se le pide a la aerolínea por cada guía del día, con los
-   * datos de la consulta del viejo (frmPINRepGen.Proc_83CAE0) en su orden: marca,
-   * consignee, país, origen, guía, pago, destino, tipo de embarque, datos del
-   * consignee, notify y fecha; más el código de la aerolínea, la reserva (cupo de
-   * fulls) y lo estimado (fulls, piezas, kg, volumen) como el Cierre de operaciones.
-   * En el viejo cada aerolínea tenía su plantilla (aerPlantillaReservas): aquí va
-   * una hoja por aerolínea con esas columnas.
+   * Reservas, como frmPINRepGen.Proc_83CAE0: una hoja por aerolínea con el
+   * formato de su plantilla (aerPlantillaReservas; ver reservas-formatos.ts) y
+   * una fila por guía con los datos de la consulta del viejo (marca, consignee,
+   * país, origen, guía, pago, destino, tipo de embarque, datos del consignee,
+   * notify). Las cajas son los fulls de la reserva de la guía (o lo coordinado si
+   * no tiene) y el peso es una fórmula con los kg por full de la plantilla.
    */
   async reservas(dia: string, idAerolinea?: number): Promise<ArchivoReporte> {
     const { coords, refs } = await this.delDia(dia, idAerolinea);
     const idsMarca = [...new Set(coords.map((c) => c.idConsignatario).filter((x): x is number => x !== null))];
     const idsEmbarque = [...new Set(coords.map((c) => c.idTipoEmbarque).filter((x): x is number => x !== null))];
-    const [marcas, guiasM, embarques] = await Promise.all([
+    const idsAerolinea = [...new Set(coords.map((c) => c.idAerolinea).filter((x): x is number => x !== null))];
+    const [marcas, guiasM, embarques, plantillas] = await Promise.all([
       this.maestros.consignatario.findMany({ where: { id: { in: idsMarca } }, select: { id: true, paisSigla: true } }),
       this.maestros.consignatarioGuiaM.findMany({ where: { idConsignatario: { in: idsMarca } } }),
-      this.maestros.tipoEmbarque.findMany({ where: { id: { in: idsEmbarque } }, select: { id: true, nombre: true, descripcionGuia: true } }),
+      this.maestros.tipoEmbarque.findMany({ where: { id: { in: idsEmbarque } }, select: { id: true, nombre: true } }),
+      this.maestros.aerolineasPlantilla.findMany({
+        where: { idAerolinea: { in: idsAerolinea } },
+        select: { idAerolinea: true, plantillaReservas: true },
+      }),
     ]);
     const pais = new Map(marcas.map((m) => [m.id, m.paisSigla ?? '']));
     const gm = new Map(guiasM.map((g) => [g.idConsignatario, g]));
-    const emb = new Map(embarques.map((e) => [e.id, enCelda(e.descripcionGuia) || e.nombre]));
+    const emb = new Map(embarques.map((e) => [e.id, e.nombre]));
+    const plantillaDe = new Map(plantillas.map((p) => [p.idAerolinea, p.plantillaReservas]));
 
-    const porAerolinea = new Map<string, typeof coords>();
-    for (const c of coords) {
-      const k = corto(ref(refs.aerolineas, c.idAerolinea)) || 'Sin aerolínea';
-      porAerolinea.set(k, [...(porAerolinea.get(k) ?? []), c]);
-    }
-    const encabezado = [
-      'N°', 'MARCA', 'CONSIGNEE', 'PAÍS', 'ORIGEN', 'AWB', 'PAGO', 'DESTINO', 'TIPO DE EMBARQUE',
-      'CONSIGNEE (DATOS)', 'NOTIFY', 'FECHA DE VUELO', 'AEROLÍNEA', 'RESERVA (FULLS)', 'FULLS', 'PIEZAS', 'KG', 'VOLUMEN',
-    ];
+    const porAerolinea = new Map<number | null, typeof coords>();
+    for (const c of coords) porAerolinea.set(c.idAerolinea, [...(porAerolinea.get(c.idAerolinea) ?? []), c]);
+
     const hojas = [...porAerolinea.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([nombre, cs]) => {
-        const filas = cs
+      .map(([id, cs]) => {
+        const aerolinea = ref(refs.aerolineas, id);
+        const guias: GuiaReserva[] = cs
           .map((c) => {
             const marca = ref(refs.consignatarios, c.idConsignatario);
             const g = c.idConsignatario !== null ? gm.get(c.idConsignatario) : undefined;
-            return [
-              marca?.codigo || marca?.nombre || '',
-              g?.guiaMConsignee ?? marca?.nombre ?? '',
-              c.idConsignatario !== null ? (pais.get(c.idConsignatario) ?? '') : '',
-              c.rutas.find((r) => r.tipoRuta === 'ORIGEN')?.codigo || 'UIO',
-              c.numeroGuia ?? '',
-              c.pago === 'COLLECT' ? 'CC' : 'PP',
-              ref(refs.destinos, c.idDestinoAwb)?.codigo ?? '',
-              c.idTipoEmbarque !== null ? (emb.get(c.idTipoEmbarque) ?? '') : '',
-              enCelda(g?.guiaMNameAddress),
-              enCelda(g?.guiaMNotify),
-              fechaTexto(dia),
-              ref(refs.aerolineas, c.idAerolinea)?.codigo ?? '',
-              c.cupoFulls ?? '',
-              c.totalFulls ?? 0,
-              c.totalCajas ?? 0,
-              c.totalKgs ?? 0,
-              c.totalVolumen ?? '',
-            ];
+            return {
+              marca: marca?.codigo || marca?.nombre || '',
+              consignee: g?.guiaMConsignee ?? marca?.nombre ?? '',
+              codigoCliente: c.idConsignatario !== null ? (pais.get(c.idConsignatario) ?? '') : '',
+              origen: c.rutas.find((r) => r.tipoRuta === 'ORIGEN')?.codigo || 'UIO',
+              awb: c.numeroGuia ?? '',
+              pago: c.pago === 'COLLECT' ? 'CC' : 'PP',
+              destino: ref(refs.destinos, c.idDestinoAwb)?.codigo ?? '',
+              tipoCarga: c.idTipoEmbarque !== null ? (emb.get(c.idTipoEmbarque) ?? '') : '',
+              consigneeDatos: enCelda(g?.guiaMNameAddress),
+              fulls: c.cupoFulls || c.totalFulls || null,
+            } satisfies GuiaReserva;
           })
-          .sort((a, b) => String(a[0]).localeCompare(String(b[0])) || String(a[4]).localeCompare(String(b[4])));
-        const suma = (i: number) => redondeo(filas.reduce((s, f) => s + (Number(f[i]) || 0), 0));
-        return {
-          nombre,
-          filas: [
-            ['EMPRESA:', AGENCIA()],
-            ['AEROLÍNEA:', nombre],
-            ['FECHA:', fechaTexto(dia)],
-            ['REPORTE:', 'RESERVAS'],
-            [],
-            encabezado,
-            ...filas.map((f, i) => [i + 1, ...f]),
-            ['', 'TOTAL', '', '', '', `${filas.length} ${filas.length === 1 ? 'guía' : 'guías'}`, '', '', '', '', '', '', '', suma(12), suma(13), suma(14), suma(15)],
-          ],
-          anchos: [5, 22, 28, 6, 7, 15, 6, 8, 18, 36, 30, 12, 9, 10, 8, 8, 9, 9],
-        };
-      });
+          .sort((a, b) => a.marca.localeCompare(b.marca) || a.awb.localeCompare(b.awb));
+        // El vuelo va en la fila VIA del primer tramo; solo si todas las guías van en el mismo.
+        const vuelos = new Set(cs.map((c) => c.rutas.find((r) => r.tipoRuta === 'VIA1')?.vuelo?.trim()).filter(Boolean));
+        const plantilla = cs.find((c) => c.plantillaReservas)?.plantillaReservas ?? (id !== null ? plantillaDe.get(id) : null);
+        const hoja = hojaReserva(plantilla, {
+          aerolinea: corto(aerolinea),
+          codigo: aerolinea?.codigo ?? '',
+          vuelo: vuelos.size === 1 ? [...vuelos][0]! : '',
+          dia,
+          agencia: AGENCIA(),
+          contacto: contactoExperts(),
+          guias,
+        });
+        return { nombre: corto(aerolinea) || 'Sin aerolínea', ...hoja };
+      })
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
     return { nombreArchivo: `reservas-${dia}.xlsx`, contenido: libroHojas(hojas) };
   }
 }
