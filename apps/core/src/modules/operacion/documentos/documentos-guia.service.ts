@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
 import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
+import { contactoExperts } from './contacto';
 import { ImpresionService } from './impresion.service';
 
 const lineas = (t: string | null | undefined) =>
@@ -77,6 +78,9 @@ export interface Etiquetas {
   /** Piezas de toda la guía (docCajas). */
   totalPiezas: number;
   fecha: string;
+  /** Experts y sus teléfonos / correos (el pie de la etiqueta del viejo). */
+  agente: string;
+  contacto: string[];
   guias: Etiqueta[];
 }
 
@@ -203,12 +207,13 @@ export class DocumentosGuiaService {
   /**
    * Etiquetas, como tv_Etiquetas del viejo: los datos de la guía madre (shipper,
    * aerolínea, AWB, origen, destino, marca, piezas totales) y una entrada por guía
-   * hija con su finca y sus piezas. El diseño lo pone el front (el viejo usaba una
-   * plantilla de Excel que no tenemos).
+   * hija con su finca y sus piezas, en el orden de las guías hijas. El front las
+   * dibuja como Etiquetas.xlt / EtiquetasH.xlt.
    */
   async etiquetas(id: number): Promise<Etiquetas> {
     const c = await this.coordinacion(id);
-    const [agencia, aerolinea, marca, destino, fincas] = await Promise.all([
+    const [empresa, agencia, aerolinea, marca, destino, fincas] = await Promise.all([
+      this.impresion.empresa(),
       c.idAgenciaIata ? this.maestros.agenciaIata.findUnique({ where: { id: c.idAgenciaIata }, select: { nombreShipper: true } }) : null,
       c.idAerolinea ? this.maestros.aerolinea.findUnique({ where: { id: c.idAerolinea }, select: { nombre: true, alias: true, codigo: true } }) : null,
       c.idConsignatario ? this.maestros.consignatario.findUnique({ where: { id: c.idConsignatario }, select: { nombre: true } }) : null,
@@ -221,9 +226,11 @@ export class DocumentosGuiaService {
         const f = g.idFinca !== null ? finca.get(g.idFinca) : undefined;
         return { hawb: g.numeroGuiaHija, finca: f?.tag?.trim() || f?.nombreFinca || '', piezas: g.detalles.reduce((s, d) => s + d.cantidadCajas, 0) };
       })
-      .filter((e) => e.piezas > 0);
+      .filter((e) => e.piezas > 0)
+      // tv_Etiquetas va ORDER BY detGuiaHija: el contador de piezas sigue ese orden.
+      .sort((a, b) => a.hawb.localeCompare(b.hawb, undefined, { numeric: true }));
     return {
-      shipper: agencia?.nombreShipper ?? (await this.impresion.empresa()).nombre,
+      shipper: agencia?.nombreShipper ?? empresa.nombre,
       aerolineaCodigo: aerolinea?.codigo ?? '',
       aerolinea: aerolinea?.alias?.trim() || aerolinea?.nombre || '',
       awb: formatoAwb(c.numeroGuia),
@@ -232,6 +239,8 @@ export class DocumentosGuiaService {
       marca: marca?.nombre ?? '',
       totalPiezas: c.totalCajas ?? guias.reduce((s, g) => s + g.piezas, 0),
       fecha: fechaBarra(c.fechaVuelo),
+      agente: empresa.nombre,
+      contacto: contactoExperts(),
       guias,
     };
   }

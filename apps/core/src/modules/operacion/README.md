@@ -135,9 +135,11 @@ Pendiente:
   `/imprimir/coordinaciones/:id/…`): **Export List** (ExportList.xlt: una fila por finca + guía hija + DAE + factura +
   fecha + producto con fulls, totales), **Form A** (repFormaA.xlt en hoja blanca Legal; exportador cliente o agencia,
   piezas o fulls, general o por producto; hoy lo emiten EBF y FlowerCargo por ECUAPASS), **Etiquetas** (datos de
-  tv_Etiquetas; diseño provisional 10×15 cm o A4, una por guía hija o por caja, hasta tener el formato de la
-  impresora de EBF/FlowerCargo) y **Reservas** (Excel del día, una hoja por aerolínea, campos de
-  frmPINRepGen.Proc_83CAE0; faltan las plantillas `aerPlantillaReservas` de cada aerolínea para imitar su formulario).
+  tv_Etiquetas con el diseño de Etiquetas.xlt / EtiquetasH.xlt: una por caja con "pieza n de total de la guía
+  madre", o una por guía hija; 10×15 cm o A4; falta la medida de la impresora de EBF/FlowerCargo) y **Reservas**
+  (Excel del día, una hoja por aerolínea con el formato de su plantilla `aerPlantillaReservas`, copiado de
+  RPT\RESERVAS *.xlt de la PC del viejo: la tabla de Experts con los kg por full de cada una —46 KLM/Qatar/Masair,
+  38 Atlas/Emirates, 29 Turkish y las viejas—, la planilla de LAN y la de Cargolux; ver `reservas-formatos.ts`).
 - Sin migrar, a confirmar con el dueño si se usan: envío del manifiesto a ECUAPASS (XML 029/034 y respuestas; hoy
   manifiesto y secuencial se escriben a mano), impreso de FITO, Programación detallada por finca, Guías hijas por
   cliente, Factura comercial, ETD/ATD y confirmación de vuelos.
