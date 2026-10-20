@@ -19,8 +19,9 @@ const PATRON_DAE = /^\d{3}-\d{4}-\d{2}-\d{8}$/;
 
 /**
  * Lo que carga la finca en una guía: producto, cajas (el portal las pide por tipo,
- * como EBF, y manda fulls y piezas), kg y DAE. Factura, valor y tallos son
- * opcionales: normalmente no los sube y se completan con los parámetros.
+ * como EBF, y manda fulls y piezas), kg y cuál de sus DAE registradas usa.
+ * Factura, valor y tallos son opcionales: normalmente no los sube y se completan
+ * con los parámetros.
  */
 export class LineaFincaDto {
   @ApiProperty() @IsInt() @Min(1)
@@ -43,9 +44,13 @@ export class LineaFincaDto {
   @IsOptional() @IsNumber() @Min(0)
   pesoKg?: number;
 
-  @ApiProperty({ example: '055-2026-40-01810346' })
+  @ApiPropertyOptional({
+    example: '055-2026-40-01810346',
+    description: 'Una de sus DAE vigentes para el vuelo (registro de DAEs); si no viene, la que propone el registro',
+  })
+  @IsOptional()
   @Matches(PATRON_DAE, { message: 'La DAE va con el formato 055-AAAA-40-XXXXXXXX.' })
-  dae: string;
+  dae?: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(20)
   factura?: string;

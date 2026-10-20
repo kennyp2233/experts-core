@@ -7,7 +7,7 @@ import { modoOperacion } from '../comun/modo-operacion';
 import { CoordinacionCambiadaException, CoordinarService } from '../coordinaciones/coordinar.service';
 import { GuardarCoordinacionDto, LineaCoordinacionDto } from '../coordinaciones/dto/guardar-coordinacion.dto';
 import { NombresMaestrosService, ref } from '../maestros/nombres-maestros.service';
-import { OpcionesService } from '../maestros/opciones.service';
+import { DaeVigente, OpcionesService } from '../maestros/opciones.service';
 import { DaeFincaDto, LineaFincaDto } from './portal-fincas.dto';
 
 /** Usuario del portal (lo que deja la estrategia JWT en `req.user`). */
@@ -27,7 +27,8 @@ const dia = (d: Date) => d.toISOString().slice(0, 10);
  * Portal de las fincas: lo que hacía la web vieja (sistema.expertshcargo.com,
  * analizada el 16/10/2026). La finca ve las guías abiertas (sin cortar, con
  * vuelo de hoy en adelante) y carga en ellas lo de sus fincas: producto, fulls,
- * cajas, kg (cajas × `kgPorCaja` si no los pone; la web vieja usaba 22) y DAE.
+ * cajas y kg (cajas × `kgPorCaja` si no los pone; la web vieja usaba 22). La
+ * DAE no la escribe: elige una de las suyas vigentes para el vuelo (como EBF).
  * Tallos y valor normalmente no los sube: como la web vieja, se completan con los
  * parámetros (fulls × tallos por full, cajas × valor por caja). Sus
  * líneas quedan con origen 'E' y su usuario, como `detOrigen`/`detUser` del
@@ -141,8 +142,8 @@ export class PortalFincasService {
       }),
       this.maestros.finca.findMany({ where: { id: { in: ids } }, select: { id: true, nombreFinca: true, tag: true } }),
       c.idDestinoFinalDocs ?? c.idDestinoAwb
-        ? this.opciones.daesVigentes(ids, (c.idDestinoFinalDocs ?? c.idDestinoAwb)!, dia(c.fechaVuelo))
-        : Promise.resolve({} as Record<number, null>),
+        ? this.opciones.daesVigentesTodas(ids, (c.idDestinoFinalDocs ?? c.idDestinoAwb)!, dia(c.fechaVuelo))
+        : Promise.resolve({} as Record<number, DaeVigente[]>),
     ]);
     const aerolinea = ref(refs.aerolineas, c.idAerolinea);
     const destino = ref(refs.destinos, c.idDestinoAwb);
@@ -168,7 +169,10 @@ export class PortalFincasService {
             .filter((p) => p.idFinca === f.id)
             .map((p) => ({ id: p.producto.id, nombre: p.producto.codigo ?? p.nombre ?? p.producto.nombre }))
             .sort((a, b) => a.nombre.localeCompare(b.nombre)),
-          dae: daes[f.id] ?? null,
+          // Las DAE de su registro que valen para este vuelo: la finca elige una, no la escribe.
+          daes: daes[f.id] ?? [],
+          // La que propone el F2 (la usaba el portal antes de `daes`).
+          dae: daes[f.id]?.[0] ?? null,
         }))
         .sort((a, b) => a.nombre.localeCompare(b.nombre)),
       lineas: lineas.map((l) => ({
@@ -210,7 +214,27 @@ export class PortalFincasService {
     }
   }
 
-  private async aLinea(dto: LineaFincaDto, idConsignatario: number, idLinea?: number): Promise<LineaCoordinacionDto> {
+  /**
+   * La DAE sale del registro de la finca, como en el portal de EBF: una de las
+   * vigentes para el destino y la fecha de vuelo (sin elegir, la que propone el
+   * F2). Una DAE que no está registrada no se acepta: primero se registra en Mis DAE.
+   */
+  private async daeDeLinea(c: { idDestinoAwb: number | null; idDestinoFinalDocs: number | null; fechaVuelo: Date }, dto: LineaFincaDto) {
+    const idDestino = c.idDestinoFinalDocs ?? c.idDestinoAwb;
+    if (!idDestino) throw new BadRequestException('La guía no tiene destino todavía: avisa a la oficina.');
+    const vigentes = (await this.opciones.daesVigentesTodas([dto.idFinca], idDestino, dia(c.fechaVuelo)))[dto.idFinca] ?? [];
+    if (vigentes.length === 0) {
+      throw new BadRequestException('No tienes una DAE vigente para el destino y la fecha de este vuelo: regístrala en Mis DAE.');
+    }
+    if (!dto.dae) return vigentes[0].dae;
+    if (!vigentes.some((v) => v.dae === dto.dae)) {
+      throw new BadRequestException('Esa DAE no está en tu registro para este destino y fecha de vuelo: elige una de las tuyas o regístrala en Mis DAE.');
+    }
+    return dto.dae;
+  }
+
+  /** `dto.dae` ya resuelta por `daeDeLinea`. */
+  private async aLinea(dto: LineaFincaDto & { dae: string }, idConsignatario: number, idLinea?: number): Promise<LineaCoordinacionDto> {
     const finca = await this.maestros.finca.findUnique({
       where: { id: dto.idFinca },
       select: { cajaLargo: true, cajaAncho: true, cajaAlto: true },
@@ -282,7 +306,8 @@ export class PortalFincasService {
     const ids = await this.fincasDe(u);
     const c = await this.abierta(id);
     await this.validarLinea(ids, dto);
-    const linea = await this.aLinea(dto, c.idConsignatario!);
+    const dae = await this.daeDeLinea(c, dto);
+    const linea = await this.aLinea({ ...dto, dae }, c.idConsignatario!);
     await this.grabar(u, id, (base) => {
       base.lineas.push(linea);
     });
@@ -294,7 +319,8 @@ export class PortalFincasService {
     const c = await this.abierta(id);
     await this.lineaPropia(id, idLinea, ids);
     await this.validarLinea(ids, dto);
-    const linea = await this.aLinea(dto, c.idConsignatario!, idLinea);
+    const dae = await this.daeDeLinea(c, dto);
+    const linea = await this.aLinea({ ...dto, dae }, c.idConsignatario!, idLinea);
     await this.grabar(u, id, (base) => {
       const i = base.lineas.findIndex((l) => l.idLinea === idLinea);
       if (i < 0) throw new NotFoundException('No encontramos esa línea en tus fincas.');
