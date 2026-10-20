@@ -82,7 +82,17 @@ export class GuiaHijaAgregadaDto {
     detNumStems: number;
 }
 
+export const FUENTES_FITO = ['sistema', 'access'] as const;
+
 export class GenerateXmlDto {
+    /**
+     * De dónde son los ids de `guias`: 'sistema' (ids de coordinación en Postgres)
+     * o 'access' (docNumero de Access, deprecado). Sin fuente = 'access', como antes.
+     */
+    @IsOptional()
+    @IsIn(FUENTES_FITO)
+    fuente?: (typeof FUENTES_FITO)[number];
+
     @IsArray()
     @IsInt({ each: true })
     guias: number[];

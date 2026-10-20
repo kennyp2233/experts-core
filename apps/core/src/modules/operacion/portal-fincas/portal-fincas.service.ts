@@ -27,7 +27,9 @@ const dia = (d: Date) => d.toISOString().slice(0, 10);
  * Portal de las fincas: lo que hacía la web vieja (sistema.expertshcargo.com,
  * analizada el 16/10/2026). La finca ve las guías abiertas (sin cortar, con
  * vuelo de hoy en adelante) y carga en ellas lo de sus fincas: producto, fulls,
- * cajas, kg (cajas × `kgPorCaja` si no los pone; la web vieja usaba 22), DAE, factura, valor y tallos. Sus
+ * cajas, kg (cajas × `kgPorCaja` si no los pone; la web vieja usaba 22) y DAE.
+ * Tallos y valor normalmente no los sube: como la web vieja, se completan con los
+ * parámetros (fulls × tallos por full, cajas × valor por caja). Sus
  * líneas quedan con origen 'E' y su usuario, como `detOrigen`/`detUser` del
  * viejo, y la oficina las ve en el detalle de la coordinación. Puede corregir o
  * borrar lo suyo mientras la guía no esté cortada. También registra sus DAE.
@@ -145,6 +147,7 @@ export class PortalFincasService {
     const aerolinea = ref(refs.aerolineas, c.idAerolinea);
     const destino = ref(refs.destinos, c.idDestinoAwb);
     const final = ref(refs.destinos, c.idDestinoFinalDocs);
+    const parametros = await this.coordinar.parametros();
     return {
       id: c.id,
       guia: c.numeroGuia,
@@ -153,7 +156,10 @@ export class PortalFincasService {
       aerolinea: aerolinea ? aerolinea.alias || aerolinea.nombre : null,
       destino: destino ? { codigo: destino.codigo, nombre: destino.nombre } : null,
       destinoFinal: final && final.id !== destino?.id ? { codigo: final.codigo, nombre: final.nombre } : null,
-      kgPorCaja: await this.kgPorCaja(),
+      kgPorCaja: parametros.lineas.kgPorCaja,
+      // Los mismos tipos de caja y factores que usa la oficina al coordinar.
+      cajasPorFull: parametros.lineas.cajasPorFull,
+      tiposCaja: parametros.tiposCaja,
       fincas: fincas
         .map((f) => ({
           id: f.id,
@@ -176,6 +182,7 @@ export class PortalFincasService {
         producto: l.codigoProducto ?? ref(refs.productos, l.idProducto)?.nombre ?? null,
         fulls: l.fulls,
         cantidadCajas: l.cantidadCajas,
+        idTipoCaja: l.idTipoCaja,
         pesoKg: l.pesoKg,
         dae: l.dae,
         factura: l.factura,
@@ -198,6 +205,9 @@ export class PortalFincasService {
       throw new BadRequestException('Ese producto no está en la lista de la finca.');
     }
     if (dto.cantidadCajas === 0 && dto.fulls > 0) throw new BadRequestException('Con fulls hay que poner las cajas.');
+    if (dto.idTipoCaja && !(await this.docs.tipoCaja.findUnique({ where: { id: dto.idTipoCaja }, select: { id: true } }))) {
+      throw new BadRequestException('Ese tipo de caja no existe.');
+    }
   }
 
   private async aLinea(dto: LineaFincaDto, idConsignatario: number, idLinea?: number): Promise<LineaCoordinacionDto> {
@@ -205,6 +215,7 @@ export class PortalFincasService {
       where: { id: dto.idFinca },
       select: { cajaLargo: true, cajaAncho: true, cajaAlto: true },
     });
+    const p = (await this.coordinar.parametros()).lineas;
     return {
       idLinea,
       idFinca: dto.idFinca,
@@ -212,11 +223,14 @@ export class PortalFincasService {
       idConsignatario,
       cantidadCajas: dto.cantidadCajas,
       fulls: dto.fulls,
-      pesoKg: dto.pesoKg ?? Math.round(dto.cantidadCajas * (await this.kgPorCaja()) * 100) / 100,
+      idTipoCaja: dto.idTipoCaja,
+      // Igual que la oficina al coordinar (formulario.recalcularLinea): kg = fulls × cajas por full × kg por caja.
+      pesoKg: dto.pesoKg ?? Math.round(dto.fulls * p.cajasPorFull * p.kgPorCaja * 100) / 100,
       dae: dto.dae,
       factura: dto.factura?.trim() || undefined,
-      valor: dto.valor,
-      tallos: dto.tallos,
+      // Como la web vieja (las líneas de las fincas en Access tienen 600 tallos por full y 140 por caja).
+      valor: dto.valor ?? Math.round(dto.cantidadCajas * p.valorPorCaja * 100) / 100,
+      tallos: dto.tallos ?? Math.round(dto.fulls * p.tallosPorFull),
       // Como la web vieja: las medidas de caja de la ficha de la finca.
       largo: finca?.cajaLargo ?? undefined,
       ancho: finca?.cajaAncho ?? undefined,

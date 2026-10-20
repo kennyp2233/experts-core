@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, ParseIntPipe, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { FitoService } from './fito.service';
 import { GenerateXmlDto } from './dto/generate-xml.dto';
@@ -55,20 +55,44 @@ export class FitoController {
         return this.service.getJobXmls(jobId);
     }
 
+    // --- Sistema nuevo (Postgres): la fuente normal ---
+
+    @Get('sistema/guias')
+    @ApiOperation({ summary: 'Coordinaciones del sistema (Postgres) para el FITO, más recientes por fecha de vuelo' })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    async listGuiasSistema(@Query('limit') limit?: string) {
+        const n = Number(limit);
+        return this.service.listGuias(Number.isInteger(n) && n > 0 && n <= 500 ? n : undefined);
+    }
+
+    @Get('sistema/guias/:id/hijas')
+    @ApiOperation({ summary: 'Líneas de una coordinación del sistema (finca, producto, cajas, tallos) para el FITO' })
+    async getGuiasHijasSistema(@Param('id', ParseIntPipe) id: number) {
+        return this.service.getGuiasHijasSistema(id);
+    }
+
+    @Get('sistema/destino/:codigo')
+    @ApiOperation({ summary: 'Destino por código IATA (datos maestros del sistema)' })
+    async getDestinoSistema(@Param('codigo') codigo: string) {
+        return this.service.getDestinoSistema(codigo);
+    }
+
+    // --- Access directo (deprecado: respaldo hasta apagar el sistema viejo) ---
+
     @Get('guias')
-    @ApiOperation({ summary: 'List available guides in Access DB' })
+    @ApiOperation({ summary: '[Deprecado] Guías leídas directo de Access. Usar /fito/sistema/guias', deprecated: true })
     async listGuias() {
         return this.service.listGuiasInAccess();
     }
 
     @Get('guias/:docNumero/hijas')
-    @ApiOperation({ summary: 'Get detail records (Guías Hijas) for a specific Guía Madre' })
+    @ApiOperation({ summary: '[Deprecado] Detalle (guías hijas) leído directo de Access. Usar /fito/sistema/guias/:id/hijas', deprecated: true })
     async getGuiasHijas(@Param('docNumero') docNumero: string) {
         return this.service.getGuiasHijas(parseInt(docNumero, 10));
     }
 
     @Get('destino/:codigo')
-    @ApiOperation({ summary: 'Get destination info by code from PIN_auxDestinos' })
+    @ApiOperation({ summary: '[Deprecado] Destino desde PIN_auxDestinos (Access). Usar /fito/sistema/destino/:codigo', deprecated: true })
     async getDestinoByCode(@Param('codigo') codigo: string) {
         return this.service.getDestinoByCode(codigo);
     }

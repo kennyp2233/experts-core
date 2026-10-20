@@ -15,6 +15,10 @@ import {
  *
  * NO mover los `queryBridge` / `executeWrite` acá — esos viven en el
  * service compartido para que otros módulos los reusen (sync, etc.).
+ *
+ * @deprecated Lee Access directo. La fuente normal es `FitoSistemaService`
+ * (Postgres, con lo que llega por el sync y lo nuevo). Se deja de respaldo por si
+ * algo no cuadra; se borra cuando el sistema viejo se apague.
  */
 @Injectable()
 export class FitoLegacyService {
@@ -22,17 +26,21 @@ export class FitoLegacyService {
 
   constructor(private readonly legacyDb: LegacyDbService) {}
 
-  /** Lista de guías madre (PIN_dDocCoor JOIN PIN_MCoordina). */
+  /**
+   * Lista de guías madre (PIN_dDocCoor JOIN PIN_MCoordina). `docFecha` es la de
+   * asignación; la de vuelo (la del FITO) es PIN_dDocExtra.extFechaDespacho.
+   */
   async listGuias(limit = 50): Promise<GuiaMadre[]> {
     try {
       const sql = `
         SELECT TOP ${limit}
             d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
-            m.docFecha, m.docDestino, m.docFITODestino,
+            m.docFecha, x.extFechaDespacho AS docFechaVuelo, m.docDestino, m.docFITODestino,
             mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
-        FROM ((PIN_dDocCoor AS d
+        FROM (((PIN_dDocCoor AS d
         INNER JOIN PIN_MCoordina AS m ON d.bodCodigo = m.bodCodigo AND d.docTipo = m.docTipo AND d.docNumero = m.docNumero)
         LEFT JOIN PIN_auxMarcas AS mar ON d.marCodigo = mar.marCodigo)
+        LEFT JOIN PIN_dDocExtra AS x ON (x.bodCodigo = m.bodCodigo AND x.docTipo = m.docTipo AND x.docNumero = m.docNumero))
         ORDER BY m.docFecha DESC
       `;
       const results = await this.legacyDb.queryBridge<GuiaMadre>(sql);
@@ -62,11 +70,12 @@ export class FitoLegacyService {
     try {
       const sql = `
         SELECT d.bodCodigo, d.docTipo, d.docNumero, d.docNumGuia, d.marCodigo,
-            m.docFecha, m.docDestino, m.docFITODestino,
+            m.docFecha, x.extFechaDespacho AS docFechaVuelo, m.docDestino, m.docFITODestino,
             mar.marNombre as consignatarioNombre, mar.marDireccion as consignatarioDireccion
-        FROM ((PIN_dDocCoor AS d
+        FROM (((PIN_dDocCoor AS d
         INNER JOIN PIN_MCoordina AS m ON d.bodCodigo = m.bodCodigo AND d.docTipo = m.docTipo AND d.docNumero = m.docNumero)
         LEFT JOIN PIN_auxMarcas AS mar ON d.marCodigo = mar.marCodigo)
+        LEFT JOIN PIN_dDocExtra AS x ON (x.bodCodigo = m.bodCodigo AND x.docTipo = m.docTipo AND x.docNumero = m.docNumero))
         WHERE d.docNumGuia = '${docNumGuia}'
       `;
       const results = await this.legacyDb.queryBridge<GuiaMadre>(sql);
