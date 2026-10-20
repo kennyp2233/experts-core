@@ -183,7 +183,8 @@ export class CoordinarService {
       const id = await this.persistir(tx, null, dto, armada, guia.idAerolinea, usuario);
       await tx.guiaMadre.update({ where: { id: guia.id }, data: { estado: 'COORDINADA' } });
       await recalcularEstadoIngresos(tx, [guia.idDocumentoBase]);
-      return { id };
+      const { numero } = await tx.documentoCoordinacion.findUniqueOrThrow({ where: { id }, select: { numero: true } });
+      return { id, numero };
     }, { timeout: 60_000 });
   }
 
