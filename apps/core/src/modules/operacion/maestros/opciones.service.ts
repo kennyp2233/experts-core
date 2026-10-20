@@ -218,9 +218,30 @@ export class OpcionesService {
         const rs = await this.db.tipoEmbarque.findMany({ where, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], take });
         return rs.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, detalle: r.mercancia }));
       }
+      case 'clientes': {
+        // El cliente de la marca (el "Embarcador" de la lista vieja): estado de cuenta y portal de clientes.
+        const where = porIds ?? {
+          estado: true,
+          ...(t ? { OR: [{ nombre: ins(t) }, { alias: ins(t) }, { nombreFactura: ins(t) }, { ruc: ins(t) }] } : {}),
+        };
+        const rs = await this.db.cliente.findMany({ where, orderBy: { nombre: 'asc' }, take });
+        return rs.map((r) => ({
+          id: r.id,
+          codigo: r.ruc,
+          nombre: r.alias?.trim() || r.nombre,
+          detalle: r.nombreFactura && r.nombreFactura !== r.nombre ? r.nombreFactura : r.alias?.trim() ? r.nombre : null,
+        }));
+      }
+      case 'paises': {
+        const where = ids?.length
+          ? { idPais: { in: ids } }
+          : { estado: true, ...(t ? { OR: [{ nombre: ins(t) }, { siglasPais: ins(t) }] } : {}) };
+        const rs = await this.db.pais.findMany({ where, orderBy: { nombre: 'asc' }, take });
+        return rs.map((r) => ({ id: r.idPais, codigo: r.siglasPais, nombre: r.nombre, detalle: null }));
+      }
       default:
         throw new BadRequestException(
-          `Tipo desconocido: ${tipo}. Opciones: guias, consignatarios, fincas, productos, agencias, aerolineas, destinos, tipos-embarque`,
+          `Tipo desconocido: ${tipo}. Opciones: guias, consignatarios, fincas, productos, agencias, aerolineas, destinos, tipos-embarque, clientes, paises`,
         );
     }
   }
