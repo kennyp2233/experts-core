@@ -13,6 +13,13 @@ export interface Opcion {
   extra?: Record<string, unknown>;
 }
 
+/** Una DAE del registro que vale para un vuelo (fechas AAAA-MM-DD). */
+export interface DaeVigente {
+  dae: string;
+  desde: string;
+  hasta: string;
+}
+
 const ins = (q: string) => ({ contains: q, mode: 'insensitive' as const });
 /** "369-84695461" → "369-8469 5461". */
 const awb = (n: string) => (n.length === 12 ? `${n.slice(0, 8)} ${n.slice(8)}` : n);
@@ -37,18 +44,20 @@ export class OpcionesService {
    * empezó antes. Coincide con la DAE de la línea en el 96 % de las líneas con
    * carga de 2026.
    */
-  async daesVigentes(
-    idsFinca: number[],
-    idDestino: number,
-    fecha: string,
-    origen = 'UIO',
-  ): Promise<Record<number, { dae: string; desde: string; hasta: string } | null>> {
+  async daesVigentes(idsFinca: number[], idDestino: number, fecha: string, origen = 'UIO'): Promise<Record<number, DaeVigente | null>> {
+    const todas = await this.daesVigentesTodas(idsFinca, idDestino, fecha, origen);
+    return Object.fromEntries(idsFinca.map((id) => [id, todas[id]?.[0] ?? null]));
+  }
+
+  /**
+   * Todas las DAE vigentes de cada finca para ese vuelo, con la misma regla; la
+   * primera es la que propone el F2. El portal de fincas solo acepta una de estas.
+   */
+  async daesVigentesTodas(idsFinca: number[], idDestino: number, fecha: string, origen = 'UIO'): Promise<Record<number, DaeVigente[]>> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new BadRequestException('Fecha de vuelo inválida (AAAA-MM-DD).');
     const destino = await this.db.destino.findUnique({ where: { id: idDestino }, select: { pais: { select: { siglasPais: true } } } });
     const pais = destino?.pais?.siglasPais;
-    const out: Record<number, { dae: string; desde: string; hasta: string } | null> = Object.fromEntries(
-      idsFinca.map((id) => [id, null]),
-    );
+    const out: Record<number, DaeVigente[]> = Object.fromEntries(idsFinca.map((id) => [id, []]));
     if (!pais || idsFinca.length === 0) return out;
     const dia = new Date(`${fecha}T00:00:00Z`);
     const rs = await this.db.daeFinca.findMany({
@@ -56,8 +65,10 @@ export class OpcionesService {
       orderBy: [{ fechaInicio: 'asc' }, { id: 'asc' }],
     });
     for (const r of rs) {
-      if (r.idFinca !== null && out[r.idFinca] === null) {
-        out[r.idFinca] = { dae: r.dae, desde: r.fechaInicio.toISOString().slice(0, 10), hasta: r.fechaFin.toISOString().slice(0, 10) };
+      const lista = r.idFinca !== null ? out[r.idFinca] : undefined;
+      // La misma DAE registrada en dos períodos aparece una vez.
+      if (lista && !lista.some((d) => d.dae === r.dae)) {
+        lista.push({ dae: r.dae, desde: r.fechaInicio.toISOString().slice(0, 10), hasta: r.fechaFin.toISOString().slice(0, 10) });
       }
     }
     return out;
