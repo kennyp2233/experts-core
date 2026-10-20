@@ -22,6 +22,8 @@ import { PortalFincasController, UsuariosFincasController } from './portal-finca
 import { PortalFincasService } from './portal-fincas/portal-fincas.service';
 import { UsuariosFincasService } from './portal-fincas/usuarios-fincas.service';
 import { CorteDefinitivoController } from './comun/corte-definitivo.controller';
+import { CuentasController } from './documentos/cuentas.controller';
+import { CuentasService } from './documentos/cuentas.service';
 import { CorteDefinitivoService } from './comun/corte-definitivo.service';
 
 /**
@@ -42,6 +44,7 @@ import { CorteDefinitivoService } from './comun/corte-definitivo.service';
     PortalFincasController,
     UsuariosFincasController,
     CorteDefinitivoController,
+    CuentasController,
   ],
   providers: [
     NombresMaestrosService,
@@ -60,6 +63,7 @@ import { CorteDefinitivoService } from './comun/corte-definitivo.service';
     PortalFincasService,
     UsuariosFincasService,
     CorteDefinitivoService,
+    CuentasService,
   ],
   exports: [NombresMaestrosService, CoordinacionesService],
 })
