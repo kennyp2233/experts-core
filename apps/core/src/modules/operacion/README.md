@@ -28,6 +28,7 @@ del viejo. En modo activo el sync Access → PG no corre (ni el cron ni a mano, 
 |---|---|---|
 | Coordinaciones: lista, búsqueda (AWB, guía hija, DAE, N°), detalle | `GET /operacion/coordinaciones[/:id]` | `/operacion/coordinaciones` |
 | Coordinar: simular, crear, editar (guía madre + cobro al cliente), cortar, anular | `POST simular`, `POST`, `PUT :id`, `POST :id/corte`, `DELETE :id` | `/operacion/coordinaciones/nueva`, `…/:id/editar` |
+| Reabrir una guía cortada (deshacer el corte; no borra nada, vuelve al portal de fincas) | `DELETE /operacion/coordinaciones/:id/corte?motivo=` | detalle → ⋯ → "Reabrir guía" |
 | Defaults para coordinar (parámetros de línea, rótulos de agencia, conceptos de aerolínea) | `GET /operacion/coordinaciones/parametros?idAerolinea=` | — |
 | Buscadores (solo activos) y sugerencias de la marca | `GET /operacion/opciones/:tipo`, `GET /operacion/opciones/consignatarios/:id/sugerencia` | — |
 | Ingreso de guías (documento CGU): lista, detalle, grabar, modificar, anular | `/operacion/guias-madre/ingresos[/:id]` | `/operacion/guias/ingresos` |

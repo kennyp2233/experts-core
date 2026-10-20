@@ -124,9 +124,15 @@ export class CoordinacionesController {
   }
 
   @Post(':id/corte')
-  @ApiOperation({ summary: 'Corte de guía (irreversible): la coordinación queda sin edición.' })
+  @ApiOperation({ summary: 'Corte de guía: la coordinación queda sin edición (se deshace con DELETE :id/corte).' })
   cortar(@Param('id', ParseIntPipe) id: number) {
     return this.coordinar.cortar(id);
+  }
+
+  @Delete(':id/corte')
+  @ApiOperation({ summary: 'Deshace el corte: la guía vuelve a quedar abierta, sin borrar nada (quién, cuándo, `?motivo=`).' })
+  reabrir(@Param('id', ParseIntPipe) id: number, @Req() req: ConUsuario, @Query('motivo') motivo?: string) {
+    return this.coordinar.reabrir(id, usuario(req), motivo);
   }
 
   @Patch(':id')

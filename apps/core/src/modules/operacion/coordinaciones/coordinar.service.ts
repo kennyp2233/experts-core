@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient as PrismaDocumentos } from '@internal/documentos-client';
 import { PrismaClient as PrismaMaestros } from '@internal/datos-maestros-client';
 import { PRISMA_DOCUMENTOS } from '../../database/database.module';
@@ -130,6 +130,8 @@ const CAMPO_CONCEPTO: Record<string, ConceptoAerolinea['campo']> = {
  */
 @Injectable()
 export class CoordinarService {
+  private readonly logger = new Logger(CoordinarService.name);
+
   constructor(
     @Inject(PRISMA_DOCUMENTOS) private readonly db: PrismaDocumentos,
     @Inject('PrismaClientDatosMaestros') private readonly maestros: PrismaMaestros,
@@ -308,7 +310,11 @@ export class CoordinarService {
     return { dto, estado: c.estadoActual, codigoAccess: c.codigoAccess };
   }
 
-  /** Corte de guía: irreversible. Deja la coordinación sin edición. */
+  /**
+   * Corte de guía: deja la coordinación sin edición (y sale del portal de
+   * fincas, entra al estado de cuenta). El viejo lo avisaba como "no
+   * reversible"; aquí se puede deshacer con `reabrir` por si algo salió mal.
+   */
   async cortar(id: number) {
     const c = await this.db.documentoCoordinacion.findUnique({
       where: { id },
@@ -344,6 +350,25 @@ export class CoordinarService {
       data: { estadoActual: 'CORTADO', ...camposResumen(resumen) },
     });
     return { id, estado: 'CORTADO' as const };
+  }
+
+  /**
+   * Deshace el corte: la guía vuelve a quedar abierta, como antes de cortar.
+   * No se borra nada: las líneas que cargaron las fincas y los valores quedan
+   * igual; mientras esté abierta la ve otra vez la finca en su portal (si el
+   * vuelo es de hoy en adelante) y sale del estado de cuenta hasta el nuevo corte.
+   */
+  async reabrir(id: number, usuario?: string, motivo?: string) {
+    const c = await this.db.documentoCoordinacion.findUnique({ where: { id } });
+    if (!c) throw new NotFoundException('La coordinación no existe.');
+    asegurarEditable(c, `La coordinación ${c.numeroGuia ?? id}`);
+    if (c.estadoActual !== 'CORTADO') throw new ConflictException('Solo se reabre una guía cortada.');
+    await this.db.documentoCoordinacion.update({
+      where: { id },
+      data: { estadoActual: 'BORRADOR', actualizadoPorLegacy: usuario ?? null, actualizadoEnLegacy: new Date() },
+    });
+    this.logger.log(`Guía ${c.numeroGuia ?? id} reabierta por ${usuario ?? '?'}${motivo?.trim() ? `: ${motivo.trim().slice(0, 200)}` : ''}`);
+    return { id, estado: 'BORRADOR' as const };
   }
 
   /**
