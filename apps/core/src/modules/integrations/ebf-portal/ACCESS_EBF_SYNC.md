@@ -1,6 +1,9 @@
 # Sync Access ↔ EBF ↔ Postgres
 
-> **Estado:** Investigado y planeado. Implementación pendiente (sin código todavía).
+> **Estado:** Implementado como Fase 1 (`sync/ebf-access`). **Desactualizado (20/10/2026):** hoy en EBF el exportador
+> es cada finca y Experts es el *cliente* del vuelo, así que el filtro por exportador `EXPERTS HANDLING CARGO` no
+> encuentra nada. Lo reemplaza la conciliación por guía hija de `operacion/ebf` (ADR 0004); conviene apagar este ciclo
+> (`EBF_SYNC_AUTOSTART=false`): recorre despacho e histórico completos cada 15 min.
 > **Última validación contra data real:** 2026-05-22 (incluyendo acciones update/delete).
 > **Predecesores:** [decisions/0001-hybrid-access-postgres.md](../../../../../../docs/decisions/0001-hybrid-access-postgres.md), [EBF_PORTAL_TOMORROW.md](./EBF_PORTAL_TOMORROW.md).
 

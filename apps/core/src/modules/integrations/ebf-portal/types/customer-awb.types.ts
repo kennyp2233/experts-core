@@ -1,4 +1,4 @@
-export type AwbState = 'IN_PROGRESS' | 'DEPARTED' | 'UNKNOWN';
+export type AwbState = 'IN_PROGRESS' | 'DEPARTED' | 'DELIVERED' | 'UNKNOWN';
 
 /** Fila de la tabla `/customer/awb/list/`. */
 export interface CustomerAwbListItem {

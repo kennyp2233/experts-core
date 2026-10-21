@@ -54,6 +54,8 @@ function parseNum(s: string | null | undefined): number {
 }
 
 function parseState(rowHtml: string, label: string): AwbState {
+  // El texto manda: el ícono de "entregada" no está mapeado.
+  if (/delivered|entregad/i.test(label)) return 'DELIVERED';
   if (/bi-airplane-fill[^"']*text-primary/.test(rowHtml)) return 'DEPARTED';
   if (/bi-circle[^"']*text-secondary/.test(rowHtml)) return 'IN_PROGRESS';
   if (/departed/i.test(label)) return 'DEPARTED';

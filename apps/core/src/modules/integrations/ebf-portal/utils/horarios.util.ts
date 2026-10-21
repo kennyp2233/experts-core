@@ -64,6 +64,35 @@ export function isWithinWindow(
   );
 }
 
+/**
+ * Próximo momento en que abre una ventana (si ya está abierta, `now`).
+ * Recorre minuto a minuto de pared en la zona horaria: las ventanas son de
+ * horas fijas y la zona de Ecuador no tiene horario de verano.
+ */
+export function nextWindowStart(
+  windows: OperationWindow[],
+  timeZone: string,
+  now: Date = new Date(),
+): Date {
+  if (isWithinWindow(windows, timeZone, now)) return now;
+  const { dayOfWeek, minuteOfDay } = toWallClock(now, timeZone);
+  for (let d = 0; d <= 7; d++) {
+    const dow = (dayOfWeek + d) % 7;
+    const starts = windows
+      .filter((w) => w.daysOfWeek.includes(dow))
+      .map((w) => w.startMinute)
+      .filter((m) => d > 0 || m > minuteOfDay)
+      .sort((a, b) => a - b);
+    if (starts.length) {
+      const diffMin = d * 24 * 60 + starts[0] - minuteOfDay;
+      const at = new Date(now.getTime() + diffMin * 60_000);
+      at.setSeconds(0, 0);
+      return at;
+    }
+  }
+  return now;
+}
+
 export function describeWindows(windows: OperationWindow[]): string {
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   return windows
