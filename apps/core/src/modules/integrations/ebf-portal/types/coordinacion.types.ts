@@ -46,6 +46,17 @@ export interface CoordinacionListQuery {
     | 'destino_final'
     | 'created_at';
   includeHistorico?: boolean;
+  /** Filtros del formulario del despacho (los mismos params del portal). */
+  /** Guía como la muestra el manager, sin espacio: "369-11763570" o "EBF-00006915". */
+  awb?: string;
+  hawb?: string;
+  /** id del exportador (finca) en EBF */
+  exportador?: number;
+  /** id de la marcación (consignatario_marcacion) en EBF */
+  marcacion?: number;
+  /** YYYY-MM-DD */
+  etdStart?: string;
+  etdEnd?: string;
 }
 
 export interface CoordinacionDetalle {

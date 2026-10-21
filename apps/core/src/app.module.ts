@@ -14,6 +14,7 @@ import { EbfPortalModule } from './modules/integrations/ebf-portal/ebf-portal.mo
 import { EbfAccessSyncModule } from './modules/sync/ebf-access/ebf-access-sync.module';
 import { LegacySyncModule } from './modules/sync/legacy-access/legacy-sync.module';
 import { OperacionModule } from './modules/operacion/operacion.module';
+import { EnvioEbfModule } from './modules/operacion/ebf/envio-ebf.module';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { AppControllerV1 } from './v1/app/app.controller';
@@ -55,6 +56,7 @@ import { RedisModule } from './redis/redis.module';
     EbfAccessSyncModule,
     LegacySyncModule,
     OperacionModule,
+    EnvioEbfModule,
     HealthModule,
     BullModule.forRootAsync({
       inject: [ConfigService],

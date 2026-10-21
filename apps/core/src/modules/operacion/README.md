@@ -48,6 +48,7 @@ del viejo. En modo activo el sync Access → PG no corre (ni el cron ni a mano, 
 | Portal de clientes: sus guías, guías hijas, liquidación y estado de cuenta | `/portal-clientes/*` (rol `CLIENTE`) | `/portal-clientes` |
 | Usuarios de clientes | `/operacion/usuarios-clientes` (rol `ADMIN`) | `/operacion/usuarios-clientes` |
 | Corte definitivo: contadores vs. Access y pasos | `/operacion/corte-definitivo` (rol `ADMIN`) | `/operacion/corte-definitivo` |
+| EBF: cada guía hija frente a EBF, lo pendiente (una sola cosa por guía hija), simular y enviar; enlaces finca/marca/producto | `/operacion/ebf/*` | `/operacion/ebf`, pestaña "EBF" del detalle |
 | Datos maestros: lista, ficha, alta y cambios (fincas, consignatarios, embarcadores, clientes, productos, aerolíneas, agencias, subagencias, destinos, países, tipos de embarque, choferes) | `GET /maestros[/:entidad[/:id[/edicion]]]`, `GET /maestros/:entidad/formulario`, `POST /maestros/:entidad`, `PUT /maestros/:entidad/:id` | `/maestros` |
 
 ## Reglas y validación
@@ -158,6 +159,37 @@ Pendiente:
 - El aviso de "salir sin grabar" cubre los enlaces y cerrar la pestaña, no el botón Atrás del navegador.
 - Datos: MARTINAIR está dos veces en las aerolíneas; hay 3 guías COORDINADAS sin coordinación (salen primero al
   filtrar Coordinadas).
+
+## EBF
+
+[`ebf/`](ebf/), decisión en `docs/decisions/0004-envio-coordinaciones-ebf.md` (fuera del repo). EBF es el agente IATA del
+82 % de las guías; hoy la oficina vuelve a tipear allá cada guía hija (finca × producto, con su DAE y cajas por tamaño).
+
+- **No se copia EBF** (es un panel de todos sus clientes: ~730 filas por día). Se lee solo lo nuestro: el portal de
+  cliente por fechas (las guías de Experts, con estado, cajas recibidas en bodega y peso cobrable) y el despacho /
+  histórico filtrado por esa guía (las filas por finca). En EBF el **exportador es la finca** y Experts es el cliente del
+  "vuelo" (cliente × marcación × fecha × ruta); la guía real llega después (mientras tanto, `EBF-0000 6915`).
+- **Enlaces** (`EbfEquivalencia`): finca ↔ exportador, marca ↔ marcación, producto ↔ producto. Los nombres casi nunca
+  coinciden (ANDESBLOSSOM = MATIZ ROSES); se aprenden del historial (misma guía + misma DAE; si no, mismas cajas y nombre
+  parecido) y se confirman a mano. Con 12 guías (29/09–20/10) salieron 53 fincas, 3 marcas y 6 productos.
+- **Estado deseado + conciliación** ([`conciliacion-ebf.ts`](ebf/conciliacion-ebf.ts), sin efectos): lo que debe haber sale
+  de la coordinación; lo pendiente es la diferencia con la última lectura, **una sola por guía hija**, recalculada cada vez.
+  Antes de enviar se relee EBF: lo que alguien ya hizo a mano se cierra sin duplicar. Reglas del portal: solo se edita o
+  borra una fila el día en que se coordinó (después, solo agregar); DAE, finca y marca no se cambian (borrar y crear);
+  horario L–V 08:00–13:30, sáb 08:00–12:00; vuelo salido = no acepta cambios. Si la bodega de EBF recibió lo mismo que dice
+  la coordinación, cuenta como en EBF. Fuera de horario, lo pendiente se muestra como quedará al abrir.
+- Estados de la guía hija: En EBF · Por enviar · Cambio por enviar · Pedir a EBF · Falta enlazar · Solo en EBF · No se
+  pudo enviar · Se hace a mano ("no enviar", vale hasta que la línea cambie).
+- **`EBF_ENVIO_MODO`**: `comparar` (default, nunca escribe), `manual` (botón "Enviar a EBF"), `automatico` (el ciclo envía
+  en horario). Solo se envían coordinaciones creadas en el sistema nuevo; las de Access se comparan. "Ver lo que se
+  enviaría" resuelve vuelo, DAE y producto contra EBF sin escribir. Todo pasa por una sola cadena (un envío a la vez) y
+  queda en `EbfBitacora`.
+- Ciclo (`EBF_ENVIO_AUTOSTART`, default sí): cada 15 min en horario de EBF y cada hora fuera, solo coordinaciones con
+  vuelo de ayer a 7 días; la primera vez aprende los enlaces.
+- Comparación del 20/10/2026 (solo lectura): 13913 y 13914 iguales a EBF; 13908 igual contando la bodega; 13912 28 de 29
+  (LARTISAN: la DAE que tenemos la registró la finca en EBF para NL; para KZ usa otra).
+- Pendiente: DAE desde el registro de EBF (es el que mantienen las fincas), peso cobrable y estado del vuelo de EBF en la
+  coordinación, y elegir a mano la guía de EBF cuando haya dos de la misma marca el mismo día.
 
 ## Cobro al cliente (estado de cuenta, ventas, liquidación)
 

@@ -34,7 +34,16 @@ export class EbfCoordinacionService {
     const basePath = query.includeHistorico
       ? this.cfg.paths.coordinacionHistorico
       : this.cfg.paths.coordinacionLista;
-    const qs = this.buildQuery({ page: query.page, sort: query.sort });
+    const qs = this.buildQuery({
+      etd_start: query.etdStart,
+      etd_end: query.etdEnd,
+      exportador: query.exportador,
+      marcacion: query.marcacion,
+      awb: query.awb,
+      hawb: query.hawb,
+      page: query.page,
+      sort: query.sort,
+    });
     const path = qs ? `${basePath}?${qs}` : basePath;
 
     const res = await this.withSessionRetry(() =>

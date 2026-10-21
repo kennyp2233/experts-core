@@ -144,3 +144,149 @@ model EbfCatalogMapping {
   @@index([entityType])
   @@map("ebf_catalog_mapping")
 }
+
+// ===== COORDINACIONES DEL SISTEMA NUEVO FRENTE A EBF (ADR 0004) =====
+// No es una copia de EBF: lo que debe haber allá sale siempre de la
+// coordinación (schema documentos); aquí queda lo último que se leyó del
+// portal, las equivalencias y lo que se envió.
+
+/// Equivalencia entre un registro de datos maestros y el de EBF.
+/// FINCA: Finca ↔ exportador · MARCA: Consignatario ↔ marcación · PRODUCTO: Producto ↔ producto.
+model EbfEquivalencia {
+  id         Int      @id @default(autoincrement())
+  /// FINCA | MARCA | PRODUCTO
+  tipo       String
+  /// id en datos maestros (Finca, Consignatario o Producto)
+  idLocal    Int      @map("id_local")
+  /// id en EBF (exportador, consignatario_marcacion, producto); null si solo se conoce el nombre
+  ebfId      Int?     @map("ebf_id")
+  /// como lo muestra EBF en sus listas ("MATIZ ROSES", "KAM", "SPRAY ROSES")
+  ebfNombre  String   @map("ebf_nombre")
+  /// HISTORIAL (de lo que ya se tipeó en EBF) | RUC (registro de DAEs de EBF) | MANUAL
+  origen     String
+  /// veces que se vio en el historial
+  vecesVista Int      @default(0) @map("veces_vista")
+  confirmada Boolean  @default(false)
+  confirmadaPor String? @map("confirmada_por")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([tipo, idLocal])
+  @@index([tipo, ebfNombre])
+  @@map("ebf_equivalencia")
+}
+
+/// Una coordinación (documentos.DocumentoCoordinacion) frente a EBF.
+model EbfCoordinacion {
+  id             Int      @id @default(autoincrement())
+  /// documentos.DocumentoCoordinacion.id (FK lógica: queda aunque se anule)
+  idCoordinacion Int      @unique @map("id_coordinacion")
+  /// N° para mostrarla (el propio o el de Access)
+  numero         Int?
+  numeroGuia     String?  @map("numero_guia")
+  fechaVuelo     DateTime @map("fecha_vuelo") @ebfPortalSyncDb.Date
+  /// Marca principal (datos maestros); si cambia, el vuelo de EBF es otro
+  idConsignatario Int?    @map("id_consignatario")
+  /// true: creada en el sistema nuevo (se envía); false: viene de Access (solo se compara)
+  enviable       Boolean  @default(false)
+  anulada        Boolean  @default(false)
+  /// "vuelo" (doc_coordinacion) de EBF: cliente × marcación × fecha × ruta
+  ebfVueloId     Int?     @map("ebf_vuelo_id")
+  ebfVuelo       String?  @map("ebf_vuelo")
+  /// Guía que muestra EBF: la real o la provisional ("EBF-0000 6915")
+  ebfGuia        String?  @map("ebf_guia")
+  /// IN PROGRESS | DEPARTED | DELIVERED (portal de cliente)
+  ebfEstado      String?  @map("ebf_estado")
+  ebfFulls       Float?   @map("ebf_fulls")
+  ebfCajas       Int?     @map("ebf_cajas")
+  ebfFullsBodega Float?   @map("ebf_fulls_bodega")
+  ebfCajasBodega Int?     @map("ebf_cajas_bodega")
+  ebfPesoBruto   Float?   @map("ebf_peso_bruto")
+  ebfPesoCobrable Float?  @map("ebf_peso_cobrable")
+  /// Filas del despacho / histórico de EBF de este vuelo en la última lectura
+  /// (con esto se recalcula lo pendiente cuando cambia la coordinación, sin volver a leer EBF)
+  ebfFilas       Json?    @map("ebf_filas")
+  /// Avisos de la lectura (p. ej. "EBF le asignó otra guía")
+  avisos         Json?
+  leidoEn        DateTime? @map("leido_en")
+  errorLectura   String?  @map("error_lectura")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  lineas EbfLinea[]
+
+  @@index([fechaVuelo])
+  @@map("ebf_coordinacion")
+}
+
+/// Una guía hija (marca × finca × producto × DAE) frente a sus filas en EBF.
+/// Lo pendiente es uno solo por línea: se recalcula, no se apila.
+model EbfLinea {
+  id                Int             @id @default(autoincrement())
+  idEbfCoordinacion Int             @map("id_ebf_coordinacion")
+  coordinacion      EbfCoordinacion @relation(fields: [idEbfCoordinacion], references: [id], onDelete: Cascade)
+  /// "idConsignatario|idFinca|idProducto|dae"
+  clave             String
+  idFinca           Int             @map("id_finca")
+  idProducto        Int?            @map("id_producto")
+  idConsignatario   Int             @map("id_consignatario")
+  numeroGuiaHija    String?         @map("numero_guia_hija")
+
+  // === Lo que debe haber en EBF (de la coordinación) ===
+  dae          String?
+  fulls        Float   @default(0)
+  cajas        Int     @default(0)
+  /// { FB, HB, QB, EB }
+  cajasPorTipo Json?   @map("cajas_por_tipo")
+
+  // === Lo último que se vio en EBF ===
+  ebfDetalleIds  Int[]     @default([]) @map("ebf_detalle_ids")
+  ebfHawb        String?   @map("ebf_hawb")
+  ebfExportador  String?   @map("ebf_exportador")
+  ebfProducto    String?   @map("ebf_producto")
+  ebfDae         String?   @map("ebf_dae")
+  ebfFulls       Float?    @map("ebf_fulls")
+  ebfCajas       Int?      @map("ebf_cajas")
+  ebfFullsBodega Float?    @map("ebf_fulls_bodega")
+  ebfCajasBodega Int?      @map("ebf_cajas_bodega")
+  /// Fecha de coordinación en EBF de la fila más reciente (solo ese día se edita o borra)
+  ebfCreadoEn    DateTime? @map("ebf_creado_en")
+  ebfCreadoPor   String?   @map("ebf_creado_por")
+
+  // === Conciliación ===
+  /// EN_EBF | POR_ENVIAR | CAMBIO_POR_ENVIAR | PEDIR_A_EBF | FALTA_ENLACE | SOLO_EN_EBF | ERROR | OMITIDA
+  estado        String
+  /// CREAR | AGREGAR | MODIFICAR | BORRAR | REEMPLAZAR
+  accion        String?
+  accionDetalle Json?   @map("accion_detalle")
+  motivo        String?
+  /// Huella de lo deseado cuando alguien dijo "no enviar": vale hasta que la coordinación cambie
+  omitidaHuella String?   @map("omitida_huella")
+  ultimoError   String?   @map("ultimo_error")
+  intentos      Int       @default(0)
+  enviadaEn     DateTime? @map("enviada_en")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([idEbfCoordinacion, clave])
+  @@index([estado])
+  @@map("ebf_linea")
+}
+
+/// Lo que se envió a EBF (o se resolvió a mano), para ver quién hizo qué.
+model EbfBitacora {
+  id             Int      @id @default(autoincrement())
+  idCoordinacion Int      @map("id_coordinacion")
+  clave          String?
+  /// CREAR | AGREGAR | MODIFICAR | BORRAR | OMITIR | HECHO_A_MANO | LEER
+  accion         String
+  /// OK | YA_ESTABA | ERROR | CANCELADA
+  resultado      String
+  detalle        Json?
+  usuario        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([idCoordinacion])
+  @@index([createdAt])
+  @@map("ebf_bitacora")
+}

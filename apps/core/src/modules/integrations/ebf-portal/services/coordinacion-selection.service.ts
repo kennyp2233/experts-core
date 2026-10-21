@@ -25,6 +25,7 @@ export class EbfCoordinacionSelectionService {
   private readonly logger = new Logger(EbfCoordinacionSelectionService.name);
   private readonly cfg: EbfPortalConfig;
   private exportadoresCache: { at: number; options: SelectOption[] } | null = null;
+  private marcacionesCache: { at: number; options: SelectOption[] } | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -67,6 +68,23 @@ export class EbfCoordinacionSelectionService {
     }
     this.logger.warn('[EBF-PORTAL] No se encontró el select de exportadores en el portal.');
     return [];
+  }
+
+  /**
+   * Todas las marcaciones de EBF (el `<select name="marcacion">` del filtro
+   * del despacho: ~3.500, de todos los clientes de EBF). Para resolver el id
+   * de una marcación por su nombre. Cacheado 10 min como los exportadores.
+   */
+  async listMarcacionesDespacho(): Promise<SelectOption[]> {
+    if (this.marcacionesCache && Date.now() - this.marcacionesCache.at < EXPORTADORES_TTL_MS) {
+      return this.marcacionesCache.options;
+    }
+    await this.auth.ensureSession();
+    const html = await this.fetchHtml(this.cfg.paths.coordinacionLista, {}, { htmx: false });
+    const selectBody = this.extractSelectBody(html, 'marcacion');
+    const options = selectBody ? parseSelectOptions(selectBody) : [];
+    if (options.length > 0) this.marcacionesCache = { at: Date.now(), options };
+    return options;
   }
 
   async listMarcaciones(exportadorId: number): Promise<SelectOption[]> {
